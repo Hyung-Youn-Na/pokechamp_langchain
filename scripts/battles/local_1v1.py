@@ -43,6 +43,8 @@ parser.add_argument("--player_backend", type=str, default="gemini-2.5-flash", ch
     "microsoft/wizardlm-2-8x22b", "microsoft/phi-3-medium-128k-instruct",
     # Ollama models
     "ollama/gpt-oss:20b", "ollama/llama3.1:8b", "ollama/mistral", "ollama/qwen2.5", "ollama/gemma3:4b",
+    # vLLM models
+    "vllm/Qwen/Qwen3.6-27B",
     # Local models (via OpenRouter)
     "llama", 'None'
 ])
@@ -72,6 +74,8 @@ parser.add_argument("--opponent_backend", type=str, default="gemini-2.5-pro", ch
     "deepseek-ai/deepseek-coder-33b-instruct", "deepseek-ai/deepseek-llm-67b-chat",
     # Microsoft models
     "microsoft/wizardlm-2-8x22b", "microsoft/phi-3-medium-128k-instruct",
+    # vLLM models
+    "vllm/Qwen/Qwen3.6-27B",
     # Local models (via OpenRouter)
     "llama", 'None', 'mcp'
 ])

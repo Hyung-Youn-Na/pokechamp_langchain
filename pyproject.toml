@@ -61,7 +61,10 @@ dependencies = [
     
     # MCP support
     "mcp",
-    
+
+    # Config
+    "pyyaml",
+
     # Testing
     "pytest",
 ]
