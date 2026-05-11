@@ -728,8 +728,8 @@ class LocalSim():
             # Sort by probability (confirmed 100% moves first, then by descending probability)
             all_moves_with_probs.sort(key=lambda x: x[1], reverse=True)
             
-            # Return just the move names (top 4)
-            return [move for move, prob in all_moves_with_probs[:4]]
+            # Return just the move names (top 4), filtering out "nothing" (Smogon sentinel for empty slots)
+            return [move for move, prob in all_moves_with_probs if move.lower() != 'nothing'][:4]
             
         except Exception as e:
             # Silently fall back to original method

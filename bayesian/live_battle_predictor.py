@@ -428,7 +428,7 @@ class LiveBattlePredictor(AbyssalPlayer):
                     for move_name, prob in probabilities['moves']:
                         # Convert back to battle format (lowercase, no spaces)
                         battle_format_move = move_name.lower().replace(' ', '').replace('-', '')
-                        if battle_format_move not in confirmed_moves and len(predicted_moves) < 4:
+                        if battle_format_move not in confirmed_moves and battle_format_move != 'nothing' and len(predicted_moves) < 4:
                             predicted_moves.append(battle_format_move)
                             
             except Exception as e:

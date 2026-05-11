@@ -245,7 +245,7 @@ class LLMPlayer(Player):
         except Exception as e:
             print(f"Failed to send thinking message: {e}")
 
-    def get_LLM_action(self, system_prompt, user_prompt, model, temperature=0.7, json_format=False, seed=None, stop=[], max_tokens=200, actions=None, llm=None, battle=None) -> str:
+    def get_LLM_action(self, system_prompt, user_prompt, model, temperature=0.7, json_format=False, seed=None, stop=[], max_tokens=None, actions=None, llm=None, battle=None) -> str:
         if llm is None:
             output, _, raw_message = self.llm.get_LLM_action(system_prompt, user_prompt, model, temperature, True, seed, stop, max_tokens=max_tokens, actions=actions, battle=battle, ps_client=self.ps_client)
         else:
@@ -422,8 +422,6 @@ class LLMPlayer(Player):
                                             user_prompt=state_prompt_io,
                                             model=self.backend,
                                             temperature=self.temperature,
-                                            max_tokens=300,
-                                            # stop=["reason"],
                                             json_format=True,
                                             actions=actions,
                                             battle=battle)
