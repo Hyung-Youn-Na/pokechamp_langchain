@@ -13,6 +13,12 @@ import random
 from pokechamp.llm_vgc_player import LLMVGCPlayer
 from pokechamp.mcp_player import MCPPlayer
 
+BANNED_MOVES_BY_FORMAT = {
+    "gen9ou": {"Tera Blast", "Last Respects", "Shed Tail", "Baton Pass"},
+    "gen9ubers": {"Last Respects", "Baton Pass"},
+    "gen9uu": {"Tera Blast", "Last Respects", "Shed Tail", "Baton Pass"},
+}
+
 class TeamSet(Teambuilder):
     """Sample from a directory of Showdown team files.
 
@@ -40,12 +46,31 @@ class TeamSet(Teambuilder):
             for file in files:
                 if file.endswith(f".{self.battle_format}_team"):
                     team_files.append(os.path.join(root, file))
-        return team_files
+        return sorted(team_files)
+
+    def _has_banned_content(self, team_data: str) -> bool:
+        banned_moves = BANNED_MOVES_BY_FORMAT.get(self.battle_format, set())
+        if not banned_moves:
+            return False
+        normalized = team_data.lower().replace(" ", "").replace("-", "")
+        for move in banned_moves:
+            normalized_move = move.lower().replace(" ", "").replace("-", "")
+            if normalized_move in normalized:
+                return True
+        return False
 
     def yield_team(self):
-        file = random.choice(self.team_files)
-        with open(file, "r") as f:
-            team_data = f.read()
+        if not self.team_files:
+            raise ValueError(f"No team files found for format {self.battle_format}")
+        attempts = 0
+        max_attempts = len(self.team_files) + 1
+        while attempts < max_attempts:
+            file = random.choice(self.team_files)
+            with open(file, "r") as f:
+                team_data = f.read()
+            if not self._has_banned_content(team_data):
+                break
+            attempts += 1
         team = self.parse_showdown_team(team_data)
         print(team)
         for mon in team:
@@ -105,12 +130,31 @@ class TeamSet(Teambuilder):
             for file in files:
                 if file.endswith(f".{self.battle_format}_team"):
                     team_files.append(os.path.join(root, file))
-        return team_files
+        return sorted(team_files)
+
+    def _has_banned_content(self, team_data: str) -> bool:
+        banned_moves = BANNED_MOVES_BY_FORMAT.get(self.battle_format, set())
+        if not banned_moves:
+            return False
+        normalized = team_data.lower().replace(" ", "").replace("-", "")
+        for move in banned_moves:
+            normalized_move = move.lower().replace(" ", "").replace("-", "")
+            if normalized_move in normalized:
+                return True
+        return False
 
     def yield_team(self):
-        file = random.choice(self.team_files)
-        with open(file, "r") as f:
-            team_data = f.read()
+        if not self.team_files:
+            raise ValueError(f"No team files found for format {self.battle_format}")
+        attempts = 0
+        max_attempts = len(self.team_files) + 1
+        while attempts < max_attempts:
+            file = random.choice(self.team_files)
+            with open(file, "r") as f:
+                team_data = f.read()
+            if not self._has_banned_content(team_data):
+                break
+            attempts += 1
         team = self.parse_showdown_team(team_data)
         print(team)
         for mon in team:
