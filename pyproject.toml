@@ -76,6 +76,13 @@ dev = [
 flash-attention = [
     "flash-attn",
 ]
+experimental-langchain = [
+    "langchain>=0.3",
+    "langchain-openai>=0.2",
+    "langgraph>=0.2",
+    "langfuse>=2.0",
+    "python-dotenv>=1.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/DanielLi10720/pokechamp"
