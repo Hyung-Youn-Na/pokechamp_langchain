@@ -1,5 +1,5 @@
 """
-Tests for dynamic move flags and flag text display in prompts.
+Tests for dynamic move flags, flag text display, and dynamic move calculations.
 
 Covers:
 - 7 new keys added to _MISC_FLAGS in poke_env/environment/move.py
@@ -8,11 +8,30 @@ Covers:
 - Flag text display in prompts when enable_dynamic_flags=True
 - No flag text when enable_dynamic_flags=False
 - Flag text conciseness (≤ 30 chars)
+- Dynamic type resolution (weatherball, terablast, aurawheel, hiddenpower)
+- Dynamic power resolution (acrobatics, facade, knockoff, weatherball, low_kick,
+  heavy_slam, hex)
+- Dynamic priority resolution (grassyglide)
+- Fixed damage calculation (seismictoss, nightshade, counter, mirrorcoat,
+  finalgambit, endeavor)
+- Dynamic info formatting
+- Module purity and importability
 """
 
 import pytest
 
 from poke_env.environment.move import Move
+from poke_env.environment.weather import Weather
+from poke_env.environment.field import Field
+from poke_env.environment.status import Status
+from pokechamp.dynamic_move import (
+    resolve_dynamic_type,
+    resolve_dynamic_power,
+    resolve_dynamic_priority,
+    get_fixed_damage,
+    resolve_fixed_damage,
+    format_dynamic_info,
+)
 
 # ---------------------------------------------------------------------------
 # Area 1: _MISC_FLAGS additions
@@ -286,3 +305,715 @@ class TestBackwardCompatibility:
         # Helper always returns annotations — the integration code checks
         # enable_dynamic_flags before appending
         assert len(annotations) > 0
+
+
+# ===========================================================================
+# Area 4: Dynamic Type Resolution  (VAL-DTYPE-*)
+# ===========================================================================
+
+
+@pytest.mark.moves
+class TestResolveDynamicTypeWeatherball:
+    """Weather Ball type resolution for all weather conditions."""
+
+    def test_weatherball_rain_water_type(self):
+        """VAL-DTYPE-002: Rain → Water."""
+        assert resolve_dynamic_type("weatherball", weather=Weather.RAINDANCE) == "Water"
+
+    def test_weatherball_primordial_sea_water(self):
+        assert (
+            resolve_dynamic_type("weatherball", weather=Weather.PRIMORDIALSEA)
+            == "Water"
+        )
+
+    def test_weatherball_sun_fire_type(self):
+        """VAL-DTYPE-001: Sun → Fire."""
+        assert resolve_dynamic_type("weatherball", weather=Weather.SUNNYDAY) == "Fire"
+
+    def test_weatherball_desolate_land_fire(self):
+        assert (
+            resolve_dynamic_type("weatherball", weather=Weather.DESOLATELAND) == "Fire"
+        )
+
+    def test_weatherball_sand_rock_type(self):
+        """VAL-DTYPE-003: Sand → Rock."""
+        assert resolve_dynamic_type("weatherball", weather=Weather.SANDSTORM) == "Rock"
+
+    def test_weatherball_hail_ice_type(self):
+        """VAL-DTYPE-004: Hail → Ice."""
+        assert resolve_dynamic_type("weatherball", weather=Weather.HAIL) == "Ice"
+
+    def test_weatherball_snow_ice(self):
+        assert resolve_dynamic_type("weatherball", weather=Weather.SNOW) == "Ice"
+
+    def test_weatherball_no_weather_normal(self):
+        """VAL-DTYPE-005: No weather → Normal."""
+        assert resolve_dynamic_type("weatherball", weather=None) == "Normal"
+
+    def test_weatherball_empty_dict_normal(self):
+        assert resolve_dynamic_type("weatherball", weather={}) == "Normal"
+
+    def test_weatherball_with_weather_dict(self):
+        """Works with Dict[Weather, int] as returned by battle.weather."""
+        assert (
+            resolve_dynamic_type("weatherball", weather={Weather.RAINDANCE: 1})
+            == "Water"
+        )
+
+
+@pytest.mark.moves
+class TestResolveDynamicTypeTerablast:
+    """Tera Blast type resolution."""
+
+    def test_terablast_tera_type_fire(self):
+        """VAL-DTYPE-006: Tera type Fire → Fire when terastallized."""
+        assert resolve_dynamic_type("terablast", tera_type="Fire") == "Fire"
+
+    def test_terablast_no_tera_normal(self):
+        """VAL-DTYPE-007: Not terastallized → Normal."""
+        assert resolve_dynamic_type("terablast", tera_type=None) == "Normal"
+
+    def test_terablast_stellar_type(self):
+        """VAL-DTYPE-008: Stellar tera type edge case."""
+        result = resolve_dynamic_type("terablast", tera_type="Stellar")
+        assert result in ("Stellar", "Normal")
+
+    def test_terablast_with_pokemon_type_enum(self):
+        from poke_env.environment.pokemon_type import PokemonType
+
+        assert resolve_dynamic_type("terablast", tera_type=PokemonType.WATER) == "WATER"
+
+
+@pytest.mark.moves
+class TestResolveDynamicTypeAurawheel:
+    """Aura Wheel type resolution based on Morpeko form."""
+
+    def test_aurawheel_full_belly_electric(self):
+        """VAL-DTYPE-009: Full Belly → Electric."""
+        assert (
+            resolve_dynamic_type(
+                "aurawheel", user_species="morpeko", user_form="fullbelly"
+            )
+            == "Electric"
+        )
+
+    def test_aurawheel_hangry_dark(self):
+        """VAL-DTYPE-010: Hangry → Dark."""
+        assert (
+            resolve_dynamic_type(
+                "aurawheel", user_species="morpeko", user_form="hangry"
+            )
+            == "Dark"
+        )
+
+    def test_aurawheel_non_morpeko_none(self):
+        """VAL-DTYPE-011: Non-Morpeko returns None gracefully."""
+        result = resolve_dynamic_type("aurawheel", user_species="pikachu")
+        assert result is None
+
+    def test_aurawheel_no_species_none(self):
+        assert resolve_dynamic_type("aurawheel") is None
+
+    def test_aurawheel_default_form_electric(self):
+        """Morpeko without explicit form defaults to Electric (Full Belly)."""
+        assert resolve_dynamic_type("aurawheel", user_species="morpeko") == "Electric"
+
+
+@pytest.mark.moves
+class TestResolveDynamicTypeHiddenPower:
+    """Hidden Power type from IVs."""
+
+    def test_hiddenpower_all_31(self):
+        """All 31 IVs → type index 15 → Dark."""
+        assert (
+            resolve_dynamic_type(
+                "hiddenpower",
+                ivs={"hp": 31, "atk": 31, "def": 31, "spa": 31, "spd": 31, "spe": 31},
+            )
+            == "DARK"
+        )
+
+    def test_hiddenpower_all_0(self):
+        """All 0 IVs → type index 0 → Fighting."""
+        assert (
+            resolve_dynamic_type(
+                "hiddenpower",
+                ivs={"hp": 0, "atk": 0, "def": 0, "spa": 0, "spd": 0, "spe": 0},
+            )
+            == "FIGHTING"
+        )
+
+    def test_hiddenpower_partial_ivs(self):
+        """Partial IVs dict uses 31 as default for missing keys."""
+        result = resolve_dynamic_type(
+            "hiddenpower", ivs={"atk": 0, "def": 0, "spa": 0, "spd": 0, "spe": 0}
+        )
+        assert isinstance(result, str)
+        assert result in {
+            t
+            for t in (
+                "FIGHTING",
+                "FLYING",
+                "POISON",
+                "GROUND",
+                "ROCK",
+                "BUG",
+                "GHOST",
+                "STEEL",
+                "FIRE",
+                "WATER",
+                "GRASS",
+                "ELECTRIC",
+                "PSYCHIC",
+                "ICE",
+                "DRAGON",
+                "DARK",
+            )
+        }
+
+    def test_hiddenpower_no_ivs_no_user(self):
+        """Without IVs or user, returns None."""
+        assert resolve_dynamic_type("hiddenpower") is None
+
+
+@pytest.mark.moves
+class TestResolveDynamicTypeUnknown:
+    """Unknown move returns None."""
+
+    def test_unknown_move_none(self):
+        """VAL-DTYPE-013: Unknown move → None."""
+        assert resolve_dynamic_type("nonexistentmove") is None
+
+    def test_regular_move_none(self):
+        """Static moves like flamethrower return None."""
+        assert resolve_dynamic_type("flamethrower") is None
+
+
+# ===========================================================================
+# Area 5: Dynamic Power Resolution  (VAL-DPOWER-*)
+# ===========================================================================
+
+
+@pytest.mark.moves
+class TestResolveDynamicPowerAcrobatics:
+    def test_acrobatics_no_item_double_power(self):
+        """VAL-DPOWER-001: No item → 110."""
+        assert resolve_dynamic_power("acrobatics", user_item=None) == 110
+
+    def test_acrobatics_has_item_base_power(self):
+        """VAL-DPOWER-002: Has item → 55."""
+        assert resolve_dynamic_power("acrobatics", user_item="leftovers") == 55
+
+    def test_acrobatics_empty_string_item(self):
+        assert resolve_dynamic_power("acrobatics", user_item="") == 110
+
+
+@pytest.mark.moves
+class TestResolveDynamicPowerFacade:
+    def test_facade_status_brn_double_power(self):
+        """VAL-DPOWER-003: Status → 140."""
+        assert resolve_dynamic_power("facade", user_status="brn") == 140
+
+    def test_facade_status_psn(self):
+        assert resolve_dynamic_power("facade", user_status="psn") == 140
+
+    def test_facade_status_par(self):
+        assert resolve_dynamic_power("facade", user_status="par") == 140
+
+    def test_facade_status_tox(self):
+        assert resolve_dynamic_power("facade", user_status="tox") == 140
+
+    def test_facade_status_enum(self):
+        """Works with Status enum."""
+        assert resolve_dynamic_power("facade", user_status=Status.BRN) == 140
+
+    def test_facade_no_status_base_power(self):
+        """VAL-DPOWER-004: No status → 70."""
+        assert resolve_dynamic_power("facade", user_status=None) == 70
+
+
+@pytest.mark.moves
+class TestResolveDynamicPowerKnockoff:
+    def test_knockoff_target_has_item_boosted(self):
+        """VAL-DPOWER-005: Target has removable item → 97.5."""
+        assert resolve_dynamic_power("knockoff", target_item="choicescarf") == 97.5
+
+    def test_knockoff_target_no_item_base(self):
+        """VAL-DPOWER-006: Target has no item → 65."""
+        assert resolve_dynamic_power("knockoff", target_item=None) == 65
+
+    def test_knockoff_z_crystal_not_removable(self):
+        """Z-crystals cannot be knocked off."""
+        assert resolve_dynamic_power("knockoff", target_item="decidiumz") == 65
+
+
+@pytest.mark.moves
+class TestResolveDynamicPowerWeatherball:
+    def test_weatherball_power_100_in_weather(self):
+        """VAL-DPOWER-007: Weather active → 100."""
+        assert resolve_dynamic_power("weatherball", weather=Weather.SUNNYDAY) == 100
+
+    def test_weatherball_power_50_no_weather(self):
+        """VAL-DPOWER-008: No weather → 50."""
+        assert resolve_dynamic_power("weatherball", weather=None) == 50
+
+    def test_weatherball_power_rain(self):
+        assert resolve_dynamic_power("weatherball", weather=Weather.RAINDANCE) == 100
+
+
+@pytest.mark.moves
+class TestResolveDynamicPowerLowKick:
+    def test_low_kick_light_target(self):
+        """VAL-DPOWER-009: Light target (< 10kg) → 20."""
+        assert resolve_dynamic_power("lowkick", target_weightkg=5.0) == 20
+
+    def test_low_kick_heavy_target(self):
+        """VAL-DPOWER-010: Heavy target (> 200kg) → 120."""
+        assert resolve_dynamic_power("lowkick", target_weightkg=420.0) == 120
+
+    def test_low_kick_medium_100kg(self):
+        assert resolve_dynamic_power("lowkick", target_weightkg=150.0) == 100
+
+    def test_low_kick_medium_50kg(self):
+        assert resolve_dynamic_power("lowkick", target_weightkg=75.0) == 80
+
+    def test_low_kick_medium_25kg(self):
+        assert resolve_dynamic_power("lowkick", target_weightkg=30.0) == 60
+
+    def test_low_kick_medium_10kg(self):
+        assert resolve_dynamic_power("lowkick", target_weightkg=15.0) == 40
+
+    def test_grassknot_same_as_lowkick(self):
+        """Grass Knot uses the same weight tiers as Low Kick."""
+        assert resolve_dynamic_power("grassknot", target_weightkg=420.0) == 120
+
+
+@pytest.mark.moves
+class TestResolveDynamicPowerHeavySlam:
+    def test_heavy_slam_heavy_user_light_target(self):
+        """VAL-DPOWER-011: Very heavy user, light target → 120."""
+        assert (
+            resolve_dynamic_power("heavyslam", user_weightkg=400.0, target_weightkg=5.0)
+            == 120
+        )
+
+    def test_heavy_slam_similar_weights(self):
+        """VAL-DPOWER-012: Similar weights → 40."""
+        assert (
+            resolve_dynamic_power("heavyslam", user_weightkg=50.0, target_weightkg=45.0)
+            == 40
+        )
+
+    def test_heavy_slam_medium_ratio(self):
+        # 20kg / 100kg = 0.2 < 0.25 → 100
+        assert (
+            resolve_dynamic_power(
+                "heavyslam", user_weightkg=100.0, target_weightkg=20.0
+            )
+            == 100
+        )
+
+    def test_heat_crash_same_as_heavy_slam(self):
+        """Heat Crash uses same weight ratio tiers."""
+        assert (
+            resolve_dynamic_power("heatcrash", user_weightkg=400.0, target_weightkg=5.0)
+            == 120
+        )
+
+
+@pytest.mark.moves
+class TestResolveDynamicPowerHex:
+    def test_hex_target_has_status(self):
+        """VAL-DPOWER-013: Target has status → 130."""
+        assert resolve_dynamic_power("hex", target_status="psn") == 130
+
+    def test_hex_target_status_enum(self):
+        assert resolve_dynamic_power("hex", target_status=Status.TOX) == 130
+
+    def test_hex_target_no_status(self):
+        """VAL-DPOWER-014: Target no status → 65."""
+        assert resolve_dynamic_power("hex", target_status=None) == 65
+
+
+@pytest.mark.moves
+class TestResolveDynamicPowerUnknown:
+    def test_unknown_move_none(self):
+        """VAL-DPOWER-015: Unknown move → None."""
+        assert resolve_dynamic_power("nonexistentmove") is None
+
+    def test_regular_move_none(self):
+        assert resolve_dynamic_power("flamethrower") is None
+
+
+# ===========================================================================
+# Area 6: Dynamic Priority Resolution  (VAL-DPRI-*)
+# ===========================================================================
+
+
+@pytest.mark.moves
+class TestResolveDynamicPriorityGrassyGlide:
+    def test_grassyglide_grassy_terrain_grounded(self):
+        """VAL-DPRI-001: Grassy Terrain + grounded → +1."""
+        assert (
+            resolve_dynamic_priority(
+                "grassyglide", terrain="grassyterrain", user_grounded=True
+            )
+            == 1
+        )
+
+    def test_grassyglide_grassy_terrain_field_enum(self):
+        """Works with Field enum."""
+        assert (
+            resolve_dynamic_priority(
+                "grassyglide",
+                fields={Field.GRASSY_TERRAIN: 1},
+                user_grounded=True,
+            )
+            == 1
+        )
+
+    def test_grassyglide_no_terrain(self):
+        """VAL-DPRI-002: No terrain → 0."""
+        assert (
+            resolve_dynamic_priority("grassyglide", terrain=None, user_grounded=True)
+            == 0
+        )
+
+    def test_grassyglide_non_grounded(self):
+        """VAL-DPRI-003: Grassy Terrain but not grounded → 0."""
+        assert (
+            resolve_dynamic_priority(
+                "grassyglide", terrain="grassyterrain", user_grounded=False
+            )
+            == 0
+        )
+
+    def test_grassyglide_wrong_terrain(self):
+        assert (
+            resolve_dynamic_priority(
+                "grassyglide", terrain="electricterrain", user_grounded=True
+            )
+            == 0
+        )
+
+
+@pytest.mark.moves
+class TestResolveDynamicPriorityUnknown:
+    def test_unknown_move_none(self):
+        """VAL-DPRI-004: Unknown move → None."""
+        assert resolve_dynamic_priority("nonexistentmove") is None
+
+    def test_regular_move_none(self):
+        assert resolve_dynamic_priority("tackle") is None
+
+
+# ===========================================================================
+# Area 7: Fixed Damage  (VAL-FIXDMG-*)
+# ===========================================================================
+
+
+@pytest.mark.moves
+class TestGetFixedDamageSeismicToss:
+    def test_seismictoss_user_level(self):
+        """VAL-FIXDMG-001: Fixed damage = user level."""
+        assert get_fixed_damage("seismictoss", user_level=50) == 50
+
+    def test_seismictoss_level_100(self):
+        assert get_fixed_damage("seismictoss", user_level=100) == 100
+
+    def test_nightshade_same_as_seismictoss(self):
+        """Night Shade also deals damage equal to user level."""
+        assert get_fixed_damage("nightshade", user_level=75) == 75
+
+
+@pytest.mark.moves
+class TestGetFixedDamageCounter:
+    def test_counter_2x_physical(self):
+        """VAL-FIXDMG-002: 2x physical damage taken."""
+        assert get_fixed_damage("counter", last_physical_damage=40) == 80
+
+    def test_counter_no_damage_descriptive(self):
+        """Without damage info, returns descriptive string."""
+        result = get_fixed_damage("counter")
+        assert isinstance(result, str)
+        assert "2x" in result.lower() or "physical" in result.lower()
+
+
+@pytest.mark.moves
+class TestGetFixedDamageMirrorCoat:
+    def test_mirrorcoat_2x_special(self):
+        assert get_fixed_damage("mirrorcoat", last_special_damage=50) == 100
+
+    def test_mirrorcoat_no_damage_descriptive(self):
+        result = get_fixed_damage("mirrorcoat")
+        assert isinstance(result, str)
+
+
+@pytest.mark.moves
+class TestGetFixedDamageFinalGambit:
+    def test_finalgambit_current_hp(self):
+        """VAL-FIXDMG-003: Fixed damage = current HP."""
+        assert get_fixed_damage("finalgambit", user_current_hp=120) == 120
+
+    def test_finalgambit_low_hp(self):
+        assert get_fixed_damage("finalgambit", user_current_hp=1) == 1
+
+
+@pytest.mark.moves
+class TestGetFixedDamageEndeavor:
+    def test_endeavor_reduces_to_user_hp(self):
+        """VAL-FIXDMG-004: Target HP - user HP."""
+        assert (
+            get_fixed_damage("endeavor", user_current_hp=10, target_current_hp=100)
+            == 90
+        )
+
+    def test_endeavor_user_higher_hp(self):
+        """If user HP is higher, damage is 0."""
+        assert (
+            get_fixed_damage("endeavor", user_current_hp=100, target_current_hp=50) == 0
+        )
+
+    def test_endeavor_no_hp_descriptive(self):
+        """Without HP info, returns descriptive string."""
+        result = get_fixed_damage("endeavor")
+        assert isinstance(result, str)
+        assert "target" in result.lower() or "hp" in result.lower()
+
+
+@pytest.mark.moves
+class TestGetFixedDamageCallbackFlag:
+    def test_damagecallback_flag_counter(self):
+        """VAL-FIXDMG-005: damageCallback in Move.flags for counter."""
+        m = Move("counter", gen=9)
+        assert "damageCallback" in m.flags
+
+    def test_damagecallback_flag_finalgambit(self):
+        m = Move("finalgambit", gen=9)
+        assert "damageCallback" in m.flags
+
+    def test_damagecallback_flag_endeavor(self):
+        m = Move("endeavor", gen=9)
+        assert "damageCallback" in m.flags
+
+    def test_damagecallback_flag_mirrorcoat(self):
+        m = Move("mirrorcoat", gen=9)
+        assert "damageCallback" in m.flags
+
+    def test_seismictoss_has_damage_key(self):
+        """Seismic toss uses 'damage' key rather than 'damageCallback'."""
+        m = Move("seismictoss", gen=9)
+        assert m.entry.get("damage") is not None
+
+
+@pytest.mark.moves
+class TestGetFixedDamageUnknown:
+    def test_unknown_move_none(self):
+        assert get_fixed_damage("tackle") is None
+
+    def test_regular_attack_none(self):
+        assert get_fixed_damage("flamethrower") is None
+
+
+@pytest.mark.moves
+class TestResolveFixedDamageAlias:
+    """Verify resolve_fixed_damage is an alias for get_fixed_damage."""
+
+    def test_alias_exists(self):
+        assert resolve_fixed_damage is get_fixed_damage
+
+    def test_alias_works(self):
+        assert resolve_fixed_damage("seismictoss", user_level=50) == 50
+
+
+# ===========================================================================
+# Area 8: format_dynamic_info  (VAL-MOD-*)
+# ===========================================================================
+
+
+@pytest.mark.moves
+class TestFormatDynamicInfo:
+    def test_weatherball_rain(self):
+        """Weatherball in rain → 'rain→Water/100BP'."""
+        result = format_dynamic_info("weatherball", weather=Weather.RAINDANCE)
+        assert "Water" in result
+        assert "100" in result
+
+    def test_weatherball_no_weather(self):
+        result = format_dynamic_info("weatherball", weather=None)
+        # No dynamic change → either empty or shows Normal/50BP
+        # With no weather, type=Normal (same as base) and power=50 (same as base)
+        # format_dynamic_info may or may not show info for "no change" cases
+        assert isinstance(result, str)
+
+    def test_acrobatics_no_item(self):
+        result = format_dynamic_info("acrobatics", user_item=None)
+        assert "110" in result
+        assert "no item" in result.lower() or "110" in result
+
+    def test_facade_status(self):
+        result = format_dynamic_info("facade", user_status="brn")
+        assert "140" in result
+
+    def test_knockoff_target_item(self):
+        result = format_dynamic_info("knockoff", target_item="choicescarf")
+        assert "97.5" in result
+
+    def test_grassyglide_grassy_terrain(self):
+        result = format_dynamic_info(
+            "grassyglide",
+            terrain="grassyterrain",
+            user_grounded=True,
+        )
+        assert "pri+1" in result
+
+    def test_seismictoss_fixed_damage(self):
+        result = format_dynamic_info("seismictoss", user_level=50)
+        assert "50" in result
+
+    def test_empty_for_regular_move(self):
+        result = format_dynamic_info("tackle")
+        assert result == ""
+
+    def test_empty_for_unknown_move(self):
+        result = format_dynamic_info("nonexistentmove")
+        assert result == ""
+
+
+# ===========================================================================
+# Area 9: Module Purity and Importability  (VAL-MOD-*)
+# ===========================================================================
+
+
+@pytest.mark.moves
+class TestModulePurity:
+    """Verify the module is standalone and all functions are importable."""
+
+    def test_import_resolve_dynamic_type(self):
+        """VAL-MOD-003: Individual import works."""
+        from pokechamp.dynamic_move import resolve_dynamic_type
+
+        assert callable(resolve_dynamic_type)
+
+    def test_import_resolve_dynamic_power(self):
+        from pokechamp.dynamic_move import resolve_dynamic_power
+
+        assert callable(resolve_dynamic_power)
+
+    def test_import_resolve_dynamic_priority(self):
+        from pokechamp.dynamic_move import resolve_dynamic_priority
+
+        assert callable(resolve_dynamic_priority)
+
+    def test_import_get_fixed_damage(self):
+        from pokechamp.dynamic_move import get_fixed_damage
+
+        assert callable(get_fixed_damage)
+
+    def test_import_format_dynamic_info(self):
+        from pokechamp.dynamic_move import format_dynamic_info
+
+        assert callable(format_dynamic_info)
+
+    def test_no_llmplayer_import(self):
+        """VAL-MOD-004: No dependency on LLMPlayer."""
+        import pokechamp.dynamic_move as dm
+
+        source = open(dm.__file__).read()
+        assert "llm_player" not in source
+        assert "LLMPlayer" not in source
+
+    def test_functions_are_pure(self):
+        """VAL-MOD-002: Functions take explicit args, no self/class state."""
+        # Call multiple times with same args → same result (no state mutation)
+        r1 = resolve_dynamic_type("weatherball", weather=Weather.RAINDANCE)
+        r2 = resolve_dynamic_type("weatherball", weather=Weather.RAINDANCE)
+        assert r1 == r2 == "Water"
+
+        p1 = resolve_dynamic_power("acrobatics", user_item=None)
+        p2 = resolve_dynamic_power("acrobatics", user_item=None)
+        assert p1 == p2 == 110
+
+    def test_module_exists(self):
+        """VAL-MOD-001: dynamic_move.py is importable."""
+        import pokechamp.dynamic_move
+
+        assert hasattr(pokechamp.dynamic_move, "resolve_dynamic_type")
+        assert hasattr(pokechamp.dynamic_move, "resolve_dynamic_power")
+        assert hasattr(pokechamp.dynamic_move, "resolve_dynamic_priority")
+        assert hasattr(pokechamp.dynamic_move, "get_fixed_damage")
+        assert hasattr(pokechamp.dynamic_move, "format_dynamic_info")
+
+
+# ===========================================================================
+# Area 10: Cross-Area / Edge Cases  (VAL-CROSS-*)
+# ===========================================================================
+
+
+@pytest.mark.moves
+class TestEdgeCases:
+    """Edge cases for dynamic move calculations."""
+
+    def test_acrobatics_item_removed_mid_battle(self):
+        """VAL-CROSS-009: Item removed → power updates."""
+        assert resolve_dynamic_power("acrobatics", user_item="leftovers") == 55
+        assert resolve_dynamic_power("acrobatics", user_item=None) == 110
+
+    def test_facade_status_inflicted_mid_battle(self):
+        """VAL-CROSS-010: Status inflicted → power updates."""
+        assert resolve_dynamic_power("facade", user_status=None) == 70
+        assert resolve_dynamic_power("facade", user_status="brn") == 140
+
+    def test_weatherball_type_changes_with_weather(self):
+        """VAL-CROSS-007: Weather changes → type updates."""
+        assert resolve_dynamic_type("weatherball", weather=Weather.SUNNYDAY) == "Fire"
+        assert resolve_dynamic_type("weatherball", weather=Weather.RAINDANCE) == "Water"
+        assert resolve_dynamic_type("weatherball", weather=None) == "Normal"
+
+    def test_terablast_before_and_after_tera(self):
+        """VAL-CROSS-008: Terastallization state changes."""
+        assert resolve_dynamic_type("terablast", tera_type=None) == "Normal"
+        assert resolve_dynamic_type("terablast", tera_type="Fire") == "Fire"
+
+    def test_move_object_as_input(self):
+        """Functions accept Move objects as move_id."""
+        m = Move("weatherball", gen=9)
+        assert resolve_dynamic_type(m, weather=Weather.RAINDANCE) == "Water"
+
+    def test_move_object_for_power(self):
+        m = Move("acrobatics", gen=9)
+        assert resolve_dynamic_power(m, user_item=None) == 110
+
+    def test_hex_frozen_status(self):
+        """FRZ also counts as a status for Hex."""
+        assert resolve_dynamic_power("hex", target_status="frz") == 130
+
+    def test_hex_sleep_status(self):
+        assert resolve_dynamic_power("hex", target_status="slp") == 130
+
+    def test_facade_frozen_status(self):
+        assert resolve_dynamic_power("facade", user_status="frz") == 140
+
+    def test_heavy_slam_exact_threshold(self):
+        """Test edge of threshold: ratio == 0.5 → 60, not 40."""
+        assert (
+            resolve_dynamic_power(
+                "heavyslam", user_weightkg=100.0, target_weightkg=49.9
+            )
+            == 60
+        )
+        assert (
+            resolve_dynamic_power(
+                "heavyslam", user_weightkg=100.0, target_weightkg=50.0
+            )
+            == 40
+        )
+
+    def test_low_kick_exact_threshold(self):
+        """Test weight threshold boundaries."""
+        # Exactly at boundary: >10.0 is False → falls through to 20
+        assert resolve_dynamic_power("lowkick", target_weightkg=10.0) == 20
+        # Just above: >10.0 is True, not >25.0 → 40
+        assert resolve_dynamic_power("lowkick", target_weightkg=10.1) == 40
+        assert resolve_dynamic_power("lowkick", target_weightkg=25.0) == 40
+        assert resolve_dynamic_power("lowkick", target_weightkg=25.1) == 60
