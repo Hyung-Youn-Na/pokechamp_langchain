@@ -1017,3 +1017,487 @@ class TestEdgeCases:
         assert resolve_dynamic_power("lowkick", target_weightkg=10.1) == 40
         assert resolve_dynamic_power("lowkick", target_weightkg=25.0) == 40
         assert resolve_dynamic_power("lowkick", target_weightkg=25.1) == 60
+
+
+# ===========================================================================
+# Area 11: Prompt Integration Tests (VAL-PROMPT-*, VAL-CROSS-*)
+# ===========================================================================
+
+
+@pytest.mark.moves
+class TestApplyDynamicCalcsHelper:
+    """Test the _apply_dynamic_calcs_to_move helper function in prompts.py."""
+
+    def test_import(self):
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+    def test_flags_disabled_returns_none(self):
+        """When both flags are False, returns (None, None, "")."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = MagicMock()
+        sim.enable_dynamic_calcs = False
+        sim.enable_dynamic_flags = False
+        battle = MagicMock()
+        move = Move("weatherball", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, MagicMock(), MagicMock()
+        )
+        assert dtype is None
+        assert dpower is None
+        assert info == ""
+
+    def test_flags_only_calcs_disabled_returns_none(self):
+        """When enable_dynamic_flags=True but enable_dynamic_calcs=False,
+        returns (None, None, "")."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = MagicMock()
+        sim.enable_dynamic_calcs = False
+        sim.enable_dynamic_flags = True
+        battle = MagicMock()
+        move = Move("weatherball", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, MagicMock(), MagicMock()
+        )
+        assert dtype is None
+        assert dpower is None
+        assert info == ""
+
+    def test_both_flags_enabled_weatherball_rain(self):
+        """With both flags enabled, weatherball in rain resolves to Water/100."""
+        from unittest.mock import MagicMock
+
+        from poke_env.environment.weather import Weather
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = MagicMock()
+        sim.enable_dynamic_calcs = True
+        sim.enable_dynamic_flags = True
+
+        battle = MagicMock()
+        battle.weather = {Weather.RAINDANCE: 1}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = None
+        user.status = None
+
+        target = MagicMock()
+        target.item = "leftovers"
+        target.status = None
+
+        move = Move("weatherball", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, user, target
+        )
+
+        assert dtype == "Water"
+        assert dpower == 100
+        assert "Water" in info
+        assert "100" in info
+
+    def test_both_flags_enabled_acrobatics_no_item(self):
+        """With both flags enabled, acrobatics with no item resolves to 110."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = MagicMock()
+        sim.enable_dynamic_calcs = True
+        sim.enable_dynamic_flags = True
+
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = None
+        user.status = None
+
+        target = MagicMock()
+        target.item = "leftovers"
+        target.status = None
+
+        move = Move("acrobatics", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, user, target
+        )
+
+        assert dtype is None  # acrobatics doesn't change type
+        assert dpower == 110  # doubled power with no item
+        assert "110" in info
+
+    def test_both_flags_enabled_facade_with_status(self):
+        """With both flags enabled, facade with status resolves to 140."""
+        from unittest.mock import MagicMock
+
+        from poke_env.environment.status import Status
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = MagicMock()
+        sim.enable_dynamic_calcs = True
+        sim.enable_dynamic_flags = True
+
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = "leftovers"
+        user.status = Status.BRN
+
+        target = MagicMock()
+        target.item = None
+        target.status = None
+
+        move = Move("facade", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, user, target
+        )
+
+        assert dtype is None  # facade doesn't change type
+        assert dpower == 140  # doubled power with status
+        assert "140" in info
+
+    def test_regular_move_no_dynamic(self):
+        """Regular moves like flamethrower return no dynamic info."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = MagicMock()
+        sim.enable_dynamic_calcs = True
+        sim.enable_dynamic_flags = True
+
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = None
+        user.status = None
+
+        target = MagicMock()
+        target.item = None
+        target.status = None
+
+        move = Move("flamethrower", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, user, target
+        )
+
+        assert dtype is None
+        assert dpower is None
+        assert info == ""
+
+    def test_grassyglide_priority_info(self):
+        """Grassyglide in Grassy Terrain shows priority info."""
+        from unittest.mock import MagicMock
+
+        from poke_env.environment.field import Field
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = MagicMock()
+        sim.enable_dynamic_calcs = True
+        sim.enable_dynamic_flags = True
+
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {Field.GRASSY_TERRAIN: 1}
+
+        user = MagicMock()
+        user.item = None
+        user.status = None
+        user.type_1 = MagicMock()
+        user.type_1.name = "GRASS"
+        user.type_2 = None
+        user.ability = "overgrow"
+
+        target = MagicMock()
+        target.item = None
+        target.status = None
+
+        move = Move("grassyglide", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, user, target
+        )
+
+        assert "pri+1" in info
+
+    def test_knockoff_target_item_power(self):
+        """Knock off with target having removable item → 97.5 power."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = MagicMock()
+        sim.enable_dynamic_calcs = True
+        sim.enable_dynamic_flags = True
+
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = None
+        user.status = None
+
+        target = MagicMock()
+        target.item = "choicescarf"
+        target.status = None
+
+        move = Move("knockoff", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, user, target
+        )
+
+        assert dpower == 97.5
+        assert "97.5" in info
+
+
+@pytest.mark.moves
+class TestPromptBackwardCompatibility:
+    """Verify that when flags are disabled, prompts are unchanged."""
+
+    def test_helper_returns_none_when_disabled(self):
+        """The integration helper returns no-op values when flags off."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = MagicMock()
+        sim.enable_dynamic_calcs = False
+        sim.enable_dynamic_flags = False
+
+        battle = MagicMock()
+        battle.weather = {MagicMock(): 1}
+
+        move = Move("weatherball", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, MagicMock(), MagicMock()
+        )
+
+        assert dtype is None
+        assert dpower is None
+        assert info == ""
+
+    def test_calcs_without_flags_no_effect(self):
+        """VAL-CROSS-001: enable_dynamic_calcs=True alone has no effect."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = MagicMock()
+        sim.enable_dynamic_calcs = True
+        sim.enable_dynamic_flags = False
+
+        battle = MagicMock()
+        battle.weather = {}
+
+        move = Move("weatherball", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, MagicMock(), MagicMock()
+        )
+
+        # calcs require flags to be enabled
+        assert dtype is None
+        assert dpower is None
+        assert info == ""
+
+    def test_no_dynamic_for_non_applicable_moves(self):
+        """VAL-CROSS-004: Non-applicable moves show no dynamic info."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = MagicMock()
+        sim.enable_dynamic_calcs = True
+        sim.enable_dynamic_flags = True
+
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = "leftovers"
+        user.status = None
+
+        target = MagicMock()
+        target.item = None
+        target.status = None
+
+        for move_id in ("tackle", "flamethrower", "thunderbolt", "icebeam"):
+            move = Move(move_id, gen=9)
+            dtype, dpower, info = _apply_dynamic_calcs_to_move(
+                move, battle, sim, user, target
+            )
+            assert dtype is None, f"{move_id} should not have dynamic type"
+            assert dpower is None, f"{move_id} should not have dynamic power"
+            assert info == "", f"{move_id} should not have dynamic info"
+
+
+@pytest.mark.moves
+class TestDynamicTypeOverrides:
+    """Verify dynamic type correctly overrides static type for display."""
+
+    def test_weatherball_type_is_capitalized(self):
+        """Dynamic type is returned in capitalized form for display."""
+        from unittest.mock import MagicMock
+
+        from poke_env.environment.weather import Weather
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = MagicMock()
+        sim.enable_dynamic_calcs = True
+        sim.enable_dynamic_flags = True
+
+        for weather, expected_type in [
+            ({Weather.RAINDANCE: 1}, "Water"),
+            ({Weather.SUNNYDAY: 1}, "Fire"),
+            ({Weather.SANDSTORM: 1}, "Rock"),
+            ({Weather.HAIL: 1}, "Ice"),
+        ]:
+            battle = MagicMock()
+            battle.weather = weather
+            battle.fields = {}
+
+            user = MagicMock()
+            user.item = None
+            user.status = None
+
+            target = MagicMock()
+            target.item = None
+            target.status = None
+
+            move = Move("weatherball", gen=9)
+            dtype, _, _ = _apply_dynamic_calcs_to_move(move, battle, sim, user, target)
+            assert dtype == expected_type, f"Weather {weather} → {expected_type}"
+
+    def test_no_weather_type_is_normal(self):
+        """Without weather, weatherball type is Normal."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = MagicMock()
+        sim.enable_dynamic_calcs = True
+        sim.enable_dynamic_flags = True
+
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = None
+        user.status = None
+
+        target = MagicMock()
+        target.item = None
+        target.status = None
+
+        move = Move("weatherball", gen=9)
+        dtype, _, _ = _apply_dynamic_calcs_to_move(move, battle, sim, user, target)
+        # weatherball returns "Normal" in no weather
+        assert dtype == "Normal"
+
+
+@pytest.mark.moves
+class TestDynamicPowerOverrides:
+    """Verify dynamic power correctly overrides base_power."""
+
+    def test_acrobatics_power_with_item(self):
+        """Acrobatics with item = 55 (no change)."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = MagicMock()
+        sim.enable_dynamic_calcs = True
+        sim.enable_dynamic_flags = True
+
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = "leftovers"
+        user.status = None
+
+        target = MagicMock()
+        target.item = None
+        target.status = None
+
+        move = Move("acrobatics", gen=9)
+        _, dpower, _ = _apply_dynamic_calcs_to_move(move, battle, sim, user, target)
+        assert dpower == 55
+
+    def test_hex_no_status(self):
+        """Hex without target status = 65 (no change)."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = MagicMock()
+        sim.enable_dynamic_calcs = True
+        sim.enable_dynamic_flags = True
+
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = None
+        user.status = None
+
+        target = MagicMock()
+        target.item = None
+        target.status = None
+
+        move = Move("hex", gen=9)
+        _, dpower, _ = _apply_dynamic_calcs_to_move(move, battle, sim, user, target)
+        assert dpower == 65
+
+    def test_hex_with_status(self):
+        """Hex with target status = 130 (doubled)."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = MagicMock()
+        sim.enable_dynamic_calcs = True
+        sim.enable_dynamic_flags = True
+
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = None
+        user.status = None
+
+        target = MagicMock()
+        target.item = None
+        target.status = "psn"
+
+        move = Move("hex", gen=9)
+        _, dpower, _ = _apply_dynamic_calcs_to_move(move, battle, sim, user, target)
+        assert dpower == 130

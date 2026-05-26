@@ -7,6 +7,12 @@ from poke_env.environment.pokemon import Pokemon
 from poke_env.environment.side_condition import SideCondition
 from poke_env.player.local_simulation import LocalSim, move_type_damage_wrapper
 from poke_env.player.battle_order import DefaultBattleOrder
+from pokechamp.dynamic_move import (
+    resolve_dynamic_type,
+    resolve_dynamic_power,
+    resolve_dynamic_priority,
+    format_dynamic_info,
+)
 
 # ---------------------------------------------------------------------------
 # Dynamic flag annotation helpers
@@ -47,6 +53,85 @@ def format_flag_text(move: Move) -> str:
     if annotations:
         return " " + " ".join(annotations)
     return ""
+
+
+# ---------------------------------------------------------------------------
+# Dynamic move calculation helpers for prompt integration
+# ---------------------------------------------------------------------------
+
+
+def _apply_dynamic_calcs_to_move(
+    move: Move,
+    battle: Battle,
+    sim: LocalSim,
+    user: Pokemon,
+    target: Pokemon,
+):
+    """Apply dynamic move calculations for prompt generation.
+
+    Returns (resolved_type, resolved_base_power, dynamic_info_str).
+    All values are None/"" when dynamic flags/calcs are disabled.
+
+    Parameters
+    ----------
+    move : Move
+        The move to resolve.
+    battle : Battle
+        Current battle state (provides weather, fields, etc.).
+    sim : LocalSim
+        Simulation object (provides flag settings).
+    user : Pokemon
+        The pokemon using the move.
+    target : Pokemon
+        The pokemon targeted by the move.
+
+    Returns
+    -------
+    (type_str, base_power, info_str)
+        type_str: capitalized type name (e.g. "Water") or None.
+        base_power: resolved base power (int/float) or None.
+        info_str: formatted dynamic info string or "".
+    """
+    if not (
+        getattr(sim, "enable_dynamic_calcs", False)
+        and getattr(sim, "enable_dynamic_flags", False)
+    ):
+        return None, None, ""
+
+    dtype = resolve_dynamic_type(
+        move,
+        weather=battle.weather,
+        user=user,
+    )
+
+    dpower = resolve_dynamic_power(
+        move,
+        weather=battle.weather,
+        user=user,
+        target=target,
+        user_item=getattr(user, "item", None),
+        user_status=getattr(user, "status", None),
+        target_item=getattr(target, "item", None),
+        target_status=getattr(target, "status", None),
+    )
+
+    dynamic_info = format_dynamic_info(
+        move,
+        weather=battle.weather,
+        user=user,
+        target=target,
+        fields=getattr(battle, "fields", None),
+        user_item=getattr(user, "item", None),
+        user_status=getattr(user, "status", None),
+        target_item=getattr(target, "item", None),
+        target_status=getattr(target, "status", None),
+    )
+
+    # Normalize type to capitalized form for display
+    if dtype:
+        dtype = dtype.capitalize()
+
+    return dtype, dpower, dynamic_info
 
 
 def get_turn_summary(sim: LocalSim, battle: Battle, n_turn: int = 5) -> str:
@@ -1044,6 +1129,18 @@ def state_translate(
             if opponent_move.base_power == 0:
                 continue  # only count attack move
 
+            # Dynamic move calculations for opponent's revealed moves
+            opp_dtype, opp_dpower, _ = _apply_dynamic_calcs_to_move(
+                opponent_move,
+                battle,
+                sim,
+                battle.opponent_active_pokemon,
+                battle.active_pokemon,
+            )
+            opp_base_power = (
+                opp_dpower if opp_dpower is not None else opponent_move.base_power
+            )
+
             if opponent_move.category.name == "SPECIAL":
                 opponent_spa = opponent_stats["spa"] * sim.boost_multiplier(
                     "spa", opponent_boosts["spa"]
@@ -1051,7 +1148,7 @@ def state_translate(
                 active_spd = active_stats["spd"] * sim.boost_multiplier(
                     "spd", active_boosts["spd"]
                 )
-                power = round(opponent_spa / active_spd * opponent_move.base_power)
+                power = round(opponent_spa / active_spd * opp_base_power)
 
             elif opponent_move.category.name == "PHYSICAL":
                 opponent_atk = opponent_stats["atk"] * sim.boost_multiplier(
@@ -1060,12 +1157,21 @@ def state_translate(
                 active_def = active_stats["atk"] * sim.boost_multiplier(
                     "atk", active_boosts["atk"]
                 )
-                power = round(opponent_atk / active_def * opponent_move.base_power)
+                power = round(opponent_atk / active_def * opp_base_power)
             else:
                 power = 0
 
-            opponent_move_prompt += f"[{opponent_move.id},{opponent_move.type.name.capitalize()},Power:{power}],"
-            opponent_type_list.append(opponent_move.type.name)
+            opp_type_display = (
+                opp_dtype if opp_dtype else opponent_move.type.name.capitalize()
+            )
+            opp_type_for_list = (
+                opp_dtype.upper() if opp_dtype else opponent_move.type.name
+            )
+
+            opponent_move_prompt += (
+                f"[{opponent_move.id},{opp_type_display},Power:{power}],"
+            )
+            opponent_type_list.append(opp_type_for_list)
 
     if opponent_move_prompt:
         opponent_prompt = (
@@ -1244,6 +1350,18 @@ def state_translate(
         except:
             effect = ""
 
+        # Dynamic move calculations (only when both flags enabled)
+        dtype, dpower, dynamic_info = _apply_dynamic_calcs_to_move(
+            move,
+            battle,
+            sim,
+            battle.active_pokemon,
+            battle.opponent_active_pokemon,
+        )
+
+        # Use dynamic base_power if resolved, else static
+        base_power = dpower if dpower is not None else move.base_power
+
         if move.category.name == "SPECIAL":
             active_spa = active_stats["spa"] * sim.boost_multiplier(
                 "spa", active_boosts["spa"]
@@ -1251,7 +1369,7 @@ def state_translate(
             opponent_spd = opponent_stats["spd"] * sim.boost_multiplier(
                 "spd", active_boosts["spd"]
             )
-            power = round(active_spa / opponent_spd * move.base_power)
+            power = round(active_spa / opponent_spd * base_power)
             move_category = ""
         elif move.category.name == "PHYSICAL":
             active_atk = active_stats["atk"] * sim.boost_multiplier(
@@ -1260,14 +1378,18 @@ def state_translate(
             opponent_def = opponent_stats["def"] * sim.boost_multiplier(
                 "def", active_boosts["def"]
             )
-            power = round(active_atk / opponent_def * move.base_power)
+            power = round(active_atk / opponent_def * base_power)
             move_category = ""
         else:
             move_category = move.category.name.capitalize()
             power = 0
 
+        # Use dynamic type if resolved, else static
+        move_type_display = dtype if dtype else move.type.name.capitalize()
+        move_type_for_eff = dtype.upper() if dtype else move.type.name
+
         move_prompt += (
-            f"Move:{move.id},Type:{move.type.name.capitalize()},"
+            f"Move:{move.id},Type:{move_type_display},"
             + (f"{move_category}-move," if move_category else "")
             + f"Power:{power},Acc:{round(move.accuracy * sim.boost_multiplier('accuracy', active_boosts['accuracy'])*100)}%"
         )
@@ -1276,7 +1398,9 @@ def state_translate(
             move_prompt += f",Effect:{effect}"
         # whether is effective to the target.
         move_type_damage_prompt = move_type_damage_wrapper(
-            battle.opponent_active_pokemon, sim.gen.type_chart, [move.type.name]
+            battle.opponent_active_pokemon,
+            sim.gen.type_chart,
+            [move_type_for_eff],
         )
         if move_type_damage_prompt and move.base_power:
             move_prompt += f'({move_type_damage_prompt.split("is ")[-1][:-1]})'
@@ -1285,6 +1409,9 @@ def state_translate(
             flag_text = format_flag_text(move)
             if flag_text:
                 move_prompt += flag_text
+        # dynamic info from calculations (e.g., "rain→Water/100BP")
+        if dynamic_info:
+            move_prompt += f",Dynamic:{dynamic_info}"
         move_prompt += "\n"
 
     move_choices = [move.id for move in battle.available_moves]
@@ -1414,12 +1541,19 @@ def get_opp_move_summary(
 ):
     switch_move_prompt = f" Seen Moves:"
     for move in seen_moves:
+        # Apply dynamic type to opponent's observed/seen moves only
+        opp_dtype, _, _ = _apply_dynamic_calcs_to_move(
+            move, battle, sim, pokemon, battle.active_pokemon
+        )
+        opp_type_display = opp_dtype if opp_dtype else move.type.name.capitalize()
+        opp_type_for_eff = opp_dtype.upper() if opp_dtype else move.type.name
+
         if move.base_power == 0:
-            switch_move_prompt += f"[{move.id},{move.type.name.capitalize()}],"
+            switch_move_prompt += f"[{move.id},{opp_type_display}],"
         #     continue # only output attack move
         else:
             move_type_damage_prompt = move_type_damage_wrapper(
-                battle.active_pokemon, sim.gen.type_chart, [move.type.name]
+                battle.active_pokemon, sim.gen.type_chart, [opp_type_for_eff]
             )
             if "2x" in move_type_damage_prompt:
                 damage_multiplier = "2"
@@ -1434,7 +1568,9 @@ def get_opp_move_summary(
             else:
                 damage_multiplier = "1"
 
-            switch_move_prompt += f"[{move.id},{move.type.name.capitalize()},{damage_multiplier}x damage],"
+            switch_move_prompt += (
+                f"[{move.id},{opp_type_display},{damage_multiplier}x damage],"
+            )
     switch_move_prompt += f" Potential Moves:"
     for move in potential_moves:
         if move.base_power == 0:
@@ -1575,12 +1711,19 @@ def get_opp_move_summary2(
 
     switch_move_prompt = f" Seen Moves:"
     for move in seen_moves:
+        # Apply dynamic type to opponent's observed/seen moves only
+        opp_dtype, _, _ = _apply_dynamic_calcs_to_move(
+            move, battle, sim, pokemon, battle.active_pokemon[idx]
+        )
+        opp_type_display = opp_dtype if opp_dtype else move.type.name.capitalize()
+        opp_type_for_eff = opp_dtype.upper() if opp_dtype else move.type.name
+
         if move.base_power == 0:
-            switch_move_prompt += f"[{move.id},{move.type.name.capitalize()}],"
+            switch_move_prompt += f"[{move.id},{opp_type_display}],"
         #     continue # only output attack move
         else:
             move_type_damage_prompt = move_type_damage_wrapper(
-                battle.active_pokemon[idx], sim.gen.type_chart, [move.type.name]
+                battle.active_pokemon[idx], sim.gen.type_chart, [opp_type_for_eff]
             )
             if "2x" in move_type_damage_prompt:
                 damage_multiplier = "2"
@@ -1595,7 +1738,9 @@ def get_opp_move_summary2(
             else:
                 damage_multiplier = "1"
 
-            switch_move_prompt += f"[{move.id},{move.type.name.capitalize()},{damage_multiplier}x damage],"
+            switch_move_prompt += (
+                f"[{move.id},{opp_type_display},{damage_multiplier}x damage],"
+            )
     switch_move_prompt += f" Potential Moves:"
     for move in potential_moves:
         if move.base_power == 0:
@@ -2049,6 +2194,18 @@ def state_translate2(
         except:
             effect = ""
 
+        # Dynamic move calculations (only when both flags enabled)
+        dtype, dpower, dynamic_info = _apply_dynamic_calcs_to_move(
+            move,
+            battle,
+            sim,
+            battle.active_pokemon,
+            battle.opponent_active_pokemon,
+        )
+
+        # Use dynamic base_power if resolved, else static
+        base_power = dpower if dpower is not None else move.base_power
+
         if move.category.name == "SPECIAL":
             active_spa = active_stats["spa"] * sim.boost_multiplier(
                 "spa", active_boosts["spa"]
@@ -2056,7 +2213,7 @@ def state_translate2(
             opponent_spd = opponent_stats["spd"] * sim.boost_multiplier(
                 "spd", active_boosts["spd"]
             )
-            power = round(active_spa / opponent_spd * move.base_power)
+            power = round(active_spa / opponent_spd * base_power)
             move_category = ""
         elif move.category.name == "PHYSICAL":
             active_atk = active_stats["atk"] * sim.boost_multiplier(
@@ -2065,14 +2222,18 @@ def state_translate2(
             opponent_def = opponent_stats["def"] * sim.boost_multiplier(
                 "def", active_boosts["def"]
             )
-            power = round(active_atk / opponent_def * move.base_power)
+            power = round(active_atk / opponent_def * base_power)
             move_category = ""
         else:
             move_category = move.category.name.capitalize()
             power = 0
 
+        # Use dynamic type if resolved, else static
+        move_type_display = dtype if dtype else move.type.name.capitalize()
+        move_type_for_eff = dtype.upper() if dtype else move.type.name
+
         move_prompt += (
-            f"Move:{move.id},Type:{move.type.name.capitalize()},"
+            f"Move:{move.id},Type:{move_type_display},"
             + (f"{move_category}-move," if move_category else "")
             + f"Power:{power},Acc:{round(move.accuracy * sim.boost_multiplier('accuracy', active_boosts['accuracy'])*100)}%"
         )
@@ -2081,7 +2242,9 @@ def state_translate2(
             move_prompt += f",Effect:{effect}"
         # whether is effective to the target.
         move_type_damage_prompt = move_type_damage_wrapper(
-            battle.opponent_active_pokemon, sim.gen.type_chart, [move.type.name]
+            battle.opponent_active_pokemon,
+            sim.gen.type_chart,
+            [move_type_for_eff],
         )
         if move_type_damage_prompt and move.base_power:
             move_prompt += f'({move_type_damage_prompt.split("is ")[-1][:-1]})'
@@ -2090,6 +2253,9 @@ def state_translate2(
             flag_text = format_flag_text(move)
             if flag_text:
                 move_prompt += flag_text
+        # dynamic info from calculations (e.g., "rain→Water/100BP")
+        if dynamic_info:
+            move_prompt += f",Dynamic:{dynamic_info}"
         move_prompt += "\n"
 
     move_choices = [move.id for move in battle.available_moves]
@@ -2537,6 +2703,24 @@ def state_translate3(
             except:
                 effect = ""
 
+            # Dynamic move calculations (only when both flags enabled)
+            # For VGC, use the first non-None opponent as target
+            opp_target = None
+            for mon in battle.opponent_active_pokemon:
+                if mon is not None:
+                    opp_target = mon
+                    break
+            dtype, dpower, dynamic_info = _apply_dynamic_calcs_to_move(
+                move,
+                battle,
+                sim,
+                battle.active_pokemon[idx],
+                opp_target,
+            )
+
+            # Use dynamic base_power if resolved, else static
+            base_power = dpower if dpower is not None else move.base_power
+
             if move.category.name == "SPECIAL":
                 active_spa = active_stats["spa"] * sim.boost_multiplier(
                     "spa", active_boosts["spa"]
@@ -2545,9 +2729,7 @@ def state_translate3(
                     opp_stats["spd"] * sim.boost_multiplier("spd", active_boosts["spd"])
                     for opp_stats in opponent_stats
                 ]
-                power = [
-                    round(active_spa / spd * move.base_power) for spd in opponent_spd
-                ]
+                power = [round(active_spa / spd * base_power) for spd in opponent_spd]
                 move_category = ""
             elif move.category.name == "PHYSICAL":
                 active_atk = active_stats["atk"] * sim.boost_multiplier(
@@ -2558,16 +2740,19 @@ def state_translate3(
                     for opp_stats in opponent_stats
                 ]
                 power = [
-                    round(active_atk / defense * move.base_power)
-                    for defense in opponent_def
+                    round(active_atk / defense * base_power) for defense in opponent_def
                 ]
                 move_category = ""
             else:
                 move_category = move.category.name.capitalize()
                 power = 0
 
+            # Use dynamic type if resolved, else static
+            move_type_display = dtype if dtype else move.type.name.capitalize()
+            move_type_for_eff = dtype.upper() if dtype else move.type.name
+
             move_prompt += (
-                f"Move:{move.id},Type:{move.type.name.capitalize()},"
+                f"Move:{move.id},Type:{move_type_display},"
                 + (f"{move_category}-move," if move_category else "")
                 + f"Power:{power},Acc:{round(move.accuracy * sim.boost_multiplier('accuracy', active_boosts['accuracy'])*100)}%"
             )
@@ -2580,7 +2765,9 @@ def state_translate3(
                 if mon is None:
                     continue
                 move_type_damage_prompt += (
-                    move_type_damage_wrapper(mon, sim.gen.type_chart, [move.type.name])
+                    move_type_damage_wrapper(
+                        mon, sim.gen.type_chart, [move_type_for_eff]
+                    )
                     + "\n"
                 )
             if move_type_damage_prompt and move.base_power:
@@ -2590,6 +2777,9 @@ def state_translate3(
                 flag_text = format_flag_text(move)
                 if flag_text:
                     move_prompt += flag_text
+            # dynamic info from calculations (e.g., "rain→Water/100BP")
+            if dynamic_info:
+                move_prompt += f",Dynamic:{dynamic_info}"
             move_prompt += "\n"
 
         moves = battle.available_moves[idx]
