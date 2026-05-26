@@ -1,11 +1,11 @@
 # VLLMPlayer configuration
 # These values are used as defaults when no explicit arguments are passed.
 
-model: "Qwen/Qwen3.6-27B"
+model: "google/gemma-4-26B-A4B-it"
 base_url: "http://172.17.0.1:18043/v1"
 api_key: "vllm"
-temperature: 0.7
-top_p: 0.8
+temperature: 1.0
+top_p: 0.95
 presence_penalty: 1.5
 max_tokens: 32768
 json_format: false
@@ -14,6 +14,6 @@ stop: []
 
 # vLLM-specific parameters passed via extra_body
 extra_body:
-  top_k: 20
+  top_k: 64
   chat_template_kwargs:
     enable_thinking: false
