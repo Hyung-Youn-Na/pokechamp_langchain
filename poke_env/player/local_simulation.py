@@ -203,6 +203,7 @@ class LocalSim:
         prompt_translate: Callable = None,
         enable_dynamic_flags: bool = False,
         enable_dynamic_calcs: bool = False,
+        enable_showdown_oracle: bool = False,
     ):
         self.battle = deepcopy(battle)
         self.move_effect = move_effect
@@ -220,6 +221,8 @@ class LocalSim:
         self.prompt_translate = prompt_translate
         self.enable_dynamic_flags = enable_dynamic_flags
         self.enable_dynamic_calcs = enable_dynamic_calcs
+        self.enable_showdown_oracle = enable_showdown_oracle
+        self.oracle = None
 
         self.switch_set = set()
 
@@ -2322,6 +2325,7 @@ class SimNode:
         sim=None,
         enable_dynamic_flags: bool = False,
         enable_dynamic_calcs: bool = False,
+        enable_showdown_oracle: bool = False,
     ):
         if sim is None:
             self.simulation = LocalSim(
@@ -2338,6 +2342,7 @@ class SimNode:
                 prompt_translate=prompt_translate,
                 enable_dynamic_flags=enable_dynamic_flags,
                 enable_dynamic_calcs=enable_dynamic_calcs,
+                enable_showdown_oracle=enable_showdown_oracle,
             )
         else:
             self.simulation = sim

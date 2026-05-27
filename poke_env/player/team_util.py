@@ -264,6 +264,7 @@ def get_llm_player(
     timeout_seconds: int = 90,
     enable_dynamic_flags: bool = False,
     enable_dynamic_calcs: bool = False,
+    enable_showdown_oracle: bool = False,
 ) -> Player:
     from pokechamp.llm_player import LLMPlayer
     from pokechamp.prompts import prompt_translate, state_translate2, state_translate3
@@ -299,6 +300,7 @@ def get_llm_player(
             llm_backend=llm_backend,
             enable_dynamic_flags=enable_dynamic_flags,
             enable_dynamic_calcs=enable_dynamic_calcs,
+            enable_showdown_oracle=enable_showdown_oracle,
         )
     if name == "abyssal":
         return AbyssalPlayer(
@@ -369,6 +371,7 @@ def get_llm_player(
                 llm_backend=llm_backend,
                 enable_dynamic_flags=enable_dynamic_flags,
                 enable_dynamic_calcs=enable_dynamic_calcs,
+                enable_showdown_oracle=enable_showdown_oracle,
             )
     elif "pokechamp" in name:
         # Use VGC player for VGC formats, timeout player for online mode, regular player for others
@@ -410,6 +413,7 @@ def get_llm_player(
                 timeout_seconds=timeout_seconds,
                 enable_dynamic_flags=enable_dynamic_flags,
                 enable_dynamic_calcs=enable_dynamic_calcs,
+                enable_showdown_oracle=enable_showdown_oracle,
             )
         else:
             return LLMPlayer(
@@ -429,6 +433,7 @@ def get_llm_player(
                 llm_backend=llm_backend,
                 enable_dynamic_flags=enable_dynamic_flags,
                 enable_dynamic_calcs=enable_dynamic_calcs,
+                enable_showdown_oracle=enable_showdown_oracle,
             )
     elif "vgc" in name:
         return LLMVGCPlayer(
@@ -473,6 +478,7 @@ def get_llm_player(
             llm_backend=llm_backend,
             enable_dynamic_flags=enable_dynamic_flags,
             enable_dynamic_calcs=enable_dynamic_calcs,
+            enable_showdown_oracle=enable_showdown_oracle,
         )
     else:
         # Try to find a custom bot in the bots folder

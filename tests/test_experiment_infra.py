@@ -131,9 +131,12 @@ class TestFeatureFlagPropagation:
             _dynamax_disable=False,
             enable_dynamic_flags=True,
             enable_dynamic_calcs=True,
+            enable_showdown_oracle=True,
         )
         assert sim.enable_dynamic_flags is True
         assert sim.enable_dynamic_calcs is True
+        assert sim.enable_showdown_oracle is True
+        assert sim.oracle is None
 
     @pytest.mark.moves
     def test_localsim_flags_default_false(self):
@@ -158,6 +161,8 @@ class TestFeatureFlagPropagation:
         )
         assert sim.enable_dynamic_flags is False
         assert sim.enable_dynamic_calcs is False
+        assert sim.enable_showdown_oracle is False
+        assert sim.oracle is None
 
 
 # ---------------------------------------------------------------------------

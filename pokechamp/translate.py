@@ -128,7 +128,8 @@ async def add_battle(battle_text, format, battle_id, json_text, gen, prompt_tran
                    llm_player.ability_effect, llm_player.pokemon_ability_dict,
                    llm_player.item_effect, llm_player.pokemon_item_dict,
                    llm_player.gen, llm_player._dynamax_disable,
-                   format=llm_player.format, prompt_translate=llm_player.prompt_translate)
+                   format=llm_player.format, prompt_translate=llm_player.prompt_translate,
+                   enable_showdown_oracle=False)
 
     # Process each turn
     for turn, message in enumerate(battle_turns_text):

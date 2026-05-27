@@ -83,6 +83,7 @@ class LLMPlayer(Player):
         llm_backend=None,
         enable_dynamic_flags: bool = False,
         enable_dynamic_calcs: bool = False,
+        enable_showdown_oracle: bool = False,
     ):
 
         super().__init__(
@@ -192,6 +193,7 @@ class LLMPlayer(Player):
         # Feature flags for dynamic move info (default False = backward compatible)
         self.enable_dynamic_flags = enable_dynamic_flags
         self.enable_dynamic_calcs = enable_dynamic_calcs
+        self.enable_showdown_oracle = enable_showdown_oracle
 
         # LLM call tracking — incremented per get_LLM_action call, reset per battle
         self.llm_call_count = 0
@@ -404,6 +406,7 @@ class LLMPlayer(Player):
             prompt_translate=self.prompt_translate,
             enable_dynamic_flags=self.enable_dynamic_flags,
             enable_dynamic_calcs=self.enable_dynamic_calcs,
+            enable_showdown_oracle=self.enable_showdown_oracle,
         )
         if battle.turn <= 1 and self.use_strat_prompt:
             self.strategy_prompt = sim.get_llm_system_prompt(
@@ -842,6 +845,7 @@ class LLMPlayer(Player):
             format=self.format,
             enable_dynamic_flags=self.enable_dynamic_flags,
             enable_dynamic_calcs=self.enable_dynamic_calcs,
+            enable_showdown_oracle=self.enable_showdown_oracle,
         )
         best_action = None
         best_action_turns = np.inf
@@ -922,6 +926,7 @@ class LLMPlayer(Player):
                     format=self.format,
                     enable_dynamic_flags=self.enable_dynamic_flags,
                     enable_dynamic_calcs=self.enable_dynamic_calcs,
+                    enable_showdown_oracle=self.enable_showdown_oracle,
                 )
                 return sim.get_hp_diff()
             except:
@@ -978,6 +983,7 @@ class LLMPlayer(Player):
             sim=sim,
             enable_dynamic_flags=self.enable_dynamic_flags,
             enable_dynamic_calcs=self.enable_dynamic_calcs,
+            enable_showdown_oracle=self.enable_showdown_oracle,
         )
         q = [root]
         leaf_nodes = []

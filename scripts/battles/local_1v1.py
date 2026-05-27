@@ -181,6 +181,12 @@ parser.add_argument(
     default=False,
     help="Enable dynamic move calculations in prompts (requires vllm/* backend)",
 )
+parser.add_argument(
+    "--enable_showdown_oracle",
+    action="store_true",
+    default=False,
+    help="Enable Showdown oracle for move outcome prediction (Node.js required)",
+)
 
 args = parser.parse_args()
 
@@ -224,6 +230,7 @@ async def main():
         battle_format=args.battle_format,
         enable_dynamic_flags=args.enable_dynamic_flags,
         enable_dynamic_calcs=args.enable_dynamic_calcs,
+        enable_showdown_oracle=args.enable_showdown_oracle,
     )
 
     opponent = get_llm_player(
