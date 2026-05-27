@@ -2006,3 +2006,523 @@ class TestFormatDynamicInfoNewMoves:
             "terrainpulse", terrain=None, user_grounded=True
         )
         assert result == ""
+
+
+# ===========================================================================
+# Area 15: Item-Based Dynamic Type Resolution
+# ===========================================================================
+
+
+@pytest.mark.moves
+class TestResolveDynamicTypeJudgment:
+    """Judgment type resolution based on held plate item."""
+
+    @pytest.mark.parametrize(
+        "item,expected",
+        [
+            ("flameplate", "Fire"),
+            ("splashplate", "Water"),
+            ("meadowplate", "Grass"),
+            ("zapplate", "Electric"),
+            ("mindplate", "Psychic"),
+            ("icicleplate", "Ice"),
+            ("fistplate", "Fighting"),
+            ("toxicplate", "Poison"),
+            ("earthplate", "Ground"),
+            ("skyplate", "Flying"),
+            ("insectplate", "Bug"),
+            ("stoneplate", "Rock"),
+            ("spookyplate", "Ghost"),
+            ("dracoplate", "Dragon"),
+            ("dreadplate", "Dark"),
+            ("ironplate", "Steel"),
+            ("pixieplate", "Fairy"),
+        ],
+    )
+    def test_plate_mapping(self, item, expected):
+        """VAL-ITEM-001: Plate item maps to correct type."""
+        assert resolve_dynamic_type("judgment", user_item=item) == expected
+
+    def test_no_item_none(self):
+        """VAL-ITEM-002: No item → None."""
+        assert resolve_dynamic_type("judgment", user_item=None) is None
+
+    def test_z_crystal_excluded(self):
+        """VAL-ITEM-003: Z-crystal (has onPlate but is zMove) → None."""
+        assert resolve_dynamic_type("judgment", user_item="decidiumz") is None
+        assert resolve_dynamic_type("judgment", user_item="firiumz") is None
+        assert resolve_dynamic_type("judgment", user_item="buginiumz") is None
+
+    def test_non_plate_item_none(self):
+        """VAL-ITEM-004: Non-plate item → None."""
+        assert resolve_dynamic_type("judgment", user_item="leftovers") is None
+        assert resolve_dynamic_type("judgment", user_item="choicescarf") is None
+
+    def test_no_kwarg_none(self):
+        """VAL-ITEM-005: No user_item kwarg → None."""
+        assert resolve_dynamic_type("judgment") is None
+
+
+@pytest.mark.moves
+class TestResolveDynamicTypeMultiAttack:
+    """Multi-Attack type resolution based on held memory item."""
+
+    @pytest.mark.parametrize(
+        "item,expected",
+        [
+            ("firememory", "Fire"),
+            ("watermemory", "Water"),
+            ("grassmemory", "Grass"),
+            ("electricmemory", "Electric"),
+            ("psychicmemory", "Psychic"),
+            ("icememory", "Ice"),
+            ("fightingmemory", "Fighting"),
+            ("poisonmemory", "Poison"),
+            ("groundmemory", "Ground"),
+            ("flyingmemory", "Flying"),
+            ("bugmemory", "Bug"),
+            ("rockmemory", "Rock"),
+            ("ghostmemory", "Ghost"),
+            ("dragonmemory", "Dragon"),
+            ("darkmemory", "Dark"),
+            ("steelmemory", "Steel"),
+            ("fairymemory", "Fairy"),
+        ],
+    )
+    def test_memory_mapping(self, item, expected):
+        """VAL-ITEM-006: Memory item maps to correct type."""
+        assert resolve_dynamic_type("multiattack", user_item=item) == expected
+
+    def test_no_item_none(self):
+        """VAL-ITEM-007: No item → None."""
+        assert resolve_dynamic_type("multiattack", user_item=None) is None
+
+    def test_non_memory_item_none(self):
+        """VAL-ITEM-008: Non-memory item → None."""
+        assert (
+            resolve_dynamic_type("multiattack", user_item="choicescarf") is None
+        )
+        assert (
+            resolve_dynamic_type("multiattack", user_item="leftovers") is None
+        )
+
+    def test_no_kwarg_none(self):
+        """VAL-ITEM-009: No user_item kwarg → None."""
+        assert resolve_dynamic_type("multiattack") is None
+
+
+@pytest.mark.moves
+class TestResolveDynamicTypeTechnoBlast:
+    """Techno Blast type resolution based on held drive item."""
+
+    @pytest.mark.parametrize(
+        "item,expected",
+        [
+            ("burndrive", "Fire"),
+            ("chilldrive", "Ice"),
+            ("dousedrive", "Water"),
+            ("shockdrive", "Electric"),
+        ],
+    )
+    def test_drive_mapping(self, item, expected):
+        """VAL-ITEM-010: Drive item maps to correct type."""
+        assert resolve_dynamic_type("technoblast", user_item=item) == expected
+
+    def test_no_item_none(self):
+        """VAL-ITEM-011: No item → None."""
+        assert resolve_dynamic_type("technoblast", user_item=None) is None
+
+    def test_non_drive_item_none(self):
+        """VAL-ITEM-012: Non-drive item → None."""
+        assert (
+            resolve_dynamic_type("technoblast", user_item="leftovers") is None
+        )
+
+    def test_no_kwarg_none(self):
+        """VAL-ITEM-013: No user_item kwarg → None."""
+        assert resolve_dynamic_type("technoblast") is None
+
+
+@pytest.mark.moves
+class TestResolveDynamicTypeNaturalGift:
+    """Natural Gift type resolution based on held berry item."""
+
+    @pytest.mark.parametrize(
+        "item,expected",
+        [
+            ("cheriberry", "Fire"),
+            ("rawstberry", "Grass"),
+            ("pechaberry", "Electric"),
+            ("sitrusberry", "Psychic"),
+            ("oranberry", "Poison"),
+            ("apicotberry", "Ground"),
+            ("lansatberry", "Flying"),
+            ("salacberry", "Fighting"),
+            ("starfberry", "Psychic"),
+            ("occaberry", "Fire"),
+            ("wacanberry", "Electric"),
+        ],
+    )
+    def test_berry_mapping(self, item, expected):
+        """VAL-ITEM-014: Berry item maps to correct type."""
+        assert resolve_dynamic_type("naturalgift", user_item=item) == expected
+
+    def test_no_item_none(self):
+        """VAL-ITEM-015: No item → None."""
+        assert resolve_dynamic_type("naturalgift", user_item=None) is None
+
+    def test_non_berry_item_none(self):
+        """VAL-ITEM-016: Non-berry item → None."""
+        assert (
+            resolve_dynamic_type("naturalgift", user_item="leftovers") is None
+        )
+        assert (
+            resolve_dynamic_type("naturalgift", user_item="choicescarf") is None
+        )
+
+    def test_unknown_berry_none(self):
+        """VAL-ITEM-018: Unknown berry returns None."""
+        assert (
+            resolve_dynamic_type("naturalgift", user_item="fakeberry") is None
+        )
+
+    def test_power_resolution(self):
+        """VAL-ITEM-017: Natural Gift resolves both type and power."""
+        dtype = resolve_dynamic_type("naturalgift", user_item="cheriberry")
+        assert dtype == "Fire"
+        dpower = resolve_dynamic_power("naturalgift", user_item="cheriberry")
+        assert dpower is not None
+        assert isinstance(dpower, int)
+
+    @pytest.mark.parametrize(
+        "item,expected_power",
+        [
+            ("cheriberry", 80),
+            ("apicotberry", 100),
+            ("blukberry", 90),
+            ("custapberry", 100),
+            ("starfberry", 100),
+            ("tamatoberry", 90),
+        ],
+    )
+    def test_power_tiers(self, item, expected_power):
+        """Verify berry power tiers (80/90/100)."""
+        assert (
+            resolve_dynamic_power("naturalgift", user_item=item) == expected_power
+        )
+
+    def test_power_no_item_none(self):
+        """No item → None power."""
+        assert (
+            resolve_dynamic_power("naturalgift", user_item=None) is None
+        )
+
+    def test_no_kwarg_none(self):
+        """No user_item kwarg → None."""
+        assert resolve_dynamic_type("naturalgift") is None
+
+
+@pytest.mark.moves
+class TestAllOnModifyTypeMoves:
+    """VAL-DISPATCH-001: All 13 onModifyType moves dispatch correctly."""
+
+    def test_all_13_moves_dispatch(self):
+        """Each of the 13 onModifyType moves returns expected type for
+        known input, and None for unrecognized moves."""
+        from unittest.mock import MagicMock
+
+        from poke_env.environment.pokemon_type import PokemonType
+
+        # All 13 moves and their expected output for a specific input
+        cases = {
+            "weatherball": (
+                {"weather": Weather.RAINDANCE},
+                "Water",
+            ),
+            "terablast": ({"tera_type": "Fire"}, "Fire"),
+            "aurawheel": (
+                {"user_species": "morpeko", "user_form": "hangry"},
+                "Dark",
+            ),
+            "hiddenpower": (
+                {"ivs": {"hp": 0, "atk": 0, "def": 0, "spa": 0, "spd": 0, "spe": 0}},
+                "FIGHTING",
+            ),
+            "ivycudgel": ({"user_species": "ogerponwellspring"}, "Water"),
+            "ragingbull": ({"user_species": "taurospaldeablaze"}, "Fire"),
+            "terastarstorm": ({"user_species": "terapagosstellar"}, "Stellar"),
+            "revelationdance": ({"user_type_1": "Fire"}, "Fire"),
+            "terrainpulse": (
+                {"terrain": "electricterrain", "user_grounded": True},
+                "Electric",
+            ),
+            "judgment": ({"user_item": "flameplate"}, "Fire"),
+            "multiattack": ({"user_item": "firememory"}, "Fire"),
+            "technoblast": ({"user_item": "burndrive"}, "Fire"),
+            "naturalgift": ({"user_item": "cheriberry"}, "Fire"),
+        }
+
+        for move_id, (kwargs, expected) in cases.items():
+            result = resolve_dynamic_type(move_id, **kwargs)
+            assert result == expected, (
+                f"{move_id} with {kwargs} returned {result!r}, expected {expected!r}"
+            )
+
+    def test_unknown_move_none(self):
+        """Unrecognized moves return None."""
+        assert resolve_dynamic_type("tackle") is None
+        assert resolve_dynamic_type("flamethrower") is None
+        assert resolve_dynamic_type("thunderbolt") is None
+
+
+@pytest.mark.moves
+class TestFormatDynamicInfoItemMoves:
+    """VAL-DISPATCH-006: format_dynamic_info for item-based moves."""
+
+    def test_judgment_plate(self):
+        result = format_dynamic_info("judgment", user_item="flameplate")
+        assert "Fire" in result
+        assert "plate→Fire" in result
+
+    def test_multiattack_memory(self):
+        result = format_dynamic_info("multiattack", user_item="watermemory")
+        assert "Water" in result
+        assert "memory→Water" in result
+
+    def test_technoblast_drive(self):
+        result = format_dynamic_info("technoblast", user_item="shockdrive")
+        assert "Electric" in result
+        assert "drive→Electric" in result
+
+    def test_naturalgift_berry(self):
+        result = format_dynamic_info("naturalgift", user_item="cheriberry")
+        assert "Fire" in result
+        assert "berry→Fire" in result
+        assert "80" in result  # berry power
+
+    def test_judgment_no_item_empty(self):
+        result = format_dynamic_info("judgment", user_item=None)
+        assert result == ""
+
+    def test_multiattack_no_item_empty(self):
+        result = format_dynamic_info("multiattack", user_item=None)
+        assert result == ""
+
+    def test_technoblast_no_item_empty(self):
+        result = format_dynamic_info("technoblast", user_item=None)
+        assert result == ""
+
+    def test_naturalgift_no_item_empty(self):
+        result = format_dynamic_info("naturalgift", user_item=None)
+        assert result == ""
+
+
+@pytest.mark.moves
+class TestApplyDynamicCalcsItemMoves:
+    """VAL-DISPATCH-003/005: _apply_dynamic_calcs_to_move passes user_item."""
+
+    def _make_sim(self):
+        from unittest.mock import MagicMock
+
+        sim = MagicMock()
+        sim.enable_dynamic_calcs = True
+        sim.enable_dynamic_flags = True
+        return sim
+
+    def test_judgment_flameplate(self):
+        """VAL-DISPATCH-005: judgment with flameplate resolves Fire."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = self._make_sim()
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = "flameplate"
+        user.status = None
+        user.type_1 = MagicMock()
+        user.type_1.name = "FIRE"
+        user.type_2 = None
+        user.ability = None
+
+        target = MagicMock()
+        target.item = None
+        target.status = None
+
+        move = Move("judgment", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, user, target
+        )
+        assert dtype == "Fire"
+        assert "Fire" in info
+
+    def test_multiattack_firememory(self):
+        """multiattack with firememory resolves Fire."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = self._make_sim()
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = "firememory"
+        user.status = None
+        user.type_1 = MagicMock()
+        user.type_1.name = "NORMAL"
+        user.type_2 = None
+        user.ability = None
+
+        target = MagicMock()
+        target.item = None
+        target.status = None
+
+        move = Move("multiattack", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, user, target
+        )
+        assert dtype == "Fire"
+
+    def test_technoblast_burndrive(self):
+        """technoblast with burndrive resolves Fire."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = self._make_sim()
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = "burndrive"
+        user.status = None
+        user.type_1 = MagicMock()
+        user.type_1.name = "NORMAL"
+        user.type_2 = None
+        user.ability = None
+
+        target = MagicMock()
+        target.item = None
+        target.status = None
+
+        move = Move("technoblast", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, user, target
+        )
+        assert dtype == "Fire"
+
+    def test_naturalgift_cheriberry(self):
+        """naturalgift with cheriberry resolves Fire type and 80 power."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = self._make_sim()
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = "cheriberry"
+        user.status = None
+        user.type_1 = MagicMock()
+        user.type_1.name = "NORMAL"
+        user.type_2 = None
+        user.ability = None
+
+        target = MagicMock()
+        target.item = None
+        target.status = None
+
+        move = Move("naturalgift", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, user, target
+        )
+        assert dtype == "Fire"
+        assert dpower == 80
+        assert "berry→Fire" in info
+        assert "80" in info
+
+    def test_judgment_no_item_no_type(self):
+        """judgment with no item returns None type."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = self._make_sim()
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = None
+        user.status = None
+        user.type_1 = MagicMock()
+        user.type_1.name = "NORMAL"
+        user.type_2 = None
+        user.ability = None
+
+        target = MagicMock()
+        target.item = None
+        target.status = None
+
+        move = Move("judgment", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, user, target
+        )
+        assert dtype is None
+        assert info == ""
+
+    def test_user_item_backward_compat(self):
+        """VAL-DISPATCH-003: user_item kwarg accepted without breaking
+        existing calls."""
+        # Weatherball still works when user_item is also present
+        assert (
+            resolve_dynamic_type(
+                "weatherball", weather=Weather.RAINDANCE, user_item="flameplate"
+            )
+            == "Water"
+        )
+        # Non-item moves ignore user_item
+        assert (
+            resolve_dynamic_type("ivycudgel", user_species="ogerpon", user_item="leftovers")
+            == "Grass"
+        )
+
+
+@pytest.mark.moves
+class TestItemMoveBackwardCompatibility:
+    """Verify item-based moves don't break existing functionality."""
+
+    def test_existing_4_moves_unchanged(self):
+        """VAL-BACK-001: Weatherball, terablast, aurawheel, hiddenpower
+        still produce identical results."""
+        assert resolve_dynamic_type("weatherball", weather=Weather.RAINDANCE) == "Water"
+        assert resolve_dynamic_type("terablast", tera_type="Fire") == "Fire"
+        assert (
+            resolve_dynamic_type("aurawheel", user_species="morpeko", user_form="hangry")
+            == "Dark"
+        )
+        assert (
+            resolve_dynamic_type(
+                "hiddenpower",
+                ivs={"hp": 31, "atk": 31, "def": 31, "spa": 31, "spd": 31, "spe": 31},
+            )
+            == "DARK"
+        )
+
+    def test_static_moves_return_none(self):
+        """VAL-BACK-003: Static non-dynamic moves return None."""
+        for move_id in ("tackle", "flamethrower", "thunderbolt"):
+            assert resolve_dynamic_type(move_id) is None

@@ -208,6 +208,7 @@ def resolve_dynamic_type(
     terrain: Any = None,
     user_type_1: Any = None,
     user_grounded: Optional[bool] = None,
+    user_item: Any = None,
 ) -> Optional[str]:
     """Resolve the dynamic type of a move based on battle conditions.
 
@@ -233,6 +234,8 @@ def resolve_dynamic_type(
         User's primary type (for revelationdance).
     user_grounded : bool, optional
         Whether the user is grounded (for terrainpulse).
+    user_item : str, optional
+        User's held item (for judgment, multiattack, technoblast, naturalgift).
 
     Returns
     -------
@@ -260,6 +263,14 @@ def resolve_dynamic_type(
         return _revelationdance_type(user_type_1, tera_type)
     if mid == "terrainpulse":
         return _terrainpulse_type(terrain, user_grounded)
+    if mid == "judgment":
+        return _judgment_type(user_item)
+    if mid == "multiattack":
+        return _multiattack_type(user_item)
+    if mid == "technoblast":
+        return _technoblast_type(user_item)
+    if mid == "naturalgift":
+        return _naturalgift_type(user_item)
     return None
 
 
@@ -450,6 +461,265 @@ def _terrainpulse_type(
     return None
 
 
+# Plate → type mapping for Judgment (17 plates, Z-crystals excluded)
+_PLATE_TYPES: Dict[str, str] = {
+    "dracoplate": "Dragon",
+    "dreadplate": "Dark",
+    "earthplate": "Ground",
+    "fistplate": "Fighting",
+    "flameplate": "Fire",
+    "icicleplate": "Ice",
+    "insectplate": "Bug",
+    "ironplate": "Steel",
+    "meadowplate": "Grass",
+    "mindplate": "Psychic",
+    "pixieplate": "Fairy",
+    "skyplate": "Flying",
+    "splashplate": "Water",
+    "spookyplate": "Ghost",
+    "stoneplate": "Rock",
+    "toxicplate": "Poison",
+    "zapplate": "Electric",
+}
+
+# Memory → type mapping for Multi-Attack (17 memories)
+_MEMORY_TYPES: Dict[str, str] = {
+    "bugmemory": "Bug",
+    "darkmemory": "Dark",
+    "dragonmemory": "Dragon",
+    "electricmemory": "Electric",
+    "fairymemory": "Fairy",
+    "fightingmemory": "Fighting",
+    "firememory": "Fire",
+    "flyingmemory": "Flying",
+    "ghostmemory": "Ghost",
+    "grassmemory": "Grass",
+    "groundmemory": "Ground",
+    "icememory": "Ice",
+    "poisonmemory": "Poison",
+    "psychicmemory": "Psychic",
+    "rockmemory": "Rock",
+    "steelmemory": "Steel",
+    "watermemory": "Water",
+}
+
+# Drive → type mapping for Techno Blast (4 drives)
+_DRIVE_TYPES: Dict[str, str] = {
+    "burndrive": "Fire",
+    "chilldrive": "Ice",
+    "dousedrive": "Water",
+    "shockdrive": "Electric",
+}
+
+# Berry → type mapping for Natural Gift
+_BERRY_TYPES: Dict[str, str] = {
+    "aguavberry": "Dragon",
+    "apicotberry": "Ground",
+    "aspearberry": "Ice",
+    "babiriberry": "Steel",
+    "belueberry": "Electric",
+    "bitterberry": "Ground",
+    "blukberry": "Fire",
+    "burntberry": "Ice",
+    "chartiberry": "Rock",
+    "cheriberry": "Fire",
+    "chestoberry": "Water",
+    "chilanberry": "Normal",
+    "chopleberry": "Fighting",
+    "cobaberry": "Flying",
+    "colburberry": "Dark",
+    "cornnberry": "Bug",
+    "custapberry": "Ghost",
+    "durinberry": "Water",
+    "enigmaberry": "Bug",
+    "figyberry": "Bug",
+    "ganlonberry": "Ice",
+    "goldberry": "Psychic",
+    "grepaberry": "Flying",
+    "habanberry": "Dragon",
+    "hondewberry": "Ground",
+    "iapapaberry": "Dark",
+    "iceberry": "Grass",
+    "jabocaberry": "Dragon",
+    "kasibberry": "Ghost",
+    "kebiaberry": "Poison",
+    "keeberry": "Fairy",
+    "kelpsyberry": "Fighting",
+    "lansatberry": "Flying",
+    "leppaberry": "Fighting",
+    "liechiberry": "Grass",
+    "lumberry": "Flying",
+    "magoberry": "Ghost",
+    "magostberry": "Rock",
+    "marangaberry": "Dark",
+    "micleberry": "Rock",
+    "mintberry": "Water",
+    "miracleberry": "Flying",
+    "mysteryberry": "Fighting",
+    "nanabberry": "Water",
+    "nomelberry": "Dragon",
+    "occaberry": "Fire",
+    "oranberry": "Poison",
+    "pamtresberry": "Steel",
+    "passhoberry": "Water",
+    "payapaberry": "Psychic",
+    "pechaberry": "Electric",
+    "persimberry": "Ground",
+    "petayaberry": "Poison",
+    "pinapberry": "Grass",
+    "pomegberry": "Ice",
+    "przcureberry": "Fire",
+    "psncureberry": "Electric",
+    "qualotberry": "Poison",
+    "rabutaberry": "Ghost",
+    "rawstberry": "Grass",
+    "razzberry": "Steel",
+    "rindoberry": "Grass",
+    "roseliberry": "Fairy",
+    "rowapberry": "Dark",
+    "salacberry": "Fighting",
+    "shucaberry": "Ground",
+    "sitrusberry": "Psychic",
+    "spelonberry": "Dark",
+    "starfberry": "Psychic",
+    "tamatoberry": "Psychic",
+    "tangaberry": "Bug",
+    "wacanberry": "Electric",
+    "watmelberry": "Fire",
+    "wepearberry": "Electric",
+    "wikiberry": "Rock",
+    "yacheberry": "Ice",
+}
+
+# Berry → base power mapping for Natural Gift
+_BERRY_POWERS: Dict[str, int] = {
+    "aguavberry": 80,
+    "apicotberry": 100,
+    "aspearberry": 80,
+    "babiriberry": 80,
+    "belueberry": 100,
+    "bitterberry": 80,
+    "blukberry": 90,
+    "burntberry": 80,
+    "chartiberry": 80,
+    "cheriberry": 80,
+    "chestoberry": 80,
+    "chilanberry": 80,
+    "chopleberry": 80,
+    "cobaberry": 80,
+    "colburberry": 80,
+    "cornnberry": 90,
+    "custapberry": 100,
+    "durinberry": 100,
+    "enigmaberry": 100,
+    "figyberry": 80,
+    "ganlonberry": 100,
+    "goldberry": 80,
+    "grepaberry": 90,
+    "habanberry": 80,
+    "hondewberry": 90,
+    "iapapaberry": 80,
+    "iceberry": 80,
+    "jabocaberry": 100,
+    "kasibberry": 80,
+    "kebiaberry": 80,
+    "keeberry": 100,
+    "kelpsyberry": 90,
+    "lansatberry": 100,
+    "leppaberry": 80,
+    "liechiberry": 100,
+    "lumberry": 80,
+    "magoberry": 80,
+    "magostberry": 90,
+    "marangaberry": 100,
+    "micleberry": 100,
+    "mintberry": 80,
+    "miracleberry": 80,
+    "mysteryberry": 80,
+    "nanabberry": 90,
+    "nomelberry": 90,
+    "occaberry": 80,
+    "oranberry": 80,
+    "pamtresberry": 90,
+    "passhoberry": 80,
+    "payapaberry": 80,
+    "pechaberry": 80,
+    "persimberry": 80,
+    "petayaberry": 100,
+    "pinapberry": 90,
+    "pomegberry": 90,
+    "przcureberry": 80,
+    "psncureberry": 80,
+    "qualotberry": 90,
+    "rabutaberry": 90,
+    "rawstberry": 80,
+    "razzberry": 80,
+    "rindoberry": 80,
+    "roseliberry": 80,
+    "rowapberry": 100,
+    "salacberry": 100,
+    "shucaberry": 80,
+    "sitrusberry": 80,
+    "spelonberry": 90,
+    "starfberry": 100,
+    "tamatoberry": 90,
+    "tangaberry": 80,
+    "wacanberry": 80,
+    "watmelberry": 100,
+    "wepearberry": 90,
+    "wikiberry": 80,
+    "yacheberry": 80,
+}
+
+
+def _judgment_type(user_item: Any = None) -> Optional[str]:
+    """Resolve Judgment type based on held plate item.
+
+    Looks up the item in _PLATE_TYPES. Z-crystals and non-plate items
+    return None.
+    """
+    if user_item is None:
+        return None
+    item_str = str(user_item).lower().replace(" ", "").replace("-", "")
+    return _PLATE_TYPES.get(item_str)
+
+
+def _multiattack_type(user_item: Any = None) -> Optional[str]:
+    """Resolve Multi-Attack type based on held memory item."""
+    if user_item is None:
+        return None
+    item_str = str(user_item).lower().replace(" ", "").replace("-", "")
+    return _MEMORY_TYPES.get(item_str)
+
+
+def _technoblast_type(user_item: Any = None) -> Optional[str]:
+    """Resolve Techno Blast type based on held drive item."""
+    if user_item is None:
+        return None
+    item_str = str(user_item).lower().replace(" ", "").replace("-", "")
+    return _DRIVE_TYPES.get(item_str)
+
+
+def _naturalgift_type(user_item: Any = None) -> Optional[str]:
+    """Resolve Natural Gift type based on held berry item.
+
+    Looks up the item in _BERRY_TYPES. Unknown berries (even those
+    ending with 'berry') return None.
+    """
+    if user_item is None:
+        return None
+    item_str = str(user_item).lower().replace(" ", "").replace("-", "")
+    return _BERRY_TYPES.get(item_str)
+
+
+def _naturalgift_power(user_item: Any = None) -> Optional[int]:
+    """Resolve Natural Gift base power based on held berry item."""
+    if user_item is None:
+        return None
+    item_str = str(user_item).lower().replace(" ", "").replace("-", "")
+    return _BERRY_POWERS.get(item_str)
+
+
 # ---------------------------------------------------------------------------
 # Dynamic Power Resolution
 # ---------------------------------------------------------------------------
@@ -508,6 +778,8 @@ def resolve_dynamic_power(
         return _heavy_slam_power(user, target, user_weightkg, target_weightkg)
     if mid == "hex":
         return _hex_power(target, target_status)
+    if mid == "naturalgift":
+        return _naturalgift_power(user_item)
     return None
 
 
@@ -801,6 +1073,7 @@ def format_dynamic_info(
         terrain=terrain,
         user_type_1=user_type_1,
         user_grounded=user_grounded,
+        user_item=user_item,
     )
     if dtype is not None:
         if mid == "weatherball":
@@ -834,6 +1107,14 @@ def format_dynamic_info(
             parts.append(f"type1→{dtype}")
         elif mid == "terrainpulse":
             parts.append(f"terrain→{dtype}")
+        elif mid == "judgment":
+            parts.append(f"plate→{dtype}")
+        elif mid == "multiattack":
+            parts.append(f"memory→{dtype}")
+        elif mid == "technoblast":
+            parts.append(f"drive→{dtype}")
+        elif mid == "naturalgift":
+            parts.append(f"berry→{dtype}")
         else:
             parts.append(dtype)
 

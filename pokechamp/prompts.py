@@ -153,6 +153,7 @@ def _apply_dynamic_calcs_to_move(
         terrain=_normalize_terrain(getattr(battle, "fields", None)),
         user_type_1=_get_type_1_name(user),
         user_grounded=_is_user_grounded(user),
+        user_item=getattr(user, "item", None),
     )
 
     dpower = resolve_dynamic_power(
