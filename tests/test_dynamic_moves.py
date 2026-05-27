@@ -1501,3 +1501,508 @@ class TestDynamicPowerOverrides:
         move = Move("hex", gen=9)
         _, dpower, _ = _apply_dynamic_calcs_to_move(move, battle, sim, user, target)
         assert dpower == 130
+
+
+# ===========================================================================
+# Area 12: Species/Form/Property/Terrain Dynamic Type Resolution
+# ===========================================================================
+
+
+@pytest.mark.moves
+class TestResolveDynamicTypeIvyCudgel:
+    """Ivy Cudgel type resolution based on Ogerpon form."""
+
+    def test_wellspring_water(self):
+        """VAL-SPECIES-001: Ogerpon-Wellspring → Water."""
+        assert (
+            resolve_dynamic_type("ivycudgel", user_species="ogerponwellspring")
+            == "Water"
+        )
+
+    def test_hearthflame_fire(self):
+        """VAL-SPECIES-002: Ogerpon-Hearthflame → Fire."""
+        assert (
+            resolve_dynamic_type("ivycudgel", user_species="ogerponhearthflame")
+            == "Fire"
+        )
+
+    def test_cornerstone_rock(self):
+        """VAL-SPECIES-003: Ogerpon-Cornerstone → Rock."""
+        assert (
+            resolve_dynamic_type("ivycudgel", user_species="ogerponcornerstone")
+            == "Rock"
+        )
+
+    def test_base_form_grass(self):
+        """VAL-SPECIES-004: Ogerpon (default) → Grass."""
+        assert resolve_dynamic_type("ivycudgel", user_species="ogerpon") == "Grass"
+
+    def test_species_normalization(self):
+        """VAL-SPECIES-005: Species normalization handles hyphens/spaces."""
+        assert (
+            resolve_dynamic_type(
+                "ivycudgel", user_species="Ogerpon-Wellspring"
+            )
+            == "Water"
+        )
+
+    def test_tera_form_grass(self):
+        """VAL-SPECIES-006: Ogerpon-Tera → Grass (base form default)."""
+        assert resolve_dynamic_type("ivycudgel", user_species="ogerpontera") == "Grass"
+
+    def test_non_ogerpon_none(self):
+        """VAL-SPECIES-007: Non-Ogerpon species returns None."""
+        assert resolve_dynamic_type("ivycudgel", user_species="pikachu") is None
+
+    def test_no_species_none(self):
+        """VAL-SPECIES-008: No species provided returns None."""
+        assert resolve_dynamic_type("ivycudgel") is None
+
+
+@pytest.mark.moves
+class TestResolveDynamicTypeRagingBull:
+    """Raging Bull type resolution based on Tauros-Paldea form."""
+
+    def test_combat_fighting(self):
+        """VAL-SPECIES-009: Tauros-Paldea-Combat → Fighting."""
+        assert (
+            resolve_dynamic_type("ragingbull", user_species="taurospaldeacombat")
+            == "Fighting"
+        )
+
+    def test_blaze_fire(self):
+        """VAL-SPECIES-010: Tauros-Paldea-Blaze → Fire."""
+        assert (
+            resolve_dynamic_type("ragingbull", user_species="taurospaldeablaze")
+            == "Fire"
+        )
+
+    def test_aqua_water(self):
+        """VAL-SPECIES-011: Tauros-Paldea-Aqua → Water."""
+        assert (
+            resolve_dynamic_type("ragingbull", user_species="taurospaldeaaqua")
+            == "Water"
+        )
+
+    def test_base_tauros_normal(self):
+        """VAL-SPECIES-012: Tauros (default) → Normal."""
+        assert resolve_dynamic_type("ragingbull", user_species="tauros") == "Normal"
+
+    def test_paldea_default_fighting(self):
+        """VAL-SPECIES-013: Tauros-Paldea (no breed) → Fighting."""
+        assert (
+            resolve_dynamic_type("ragingbull", user_species="taurospaldea")
+            == "Fighting"
+        )
+
+    def test_non_tauros_none(self):
+        """VAL-SPECIES-014: Non-Tauros species returns None."""
+        assert resolve_dynamic_type("ragingbull", user_species="pikachu") is None
+
+
+@pytest.mark.moves
+class TestResolveDynamicTypeTeraStarStorm:
+    """Tera Star Storm type resolution based on Terapagos form."""
+
+    def test_stellar_form(self):
+        """VAL-SPECIES-015: Terapagos-Stellar → Stellar."""
+        assert (
+            resolve_dynamic_type("terastarstorm", user_species="terapagosstellar")
+            == "Stellar"
+        )
+
+    def test_base_terapagos_none(self):
+        """VAL-SPECIES-016: Terapagos (base) → None."""
+        assert (
+            resolve_dynamic_type("terastarstorm", user_species="terapagos") is None
+        )
+
+    def test_terastal_form_stellar(self):
+        """VAL-SPECIES-017: Terapagos-Terastal → Stellar."""
+        assert (
+            resolve_dynamic_type("terastarstorm", user_species="terapagosterastal")
+            == "Stellar"
+        )
+
+    def test_non_terapagos_none(self):
+        assert (
+            resolve_dynamic_type("terastarstorm", user_species="pikachu") is None
+        )
+
+    def test_no_species_none(self):
+        assert resolve_dynamic_type("terastarstorm") is None
+
+
+@pytest.mark.moves
+class TestResolveDynamicTypeRevelationDance:
+    """Revelation Dance type resolution based on user's primary type."""
+
+    def test_fire_type(self):
+        """VAL-PROP-001: type_1 Fire → Fire."""
+        assert resolve_dynamic_type("revelationdance", user_type_1="Fire") == "Fire"
+
+    def test_water_type(self):
+        """VAL-PROP-002: type_1 Water → Water."""
+        assert (
+            resolve_dynamic_type("revelationdance", user_type_1="Water") == "Water"
+        )
+
+    def test_grass_type(self):
+        """VAL-PROP-003: type_1 Grass → Grass."""
+        assert resolve_dynamic_type("revelationdance", user_type_1="Grass") == "Grass"
+
+    def test_terastallized_override(self):
+        """VAL-PROP-004: Tera type overrides base type_1."""
+        assert (
+            resolve_dynamic_type(
+                "revelationdance", user_type_1="Fire", tera_type="Flying"
+            )
+            == "Flying"
+        )
+
+    def test_bird_edge_case(self):
+        """VAL-PROP-005: Non-standard type like Bird passes through."""
+        assert (
+            resolve_dynamic_type("revelationdance", user_type_1="Bird") == "Bird"
+        )
+
+    def test_no_type_none(self):
+        assert resolve_dynamic_type("revelationdance") is None
+
+    def test_none_type_none(self):
+        assert resolve_dynamic_type("revelationdance", user_type_1=None) is None
+
+
+@pytest.mark.moves
+class TestResolveDynamicTypeTerrainPulse:
+    """Terrain Pulse type resolution based on active terrain."""
+
+    def test_electric_terrain(self):
+        """VAL-PROP-006: Electric Terrain → Electric."""
+        assert (
+            resolve_dynamic_type(
+                "terrainpulse", terrain="electricterrain", user_grounded=True
+            )
+            == "Electric"
+        )
+
+    def test_grassy_terrain(self):
+        """VAL-PROP-007: Grassy Terrain → Grass."""
+        assert (
+            resolve_dynamic_type(
+                "terrainpulse", terrain="grassyterrain", user_grounded=True
+            )
+            == "Grass"
+        )
+
+    def test_misty_terrain(self):
+        """VAL-PROP-008: Misty Terrain → Fairy."""
+        assert (
+            resolve_dynamic_type(
+                "terrainpulse", terrain="mistyterrain", user_grounded=True
+            )
+            == "Fairy"
+        )
+
+    def test_psychic_terrain(self):
+        """VAL-PROP-009: Psychic Terrain → Psychic."""
+        assert (
+            resolve_dynamic_type(
+                "terrainpulse", terrain="psychicterrain", user_grounded=True
+            )
+            == "Psychic"
+        )
+
+    def test_not_grounded_none(self):
+        """VAL-PROP-010: Not grounded → None."""
+        assert (
+            resolve_dynamic_type(
+                "terrainpulse", terrain="electricterrain", user_grounded=False
+            )
+            is None
+        )
+
+    def test_no_terrain_none(self):
+        """No terrain active → None."""
+        assert (
+            resolve_dynamic_type(
+                "terrainpulse", terrain=None, user_grounded=True
+            )
+            is None
+        )
+
+    def test_no_kwargs_none(self):
+        assert resolve_dynamic_type("terrainpulse") is None
+
+
+@pytest.mark.moves
+class TestNewKwargsBackwardCompatibility:
+    """Verify new kwargs don't break existing calls."""
+
+    def test_weatherball_still_works_with_new_kwargs_present(self):
+        """Existing weatherball call with extra kwargs still works."""
+        assert (
+            resolve_dynamic_type(
+                "weatherball",
+                weather=Weather.RAINDANCE,
+                terrain="electricterrain",
+                user_type_1="Fire",
+            )
+            == "Water"
+        )
+
+    def test_terablast_still_works(self):
+        assert resolve_dynamic_type("terablast", tera_type="Fire") == "Fire"
+
+    def test_aurawheel_still_works(self):
+        assert (
+            resolve_dynamic_type(
+                "aurawheel", user_species="morpeko", user_form="hangry"
+            )
+            == "Dark"
+        )
+
+    def test_hiddenpower_still_works(self):
+        assert (
+            resolve_dynamic_type(
+                "hiddenpower",
+                ivs={"hp": 31, "atk": 31, "def": 31, "spa": 31, "spd": 31, "spe": 31},
+            )
+            == "DARK"
+        )
+
+    def test_static_moves_return_none(self):
+        """VAL-BACK-003: Static moves return None."""
+        for move_id in ("flamethrower", "thunderbolt", "tackle"):
+            assert resolve_dynamic_type(move_id) is None
+
+
+# ===========================================================================
+# Area 13: Integration — terrain and user_type_1 passed via prompts
+# ===========================================================================
+
+
+@pytest.mark.moves
+class TestApplyDynamicCalcsTerrainPulse:
+    """Test _apply_dynamic_calcs_to_move passes terrain and user_type_1."""
+
+    def _make_sim(self):
+        from unittest.mock import MagicMock
+
+        sim = MagicMock()
+        sim.enable_dynamic_calcs = True
+        sim.enable_dynamic_flags = True
+        return sim
+
+    def test_terrainpulse_electric_terrain(self):
+        """VAL-DISPATCH-004: terrainpulse resolves Electric from battle.fields."""
+        from unittest.mock import MagicMock
+
+        from poke_env.environment.field import Field
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = self._make_sim()
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {Field.ELECTRIC_TERRAIN: 1}
+
+        user = MagicMock()
+        user.item = None
+        user.status = None
+        user.type_1 = MagicMock()
+        user.type_1.name = "ELECTRIC"
+        user.type_2 = None
+        user.ability = None
+
+        target = MagicMock()
+        target.item = None
+        target.status = None
+
+        move = Move("terrainpulse", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, user, target
+        )
+        assert dtype == "Electric"
+        assert "Electric" in info
+
+    def test_revelationdance_fire_type(self):
+        """_apply_dynamic_calcs_to_move passes user_type_1 for revelationdance."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = self._make_sim()
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = None
+        user.status = None
+        user.type_1 = MagicMock()
+        user.type_1.name = "FIRE"
+        user.type_2 = None
+        user.ability = None
+
+        target = MagicMock()
+        target.item = None
+        target.status = None
+
+        move = Move("revelationdance", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, user, target
+        )
+        assert dtype == "Fire"
+        assert "Fire" in info
+
+    def test_ivycudgel_ogerpon_wellspring(self):
+        """_apply_dynamic_calcs_to_move passes species for ivycudgel."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = self._make_sim()
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = None
+        user.status = None
+        user.species = "ogerponwellspring"
+        user.type_1 = MagicMock()
+        user.type_1.name = "WATER"
+        user.type_2 = None
+        user.ability = None
+
+        target = MagicMock()
+        target.item = None
+        target.status = None
+
+        move = Move("ivycudgel", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, user, target
+        )
+        assert dtype == "Water"
+
+    def test_ragingbull_tauros_blaze(self):
+        """_apply_dynamic_calcs_to_move passes species for ragingbull."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = self._make_sim()
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = None
+        user.status = None
+        user.species = "taurospaldeablaze"
+        user.type_1 = MagicMock()
+        user.type_1.name = "FIRE"
+        user.type_2 = None
+        user.ability = None
+
+        target = MagicMock()
+        target.item = None
+        target.status = None
+
+        move = Move("ragingbull", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, user, target
+        )
+        assert dtype == "Fire"
+
+    def test_terastarstorm_terapagos_stellar(self):
+        """_apply_dynamic_calcs_to_move passes species for terastarstorm."""
+        from unittest.mock import MagicMock
+
+        from pokechamp.prompts import _apply_dynamic_calcs_to_move
+
+        sim = self._make_sim()
+        battle = MagicMock()
+        battle.weather = {}
+        battle.fields = {}
+
+        user = MagicMock()
+        user.item = None
+        user.status = None
+        user.species = "terapagosstellar"
+        user.type_1 = MagicMock()
+        user.type_1.name = "STELLAR"
+        user.type_2 = None
+        user.ability = None
+
+        target = MagicMock()
+        target.item = None
+        target.status = None
+
+        move = Move("terastarstorm", gen=9)
+
+        dtype, dpower, info = _apply_dynamic_calcs_to_move(
+            move, battle, sim, user, target
+        )
+        assert dtype == "Stellar"
+
+
+# ===========================================================================
+# Area 14: format_dynamic_info for new moves
+# ===========================================================================
+
+
+@pytest.mark.moves
+class TestFormatDynamicInfoNewMoves:
+    """Verify format_dynamic_info produces correct strings for new moves."""
+
+    def test_ivycudgel_wellspring(self):
+        result = format_dynamic_info(
+            "ivycudgel", user_species="ogerponwellspring"
+        )
+        assert "Water" in result
+
+    def test_ragingbull_combat(self):
+        result = format_dynamic_info(
+            "ragingbull", user_species="taurospaldeacombat"
+        )
+        assert "Fighting" in result
+
+    def test_terastarstorm_stellar(self):
+        result = format_dynamic_info(
+            "terastarstorm", user_species="terapagosstellar"
+        )
+        assert "Stellar" in result
+
+    def test_revelationdance_fire(self):
+        result = format_dynamic_info(
+            "revelationdance", user_type_1="Fire"
+        )
+        assert "Fire" in result
+
+    def test_terrainpulse_electric(self):
+        result = format_dynamic_info(
+            "terrainpulse", terrain="electricterrain", user_grounded=True
+        )
+        assert "Electric" in result
+
+    def test_ivycudgel_non_ogerpon_empty(self):
+        result = format_dynamic_info(
+            "ivycudgel", user_species="pikachu"
+        )
+        assert result == ""
+
+    def test_revelationdance_no_type_empty(self):
+        result = format_dynamic_info("revelationdance")
+        assert result == ""
+
+    def test_terrainpulse_no_terrain_empty(self):
+        result = format_dynamic_info(
+            "terrainpulse", terrain=None, user_grounded=True
+        )
+        assert result == ""

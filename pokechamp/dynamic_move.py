@@ -205,6 +205,9 @@ def resolve_dynamic_type(
     user_species: Any = None,
     user_form: Any = None,
     ivs: Optional[Dict[str, int]] = None,
+    terrain: Any = None,
+    user_type_1: Any = None,
+    user_grounded: Optional[bool] = None,
 ) -> Optional[str]:
     """Resolve the dynamic type of a move based on battle conditions.
 
@@ -224,6 +227,12 @@ def resolve_dynamic_type(
         Explicit override for user's form.
     ivs : dict, optional
         Explicit override for user's IVs.
+    terrain : str or Field enum, optional
+        Active terrain (for terrainpulse).
+    user_type_1 : str or PokemonType, optional
+        User's primary type (for revelationdance).
+    user_grounded : bool, optional
+        Whether the user is grounded (for terrainpulse).
 
     Returns
     -------
@@ -241,6 +250,16 @@ def resolve_dynamic_type(
         return _aurawheel_type(user, user_species, user_form)
     if mid == "hiddenpower":
         return _hiddenpower_type(user, ivs)
+    if mid == "ivycudgel":
+        return _ivycudgel_type(user, user_species)
+    if mid == "ragingbull":
+        return _ragingbull_type(user, user_species)
+    if mid == "terastarstorm":
+        return _terastarstorm_type(user, user_species)
+    if mid == "revelationdance":
+        return _revelationdance_type(user_type_1, tera_type)
+    if mid == "terrainpulse":
+        return _terrainpulse_type(terrain, user_grounded)
     return None
 
 
@@ -306,6 +325,128 @@ def _hiddenpower_type(user: Any, ivs: Optional[Dict[str, int]] = None) -> Option
         user_ivs = getattr(user, "ivs", None)
         if user_ivs is not None:
             return _hiddenpower_type_from_ivs(user_ivs)
+    return None
+
+
+# Ogerpon form → Ivy Cudgel type mapping
+_OGERPON_FORM_TYPES = {
+    "ogerponwellspring": "Water",
+    "ogerponhearthflame": "Fire",
+    "ogerponcornerstone": "Rock",
+}
+
+
+def _ivycudgel_type(user: Any, user_species: Any = None) -> Optional[str]:
+    """Resolve Ivy Cudgel type based on Ogerpon form.
+
+    Wellspring → Water, Hearthflame → Fire, Cornerstone → Rock,
+    base Ogerpon → Grass, non-Ogerpon → None.
+    """
+    species = user_species
+    if species is None and user is not None:
+        species = getattr(user, "species", None)
+    if species is None:
+        return None
+    species_str = str(species).lower().replace(" ", "").replace("-", "")
+    if "ogerpon" not in species_str:
+        return None
+    # Check specific forms
+    if species_str in _OGERPON_FORM_TYPES:
+        return _OGERPON_FORM_TYPES[species_str]
+    # Base form (ogerpon, ogerpontera) defaults to Grass
+    return "Grass"
+
+
+# Tauros form → Raging Bull type mapping
+def _ragingbull_type(user: Any, user_species: Any = None) -> Optional[str]:
+    """Resolve Raging Bull type based on Tauros form.
+
+    Paldea-Combat → Fighting, Paldea-Blaze → Fire, Paldea-Aqua → Water,
+    base Tauros → Normal, Tauros-Paldea (no breed) → Fighting,
+    non-Tauros → None.
+    """
+    species = user_species
+    if species is None and user is not None:
+        species = getattr(user, "species", None)
+    if species is None:
+        return None
+    species_str = str(species).lower().replace(" ", "").replace("-", "")
+    if "tauros" not in species_str:
+        return None
+    if "taurospaldeacombat" in species_str:
+        return "Fighting"
+    if "taurospaldeablaze" in species_str:
+        return "Fire"
+    if "taurospaldeaaqua" in species_str:
+        return "Water"
+    if "taurospaldea" in species_str:
+        return "Fighting"
+    # Base Tauros
+    return "Normal"
+
+
+def _terastarstorm_type(
+    user: Any, user_species: Any = None
+) -> Optional[str]:
+    """Resolve Tera Star Storm type based on Terapagos form.
+
+    Terapagos-Stellar → Stellar, Terapagos-Terastal → Stellar,
+    base Terapagos → None, non-Terapagos → None.
+    """
+    species = user_species
+    if species is None and user is not None:
+        species = getattr(user, "species", None)
+    if species is None:
+        return None
+    species_str = str(species).lower().replace(" ", "").replace("-", "")
+    if "terapagosstellar" in species_str or "terapagosterastal" in species_str:
+        return "Stellar"
+    return None
+
+
+def _revelationdance_type(
+    user_type_1: Any = None, tera_type: Any = None
+) -> Optional[str]:
+    """Resolve Revelation Dance type based on user's primary type.
+
+    If terastallized (tera_type provided), use Tera type instead.
+    Returns the type string directly, or None if no type provided.
+    """
+    # Tera type overrides base type_1 when terastallized
+    if tera_type is not None:
+        return tera_type.name if hasattr(tera_type, "name") else str(tera_type)
+    if user_type_1 is None:
+        return None
+    return user_type_1.name if hasattr(user_type_1, "name") else str(user_type_1)
+
+
+# Terrain → type mapping for Terrain Pulse
+_TERRAIN_TYPES = {
+    "ELECTRIC_TERRAIN": "Electric",
+    "GRASSY_TERRAIN": "Grass",
+    "MISTY_TERRAIN": "Fairy",
+    "PSYCHIC_TERRAIN": "Psychic",
+}
+
+
+def _terrainpulse_type(
+    terrain: Any = None, user_grounded: Optional[bool] = None
+) -> Optional[str]:
+    """Resolve Terrain Pulse type based on active terrain.
+
+    Returns the terrain's corresponding type if the user is grounded,
+    or None if no terrain, user is not grounded, or terrain is unknown.
+    """
+    if user_grounded is not True:
+        return None
+    terrain_name = _normalize_terrain(terrain)
+    if terrain_name is None:
+        return None
+    terrain_upper = str(terrain_name).upper()
+    # Handle both "ELECTRIC_TERRAIN" and "ELECTRICTERRAIN" formats
+    for key, dtype in _TERRAIN_TYPES.items():
+        if terrain_upper == key or terrain_upper == key.replace("_", ""):
+            return dtype
     return None
 
 
@@ -630,6 +771,7 @@ def format_dynamic_info(
     user_weightkg: Optional[float] = None,
     target_weightkg: Optional[float] = None,
     user_grounded: Optional[bool] = None,
+    user_type_1: Any = None,
     user_level: Optional[int] = None,
     user_current_hp: Optional[int] = None,
     target_current_hp: Optional[int] = None,
@@ -656,6 +798,9 @@ def format_dynamic_info(
         user_species=user_species,
         user_form=user_form,
         ivs=ivs,
+        terrain=terrain,
+        user_type_1=user_type_1,
+        user_grounded=user_grounded,
     )
     if dtype is not None:
         if mid == "weatherball":
@@ -679,6 +824,18 @@ def format_dynamic_info(
             parts.append(f"form→{dtype}")
         elif mid == "hiddenpower":
             parts.append(f"ivs→{dtype}")
+        elif mid == "ivycudgel":
+            parts.append(f"form→{dtype}")
+        elif mid == "ragingbull":
+            parts.append(f"form→{dtype}")
+        elif mid == "terastarstorm":
+            parts.append(f"tera→{dtype}")
+        elif mid == "revelationdance":
+            parts.append(f"type1→{dtype}")
+        elif mid == "terrainpulse":
+            parts.append(f"terrain→{dtype}")
+        else:
+            parts.append(dtype)
 
     # --- Power ---
     dpower = resolve_dynamic_power(

@@ -60,6 +60,54 @@ def format_flag_text(move: Move) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _normalize_terrain(fields):
+    """Extract the active terrain name from a fields dict, or None."""
+    if fields is None:
+        return None
+    if isinstance(fields, dict):
+        for field in fields:
+            if hasattr(field, "is_terrain") and field.is_terrain:
+                return field.name
+        return None
+    if hasattr(fields, "name"):
+        return fields.name
+    if isinstance(fields, str):
+        return fields
+    return None
+
+
+def _get_type_1_name(user):
+    """Extract user's type_1 as a string, handling PokemonType enum."""
+    if user is None:
+        return None
+    type_1 = getattr(user, "type_1", None)
+    if type_1 is None:
+        return None
+    if hasattr(type_1, "name"):
+        name = type_1.name
+        # Convert "FIRE" → "Fire" for resolve_dynamic_type compatibility
+        return name.capitalize()
+    return str(type_1)
+
+
+def _is_user_grounded(user):
+    """Check if the user is grounded (not immune to terrain effects)."""
+    if user is None:
+        return True
+    for t in (getattr(user, "type_1", None), getattr(user, "type_2", None)):
+        if t is not None:
+            tn = t.name if hasattr(t, "name") else str(t)
+            if tn.upper() == "FLYING":
+                return False
+    ability = getattr(user, "ability", None)
+    if ability and str(ability).lower() == "levitate":
+        return False
+    item = getattr(user, "item", None)
+    if item and str(item).lower() == "airballoon":
+        return False
+    return True
+
+
 def _apply_dynamic_calcs_to_move(
     move: Move,
     battle: Battle,
@@ -102,6 +150,9 @@ def _apply_dynamic_calcs_to_move(
         move,
         weather=battle.weather,
         user=user,
+        terrain=_normalize_terrain(getattr(battle, "fields", None)),
+        user_type_1=_get_type_1_name(user),
+        user_grounded=_is_user_grounded(user),
     )
 
     dpower = resolve_dynamic_power(
@@ -125,6 +176,9 @@ def _apply_dynamic_calcs_to_move(
         user_status=getattr(user, "status", None),
         target_item=getattr(target, "item", None),
         target_status=getattr(target, "status", None),
+        terrain=_normalize_terrain(getattr(battle, "fields", None)),
+        user_type_1=_get_type_1_name(user),
+        user_grounded=_is_user_grounded(user),
     )
 
     # Normalize type to capitalized form for display
