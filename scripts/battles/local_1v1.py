@@ -75,9 +75,15 @@ parser.add_argument(
         "ollama/mistral",
         "ollama/qwen2.5",
         "ollama/gemma3:4b",
+        "ollama/gemma4:31b",
+        "ollama/deepseek-v4-flash:cloud",
         # vLLM models
         "vllm/Qwen/Qwen3.6-27B",
         "vllm/google/gemma-4-26B-A4B-it",
+        # Featherless AI models
+        "featherless/deepseek-ai/DeepSeek-V4-Pro",
+        "featherless/deepseek-ai/DeepSeek-V3-0324",
+        "featherless/Qwen/Qwen3-235B-A22B",
         # Local models (via OpenRouter)
         "llama",
         "None",
@@ -117,6 +123,8 @@ parser.add_argument(
         "ollama/mistral",
         "ollama/qwen2.5",
         "ollama/gemma3:4b",
+        "ollama/gemma4:31b",
+        "ollama/deepseek-v4-flash:cloud",
         # Meta models
         "meta-llama/llama-3.1-70b-instruct",
         "meta-llama/llama-3.1-8b-instruct",
@@ -138,6 +146,10 @@ parser.add_argument(
         # vLLM models
         "vllm/Qwen/Qwen3.6-27B",
         "vllm/google/gemma-4-26B-A4B-it",
+        # Featherless AI models
+        "featherless/deepseek-ai/DeepSeek-V4-Pro",
+        "featherless/deepseek-ai/DeepSeek-V3-0324",
+        "featherless/Qwen/Qwen3-235B-A22B",
         # Local models (via OpenRouter)
         "llama",
         "None",
@@ -167,6 +179,12 @@ parser.add_argument("--N", type=int, default=25)
 parser.add_argument(
     "--seed", type=int, default=None, help="Random seed for reproducibility"
 )
+parser.add_argument(
+    "--player_api_key", type=str, default="", help="API key for the player LLM backend (e.g. Featherless, OpenRouter)"
+)
+parser.add_argument(
+    "--opponent_api_key", type=str, default="", help="API key for the opponent LLM backend"
+)
 
 # Experiment infrastructure flags
 parser.add_argument(
@@ -189,13 +207,6 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
-
-# Backend lock: dynamic calcs require vllm/* backend
-if args.enable_dynamic_calcs and not args.player_backend.startswith("vllm/"):
-    parser.error(
-        f"--enable_dynamic_calcs requires a vllm/* backend, "
-        f"got '{args.player_backend}'"
-    )
 
 # Set random seed if provided
 if args.seed is not None:
@@ -225,6 +236,7 @@ async def main():
         args.player_backend,
         args.player_prompt_algo,
         args.player_name,
+        KEY=args.player_api_key,
         device=args.player_device,
         PNUMBER1=PNUMBER1,  # for name uniqueness locally
         battle_format=args.battle_format,
@@ -238,6 +250,7 @@ async def main():
         args.opponent_backend,
         args.opponent_prompt_algo,
         args.opponent_name,
+        KEY=args.opponent_api_key,
         device=args.opponent_device,
         PNUMBER1=PNUMBER1 + "2",  # for name uniqueness locally
         battle_format=args.battle_format,
