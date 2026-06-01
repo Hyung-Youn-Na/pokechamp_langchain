@@ -64,6 +64,7 @@ dependencies = [
 
     # Config
     "pyyaml",
+    "python-dotenv",
 
     # Testing
     "pytest",

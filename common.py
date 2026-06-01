@@ -4,6 +4,10 @@ import os
 import importlib
 import inspect
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 prompt_algos = [
     "io", 
     "sc", 
