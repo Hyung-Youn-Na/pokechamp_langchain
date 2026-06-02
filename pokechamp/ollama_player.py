@@ -1,5 +1,6 @@
 import ollama
 import json
+import os
 import numpy as np
 import time
 
@@ -13,16 +14,25 @@ class OllamaPlayer():
             device: Not used with Ollama API, kept for compatibility
         """
         self.model = model
+        self.completion_tokens = 0
+        self.prompt_tokens = 0
         
         # Configuration for Ollama client
-        self.base_url = "http://localhost:11434"
-        self.request_timeout = 300  # 5 minutes timeout
         self.temperature = 0.7
-        self.context_window = 8192  # Use larger context window for pokechamp context
-        self.max_tokens = 8192  # Limit response length but ensure complete JSON
-        
-        # Initialize client with configuration
-        self.client = ollama.Client(host=self.base_url)
+        self.context_window = 8192
+        self.max_tokens = 8192
+
+        # Support Ollama Cloud via env vars
+        ollama_api_key = os.getenv('OLLAMA_API_KEY', '')
+        if ollama_api_key:
+            self.client = ollama.Client(
+                host="https://ollama.com",
+                headers={'Authorization': 'Bearer ' + ollama_api_key}
+            )
+            print(f"Using Ollama Cloud with model: {model}")
+        else:
+            self.client = ollama.Client(host="http://localhost:11434")
+            print(f"Using local Ollama with model: {model}")
         
         # Check if model is available
         # try:
@@ -80,8 +90,15 @@ class OllamaPlayer():
                 model=self.model,
                 messages=messages,
                 options=options,
+                think=False,
                 stream=False
             )
+
+            # Track token usage
+            if hasattr(response, 'prompt_eval_count') and response.prompt_eval_count:
+                self.prompt_tokens += response.prompt_eval_count
+            if hasattr(response, 'eval_count') and response.eval_count:
+                self.completion_tokens += response.eval_count
             
             # Extract message content
             message = ""
