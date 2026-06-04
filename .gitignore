@@ -79,3 +79,13 @@ showdown_ladder_vs.py
 timeout_llm_player.py
 
 battle_log_old
+
+# AI tool artifacts
+.claude/
+.agents/
+.temp/
+settings.json
+skills-lock.json
+mission.md
+validation-contract.md
+scripts/compare_prompts.py
