@@ -1018,13 +1018,12 @@ class LLMPlayer(Player):
                     # value estimation for leaf nodes
                     value_prompt = (
                         "Evaluate the score from 1-100 based on how likely the player is to win. Higher is better. Start at 50 points."
-                        + "Add points based on the effectiveness of current available moves, especially super-effective and STAB moves."
-                        + "Award points for each pokemon remaining on the player's team, weighted by their strength."
+                        + "Add points based on the effectiveness of current available moves."
+                        + "Award points for each pokemon remaining on the player's team, weighted by their strength"
                         + "Add points for boosted status and opponent entry hazards and subtract points for status effects and player entry hazards. "
+                        + "Subtract points for excessive switching."
                         + "Subtract points based on the effectiveness of the opponent's current moves, especially if they have a faster speed."
-                        + "Remove points for each pokemon remaining on the opponent's team, weighted by their strength."
-                        + "Add points if the player can identify a clear win condition (a pokemon that can sweep the remaining opponents). "
-                        + "Subtract points if the player has no switch-ins that can safely handle the opponent's current pokemon.\n"
+                        + "Remove points for each pokemon remaining on the opponent's team, weighted by their strength.\n"
                     )
                     cot_prompt = 'Briefly justify your total score, up to 100 words. Then, conclude with the score in the JSON format: {"score": <total_points>}. '
                     state_prompt_io = state_prompt + value_prompt + cot_prompt
