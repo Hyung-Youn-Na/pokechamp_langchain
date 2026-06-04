@@ -169,6 +169,7 @@ uv run python scripts/battles/local_1v1.py \
 | EXP-008 | io baseline (deepseek-v4-flash) | 2026-06-03 | completed | 20.0% (6/30) | io prompt, no dynamic flags, -70.00pp vs EXP-004 |
 | EXP-009 | io flags-only (deepseek-v4-flash) | 2026-06-04 | completed | 46.7% (14/30) | io prompt + --enable_dynamic_flags, -23.33pp vs EXP-005, +26.67pp vs EXP-008 |
 | EXP-010 | io flags+calcs (deepseek-v4-flash) | 2026-06-04 | completed | 60.0% (18/30) | io prompt + --enable_dynamic_flags --enable_dynamic_calcs, +20.00pp vs EXP-006, +13.33pp vs EXP-009 |
+| EXP-011 | io all flags (deepseek-v4-flash) | 2026-06-04 | completed | 46.7% (14/30) | io prompt + --enable_dynamic_flags --enable_dynamic_calcs --enable_showdown_oracle, -13.33pp vs EXP-007, -13.33pp vs EXP-010 |
 
 ### 미측정 코드 변경 (실험 인덱스에 없음)
 
