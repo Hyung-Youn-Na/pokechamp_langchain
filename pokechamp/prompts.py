@@ -1621,13 +1621,10 @@ def state_translate(
     if battle.active_pokemon.fainted:  # passive switching
 
         system_prompt = (
-            f"You are an expert pokemon battler in generation {sim.gen.gen} OU format Pokemon Showdown. Your {battle.active_pokemon.species} just fainted. Choose a suitable pokemon to continue the battle.\n"
-            "Switch-in selection priority:\n"
-            "1. Choose a pokemon with type advantage over the opponent (resists opponent's moves, can hit super-effectively).\n"
-            "2. Prefer a pokemon faster than the opponent so it can attack first.\n"
-            "3. If no type advantage exists, pick the tankiest pokemon that can survive hits.\n"
-            "4. Avoid sending in pokemon weak to the opponent's known moves.\n"
-            "5. Consider entry hazards on your side when switching (avoid sending pokemon weak to Stealth Rock).\n"
+            f"You are a pokemon battler in generation {sim.gen.gen} OU format Pokemon Showdown that targets to win the pokemon battle. Your {battle.active_pokemon.species} just fainted. Choose a suitable pokemon to continue the battle. Here are some tips:"
+            " Compare the speeds of your pokemon to the opposing pokemon, which determines who take the move first."
+            " Consider the defense state and type-resistance of your pokemon when its speed is lower than the opposing pokemon."
+            " Consider the move-type advantage of your pokemon pokemon when its speed is higher than the opposing pokemon."
         )
 
         state_prompt = battle_prompt + opponent_prompt + switch_prompt
@@ -1638,24 +1635,13 @@ def state_translate(
     else:  # take a move or active switch
 
         system_prompt = (
-            f"You are an expert pokemon battler in generation {sim.gen.gen} OU format Pokemon Showdown. Your goal is to win the battle. You can choose to take a move or switch in another pokemon.\n"
-            "Decision priority (highest to lowest):\n"
-            "1. TYPE EFFECTIVENESS: Super-effective moves are top priority. STAB + super-effective is ideal. Avoid using moves the opponent resists or is immune to.\n"
-            "2. SPEED CONTROL: If your pokemon is faster, attack aggressively. If slower, consider priority moves, switching to a faster pokemon, or using a tanky pokemon that can survive the hit.\n"
-            "3. THREAT MANAGEMENT: If an opponent is boosting their stats, knock it out immediately even at cost. Do not let sweepers set up freely.\n"
-            "4. HP THRESHOLDS: When your pokemon is below 25% HP, strongly consider switching. When opponent is low HP, finish with a high-accuracy move rather than a risky one.\n"
-            "5. HAZARD STRATEGY: Set Stealth Rock early if possible. Remove opponent hazards with Rapid Spin when safe. Do not set hazards if you need immediate damage.\n"
-            "6. BOOSTING: Status-boosting moves (Swords Dance, Calm Mind, Dragon Dance, Nasty Plot) are strong when your pokemon can survive a hit and sweep. Boosts reset on switch-out.\n"
-            "7. MOMENTUM: Use pivot moves (U-turn, Volt Switch, Flip Turn) to bring in favorable matchups safely.\n"
-            "\nSWITCHING RULES:\n"
-            "- Switching costs a full turn: the opponent moves first and your switch-in takes damage.\n"
-            "- If your switch-in is slower, the opponent moves twice consecutively.\n"
-            "- NEVER switch out consecutively for more than 2 turns (panic switching). Stand your ground and attack at least every other turn.\n"
-            "- Switch INTO pokemon that resist the opponent's expected move and can threaten back.\n"
-            "\nANTI-PATTERNS (avoid these):\n"
-            "- Panic switching: repeatedly switching without attacking when facing a threat.\n"
-            "- Using low-accuracy moves when a safe KO is available with a higher-accuracy move.\n"
-            "- Ignoring opponent's status conditions (Toxic, Burn) that will accumulate damage over turns.\n"
+            f"You are a pokemon battler in generation {sim.gen.gen} OU format Pokemon Showdown that targets to win the pokemon battle. You can choose to take a move or switch in another pokemon. Here are some battle tips:"
+            " Use status-boosting moves like swordsdance, calmmind, dragondance, nastyplot strategically. The boosting will be reset when pokemon switch out."
+            " Set traps like stickyweb, spikes, toxicspikes, stealthrock strategically."
+            " When face to a opponent is boosting or has already boosted its attack/special attack/speed, knock it out as soon as possible, even sacrificing your pokemon."
+            " if choose to switch, you forfeit to take a move this turn and the opposing pokemon will definitely move first. Therefore, you should pay attention to speed, type-resistance and defense of your switch-in pokemon to bear the damage from the opposing pokemon."
+            " And If the switch-in pokemon has a slower speed then the opposing pokemon, the opposing pokemon will move twice continuously."
+            " Prefer super-effective and STAB moves. Do not switch out consecutively for more than 2 turns."
         )
 
         system_prompt = system_prompt + sim.strategy
