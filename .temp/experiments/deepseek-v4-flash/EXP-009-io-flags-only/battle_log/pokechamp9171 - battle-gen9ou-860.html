@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<!-- version 1 -->
+<title>battle-gen9ou-860</title>
+<style>
+    html,
+    body {
+        font-family: Verdana, sans-serif;
+        font-size: 10pt;
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        padding: 12px 0;
+    }
+
+    .battle-log {
+        font-family: Verdana, sans-serif;
+        font-size: 10pt;
+    }
+
+    .battle-log-inline {
+        border: 1px solid #AAAAAA;
+        background: #EEF2F5;
+        color: black;
+        max-width: 640px;
+        margin: 0 auto 80px;
+        padding-bottom: 5px;
+    }
+
+    .battle-log .inner {
+        padding: 4px 8px 0px 8px;
+    }
+
+    .battle-log .inner-preempt {
+        padding: 0 8px 4px 8px;
+    }
+
+    .battle-log .inner-after {
+        margin-top: 0.5em;
+    }
+
+    .battle-log h2 {
+        margin: 0.5em -8px;
+        padding: 4px 8px;
+        border: 1px solid #AAAAAA;
+        background: #E0E7EA;
+        border-left: 0;
+        border-right: 0;
+        font-family: Verdana, sans-serif;
+        font-size: 13pt;
+    }
+
+    .backprop {
+        top: 0;
+    }
+
+    .battle-log .chat {
+        vertical-align: middle;
+        padding: 3px 0 3px 0;
+        font-size: 8pt;
+    }
+
+    .battle-log .chat strong {
+        color: #40576A;
+    }
+
+    .battle-log .chat em {
+        padding: 1px 4px 1px 3px;
+        color: #000000;
+        font-style: normal;
+    }
+
+    .chat.mine {
+        background: rgba(0, 0, 0, 0.05);
+        margin-left: -8px;
+        margin-right: -8px;
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .spoiler {
+        color: #BBBBBB;
+        background: #BBBBBB;
+        padding: 0px 3px;
+    }
+
+    .spoiler:hover,
+    .spoiler:active,
+    .spoiler-shown {
+        color: #000000;
+        background: #E2E2E2;
+        padding: 0px 3px;
+    }
+
+    .spoiler a {
+        color: #BBBBBB;
+    }
+
+    .spoiler:hover a,
+    .spoiler:active a,
+    .spoiler-shown a {
+        color: #2288CC;
+    }
+
+    .chat code,
+    .chat .spoiler:hover code,
+    .chat .spoiler:active code,
+    .chat .spoiler-shown code {
+        border: 1px solid #C0C0C0;
+        background: #EEEEEE;
+        color: black;
+        padding: 0 2px;
+    }
+
+    .chat .spoiler code {
+        border: 1px solid #CCCCCC;
+        background: #CCCCCC;
+        color: #CCCCCC;
+    }
+
+    .battle-log .rated {
+        padding: 3px 4px;
+    }
+
+    .battle-log .rated strong {
+        color: white;
+        background: #89A;
+        padding: 1px 4px;
+        border-radius: 4px;
+    }
+
+    .spacer {
+        margin-top: 0.5em;
+    }
+
+    .message-announce {
+        background: #6688AA;
+        color: white;
+        padding: 1px 4px 2px;
+    }
+
+    .message-announce a,
+    .broadcast-green a,
+    .broadcast-blue a,
+    .broadcast-red a {
+        color: #DDEEFF;
+    }
+
+    .broadcast-green {
+        background-color: #559955;
+        color: white;
+        padding: 2px 4px;
+    }
+
+    .broadcast-blue {
+        background-color: #6688AA;
+        color: white;
+        padding: 2px 4px;
+    }
+
+    .infobox {
+        border: 1px solid #6688AA;
+        padding: 2px 4px;
+    }
+
+    .infobox-limited {
+        max-height: 200px;
+        overflow: auto;
+        overflow-x: hidden;
+    }
+
+    .broadcast-red {
+        background-color: #AA5544;
+        color: white;
+        padding: 2px 4px;
+    }
+
+    .message-learn-canlearn {
+        font-weight: bold;
+        color: #228822;
+        text-decoration: underline;
+    }
+
+    .message-learn-cannotlearn {
+        font-weight: bold;
+        color: #CC2222;
+        text-decoration: underline;
+    }
+
+    .message-effect-weak {
+        font-weight: bold;
+        color: #CC2222;
+    }
+
+    .message-effect-resist {
+        font-weight: bold;
+        color: #6688AA;
+    }
+
+    .message-effect-immune {
+        font-weight: bold;
+        color: #666666;
+    }
+
+    .message-learn-list {
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+    .message-throttle-notice,
+    .message-error {
+        color: #992222;
+    }
+
+    .message-overflow,
+    .chat small.message-overflow {
+        font-size: 0pt;
+    }
+
+    .message-overflow::before {
+        font-size: 9pt;
+        content: '...';
+    }
+
+    .subtle {
+        color: #3A4A66;
+    }
+</style>
+<div class="wrapper replay-wrapper" style="max-width:1180px;margin:0 auto">
+    <input type="hidden" name="replayid" value="unregisteredserver-gen8randombattle-320064" />
+    <div class="battle"></div>
+    <div class="battle-log"></div>
+    <div class="replay-controls"></div>
+    <div class="replay-controls-2"></div>
+    <h1 style="font-weight:normal;text-align:center"><strong>poke-env battle replay</strong><br />battle-gen9ou-860<br /><a
+            href="http://pokemonshowdown.com/users/randomplayer1" class="subtle" target="_blank">pokechamp9171</a>
+        vs. <a href="http://pokemonshowdown.com/users/randomplayer2" class="subtle"
+            target="_blank">abyssal91712</a></h1>
+    <script type="text/plain" class="battle-log-data">
+    >battle-gen9ou-860|init|battle
+|title|pokechamp9171 vs. abyssal91712
+|j|☆pokechamp9171
+|j|☆abyssal91712
+|gametype|singles
+|player|p1|pokechamp9171|unknown|
+|player|p2|abyssal91712|bryony|
+|gen|9
+|tier|[Gen 9] OU
+|rule|HP Percentage Mod: HP is shown in percentages
+|rule|Endless Battle Clause: Forcing endless battles is banned
+|rule|Species Clause: Limit one of each Pokémon
+|rule|OHKO Clause: OHKO moves are banned
+|rule|Evasion Items Clause: Evasion items are banned
+|rule|Evasion Moves Clause: Evasion moves are banned
+|rule|Evasion Abilities Clause: Evasion abilities are banned
+|rule|Sleep Moves Clause: Sleep-inducing moves are banned
+|clearpoke
+|poke|p1|Ting-Lu|
+|poke|p1|Weezing-Galar, F|
+|poke|p1|Alomomola, M|
+|poke|p1|Tornadus-Therian, M|
+|poke|p1|Gholdengo|
+|poke|p1|Zamazenta-*|
+|poke|p2|Clefable, F|
+|poke|p2|Keldeo|
+|poke|p2|Gliscor, M|
+|poke|p2|Ogerpon-Wellspring, F|
+|poke|p2|Blissey, F|
+|poke|p2|Dragapult, M|
+|teampreview
+|teamsize|p1|6
+|teamsize|p2|6
+|start
+|switch|p1a: Alomomola|Alomomola, M|474/474
+|switch|p2a: Dragapult|Dragapult, M|100/100
+|turn|1
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|switch|p1a: Weezing|Weezing-Galar, F|333/333
+|-ability|p1a: Weezing|Neutralizing Gas
+|move|p2a: Dragapult|Thunderbolt|p1a: Weezing
+|-damage|p1a: Weezing|205/333
+|upkeep
+|turn|2
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|-end|p1a: Weezing|ability: Neutralizing Gas
+|switch|p1a: Gholdengo|Gholdengo|315/315
+|move|p2a: Dragapult|Thunderbolt|p1a: Gholdengo
+|-damage|p1a: Gholdengo|214/315
+|upkeep
+|turn|3
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Gholdengo|Shadow Ball|p2a: Dragapult
+|-supereffective|p2a: Dragapult
+|-damage|p2a: Dragapult|0 fnt
+|faint|p2a: Dragapult
+|upkeep
+|switch|p2a: Gliscor|Gliscor, M|100/100
+|turn|4
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Gholdengo|Shadow Ball|p2a: Gliscor
+|-damage|p2a: Gliscor|62/100
+|move|p2a: Gliscor|Toxic Spikes|p1a: Gholdengo
+|-sidestart|p1: pokechamp9171|move: Toxic Spikes
+|-status|p2a: Gliscor|tox|[from] item: Toxic Orb
+|upkeep
+|turn|5
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Gholdengo|Shadow Ball|p2a: Gliscor
+|-damage|p2a: Gliscor|26/100 tox
+|move|p2a: Gliscor|Knock Off|p1a: Gholdengo
+|-supereffective|p1a: Gholdengo
+|-damage|p1a: Gholdengo|72/315
+|-enditem|p1a: Gholdengo|Choice Scarf|[from] move: Knock Off|[of] p2a: Gliscor
+|-heal|p2a: Gliscor|38/100 tox|[from] ability: Poison Heal
+|upkeep
+|turn|6
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Gholdengo|Shadow Ball|p2a: Gliscor
+|-damage|p2a: Gliscor|1/100 tox
+|-unboost|p2a: Gliscor|spd|1
+|move|p2a: Gliscor|Knock Off|p1a: Gholdengo
+|-supereffective|p1a: Gholdengo
+|-damage|p1a: Gholdengo|0 fnt
+|faint|p1a: Gholdengo
+|-heal|p2a: Gliscor|13/100 tox|[from] ability: Poison Heal
+|upkeep
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|switch|p1a: Zamazenta|Zamazenta|345/345
+|-ability|p1a: Zamazenta|Dauntless Shield|boost
+|-boost|p1a: Zamazenta|def|1
+|turn|7
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Zamazenta|Ice Fang|p2a: Gliscor
+|-supereffective|p2a: Gliscor
+|-crit|p2a: Gliscor
+|-damage|p2a: Gliscor|0 fnt
+|faint|p2a: Gliscor
+|upkeep
+|switch|p2a: Clefable|Clefable, F|100/100
+|turn|8
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Zamazenta|Ice Fang|p2a: Clefable
+|-damage|p2a: Clefable|78/100
+|move|p2a: Clefable|Moonblast|p1a: Zamazenta
+|-supereffective|p1a: Zamazenta
+|-crit|p1a: Zamazenta
+|-damage|p1a: Zamazenta|61/345
+|-unboost|p1a: Zamazenta|spa|1
+|upkeep
+|turn|9
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|switch|p1a: Weezing|Weezing-Galar, F|205/333
+|-ability|p1a: Weezing|Neutralizing Gas
+|-sideend|p1: pokechamp9171|move: Toxic Spikes|[of] p1a: Weezing
+|move|p2a: Clefable|Moonblast|p1a: Weezing
+|-resisted|p1a: Weezing
+|-damage|p1a: Weezing|137/333
+|-unboost|p1a: Weezing|spa|1
+|upkeep
+|turn|10
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Weezing|Sludge Bomb|p2a: Clefable
+|-supereffective|p2a: Clefable
+|-damage|p2a: Clefable|54/100
+|-status|p2a: Clefable|psn
+|move|p2a: Clefable|Flamethrower|p1a: Weezing
+|-damage|p1a: Weezing|51/333
+|-damage|p2a: Clefable|41/100 psn|[from] psn
+|upkeep
+|turn|11
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Weezing|Sludge Bomb|p2a: Clefable
+|-supereffective|p2a: Clefable
+|-damage|p2a: Clefable|19/100 psn
+|move|p2a: Clefable|Flamethrower|p1a: Weezing
+|-damage|p1a: Weezing|0 fnt
+|faint|p1a: Weezing
+|-end|p1a: Weezing|ability: Neutralizing Gas
+|-damage|p2a: Clefable|6/100 psn|[from] psn
+|upkeep
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|switch|p1a: Tornadus|Tornadus-Therian, M|361/361
+|turn|12
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Tornadus|Heat Wave|p2a: Clefable|[miss]
+|-miss|p1a: Tornadus|p2a: Clefable
+|move|p2a: Clefable|Moonblast|p1a: Tornadus
+|-damage|p1a: Tornadus|244/361
+|-unboost|p1a: Tornadus|spa|1
+|-damage|p2a: Clefable|0 fnt|[from] psn
+|faint|p2a: Clefable
+|upkeep
+|switch|p2a: Blissey|Blissey, F|100/100
+|turn|13
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Tornadus|Knock Off|p2a: Blissey
+|-damage|p2a: Blissey|82/100
+|-enditem|p2a: Blissey|Leftovers|[from] move: Knock Off|[of] p1a: Tornadus
+|move|p2a: Blissey|Calm Mind|p2a: Blissey
+|-boost|p2a: Blissey|spa|1
+|-boost|p2a: Blissey|spd|1
+|upkeep
+|turn|14
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Tornadus|Knock Off|p2a: Blissey
+|-crit|p2a: Blissey
+|-damage|p2a: Blissey|61/100
+|move|p2a: Blissey|Shadow Ball|p1a: Tornadus
+|-damage|p1a: Tornadus|164/361
+|upkeep
+|turn|15
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Tornadus|Knock Off|p2a: Blissey
+|-damage|p2a: Blissey|47/100
+|move|p2a: Blissey|Shadow Ball|p1a: Tornadus
+|-damage|p1a: Tornadus|89/361
+|upkeep
+|turn|16
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|switch|p1a: Zamazenta|Zamazenta|61/345
+|move|p2a: Blissey|Shadow Ball|p1a: Zamazenta
+|-damage|p1a: Zamazenta|0 fnt
+|faint|p1a: Zamazenta
+|upkeep
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|switch|p1a: Tornadus|Tornadus-Therian, M|209/361
+|turn|17
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Tornadus|Bleakwind Storm|p2a: Blissey
+|-damage|p2a: Blissey|39/100
+|move|p2a: Blissey|Shadow Ball|p1a: Tornadus
+|-damage|p1a: Tornadus|127/361
+|upkeep
+|turn|18
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Tornadus|Knock Off|p2a: Blissey
+|-damage|p2a: Blissey|25/100
+|move|p2a: Blissey|Shadow Ball|p1a: Tornadus
+|-damage|p1a: Tornadus|42/361
+|upkeep
+|turn|19
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Tornadus|Bleakwind Storm|p2a: Blissey
+|-damage|p2a: Blissey|16/100
+|move|p2a: Blissey|Shadow Ball|p1a: Tornadus
+|-damage|p1a: Tornadus|0 fnt
+|faint|p1a: Tornadus
+|upkeep
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|switch|p1a: Ting-Lu|Ting-Lu|514/514
+|-ability|p1a: Ting-Lu|Vessel of Ruin
+|turn|20
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p2a: Blissey|Shadow Ball|p1a: Ting-Lu
+|-resisted|p1a: Ting-Lu
+|-damage|p1a: Ting-Lu|490/514
+|move|p1a: Ting-Lu|Ruination|p2a: Blissey|[miss]
+|-miss|p1a: Ting-Lu|p2a: Blissey
+|-heal|p1a: Ting-Lu|514/514|[from] item: Leftovers
+|upkeep
+|turn|21
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p2a: Blissey|Shadow Ball|p1a: Ting-Lu
+|-resisted|p1a: Ting-Lu
+|-damage|p1a: Ting-Lu|490/514
+|move|p1a: Ting-Lu|Ruination|p2a: Blissey
+|-damage|p2a: Blissey|8/100
+|-heal|p1a: Ting-Lu|514/514|[from] item: Leftovers
+|upkeep
+|turn|22
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p2a: Blissey|Shadow Ball|p1a: Ting-Lu
+|-resisted|p1a: Ting-Lu
+|-damage|p1a: Ting-Lu|490/514
+|-unboost|p1a: Ting-Lu|spd|1
+|move|p1a: Ting-Lu|Ruination|p2a: Blissey
+|-damage|p2a: Blissey|4/100
+|-heal|p1a: Ting-Lu|514/514|[from] item: Leftovers
+|upkeep
+|turn|23
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p2a: Blissey|Shadow Ball|p1a: Ting-Lu
+|-resisted|p1a: Ting-Lu
+|-damage|p1a: Ting-Lu|479/514
+|move|p1a: Ting-Lu|Ruination|p2a: Blissey
+|-damage|p2a: Blissey|2/100
+|-heal|p1a: Ting-Lu|511/514|[from] item: Leftovers
+|upkeep
+|turn|24
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p2a: Blissey|Shadow Ball|p1a: Ting-Lu
+|-resisted|p1a: Ting-Lu
+|-damage|p1a: Ting-Lu|474/514
+|move|p1a: Ting-Lu|Ruination|p2a: Blissey
+|-damage|p2a: Blissey|2/100
+|-heal|p1a: Ting-Lu|506/514|[from] item: Leftovers
+|upkeep
+|turn|25
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p2a: Blissey|Shadow Ball|p1a: Ting-Lu
+|-resisted|p1a: Ting-Lu
+|-damage|p1a: Ting-Lu|472/514
+|move|p1a: Ting-Lu|Whirlwind|p2a: Blissey
+|drag|p2a: Keldeo|Keldeo|100/100
+|-heal|p1a: Ting-Lu|504/514|[from] item: Leftovers
+|upkeep
+|turn|26
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|switch|p1a: Alomomola|Alomomola, M|474/474
+|move|p2a: Keldeo|Surf|p1a: Alomomola
+|-resisted|p1a: Alomomola
+|-damage|p1a: Alomomola|373/474
+|upkeep
+|turn|27
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|switch|p1a: Ting-Lu|Ting-Lu|504/514
+|-ability|p1a: Ting-Lu|Vessel of Ruin
+|move|p2a: Keldeo|Surf|p1a: Ting-Lu
+|-supereffective|p1a: Ting-Lu
+|-damage|p1a: Ting-Lu|312/514
+|-heal|p1a: Ting-Lu|344/514|[from] item: Leftovers
+|upkeep
+|turn|28
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|switch|p1a: Alomomola|Alomomola, M|474/474
+|move|p2a: Keldeo|Surf|p1a: Alomomola
+|-resisted|p1a: Alomomola
+|-damage|p1a: Alomomola|378/474
+|upkeep
+|turn|29
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|switch|p1a: Ting-Lu|Ting-Lu|344/514
+|-ability|p1a: Ting-Lu|Vessel of Ruin
+|move|p2a: Keldeo|Surf|p1a: Ting-Lu
+|-supereffective|p1a: Ting-Lu
+|-crit|p1a: Ting-Lu
+|-damage|p1a: Ting-Lu|48/514
+|-heal|p1a: Ting-Lu|80/514|[from] item: Leftovers
+|upkeep
+|turn|30
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|switch|p1a: Alomomola|Alomomola, M|474/474
+|move|p2a: Keldeo|Surf|p1a: Alomomola
+|-resisted|p1a: Alomomola
+|-damage|p1a: Alomomola|372/474
+|upkeep
+|turn|31
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Alomomola|Protect|p1a: Alomomola
+|-singleturn|p1a: Alomomola|Protect
+|move|p2a: Keldeo|Surf|p1a: Alomomola
+|-activate|p1a: Alomomola|move: Protect
+|upkeep
+|turn|32
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|switch|p1a: Ting-Lu|Ting-Lu|80/514
+|-ability|p1a: Ting-Lu|Vessel of Ruin
+|move|p2a: Keldeo|Surf|p1a: Ting-Lu
+|-supereffective|p1a: Ting-Lu
+|-damage|p1a: Ting-Lu|0 fnt
+|faint|p1a: Ting-Lu
+|upkeep
+|switch|p1a: Alomomola|Alomomola, M|474/474
+|turn|33
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Alomomola|Protect|p1a: Alomomola
+|-singleturn|p1a: Alomomola|Protect
+|move|p2a: Keldeo|Surf|p1a: Alomomola
+|-activate|p1a: Alomomola|move: Protect
+|upkeep
+|turn|34
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Alomomola|Protect|p1a: Alomomola
+|-singleturn|p1a: Alomomola|Protect
+|move|p2a: Keldeo|Surf|p1a: Alomomola
+|-activate|p1a: Alomomola|move: Protect
+|upkeep
+|turn|35
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Alomomola|Protect||[still]
+|-fail|p1a: Alomomola
+|move|p2a: Keldeo|Surf|p1a: Alomomola
+|-resisted|p1a: Alomomola
+|-damage|p1a: Alomomola|365/474
+|upkeep
+|turn|36
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p2a: Keldeo|Surf|p1a: Alomomola
+|-resisted|p1a: Alomomola
+|-damage|p1a: Alomomola|267/474
+|move|p1a: Alomomola|Wish|p1a: Alomomola
+|upkeep
+|turn|37
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p2a: Keldeo|Surf|p1a: Alomomola
+|-resisted|p1a: Alomomola
+|-damage|p1a: Alomomola|171/474
+|move|p1a: Alomomola|Wish||[still]
+|-fail|p1a: Alomomola
+|-heal|p1a: Alomomola|408/474|[from] move: Wish|[wisher] Alomomola
+|upkeep
+|turn|38
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Alomomola|Protect|p1a: Alomomola
+|-singleturn|p1a: Alomomola|Protect
+|move|p2a: Keldeo|Surf|p1a: Alomomola
+|-activate|p1a: Alomomola|move: Protect
+|upkeep
+|turn|39
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Alomomola|Protect||[still]
+|-fail|p1a: Alomomola
+|move|p2a: Keldeo|Surf|p1a: Alomomola
+|-resisted|p1a: Alomomola
+|-damage|p1a: Alomomola|299/474
+|upkeep
+|turn|40
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Alomomola|Protect|p1a: Alomomola
+|-singleturn|p1a: Alomomola|Protect
+|move|p2a: Keldeo|Surf|p1a: Alomomola
+|-activate|p1a: Alomomola|move: Protect
+|upkeep
+|turn|41
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Alomomola|Protect||[still]
+|-fail|p1a: Alomomola
+|move|p2a: Keldeo|Surf|p1a: Alomomola
+|-resisted|p1a: Alomomola
+|-damage|p1a: Alomomola|192/474
+|upkeep
+|turn|42
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Alomomola|Protect|p1a: Alomomola
+|-singleturn|p1a: Alomomola|Protect
+|move|p2a: Keldeo|Surf|p1a: Alomomola
+|-activate|p1a: Alomomola|move: Protect
+|upkeep
+|turn|43
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Alomomola|Protect||[still]
+|-fail|p1a: Alomomola
+|move|p2a: Keldeo|Surf|p1a: Alomomola
+|-resisted|p1a: Alomomola
+|-damage|p1a: Alomomola|96/474
+|upkeep
+|turn|44
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Alomomola|Protect|p1a: Alomomola
+|-singleturn|p1a: Alomomola|Protect
+|move|p2a: Keldeo|Surf|p1a: Alomomola
+|-activate|p1a: Alomomola|move: Protect
+|upkeep
+|turn|45
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|html|<div class="message-error">You must be registered to chat in temporary rooms (like battles).</div>You may register in the <button name="openOptions"><i class="fa fa-cog"></i> Options</button> menu.
+|move|p1a: Alomomola|Protect||[still]
+|-fail|p1a: Alomomola
+|move|p2a: Keldeo|Surf|p1a: Alomomola
+|-resisted|p1a: Alomomola
+|-damage|p1a: Alomomola|0 fnt
+|faint|p1a: Alomomola
+    </script>
+</div>
+
+<div class="battle-log battle-log-inline" style="display:none"></div>
+
+<script>
+    let daily = Math.floor(Date.now() / 1000 / 60 / 60 / 24); document.write('<script src="https://play.pokemonshowdown.com/js/replay-embed.js?version' + daily + '"></' + 'script>');
+</script>
+
+<p style="text-align:center"> Replay created by <a href="https://github.com/hsahovic/poke-env">poke-env</a>, with code from <a
+        href="https://github.com/smogon/pokemon-showdown"> pokemon-showdown</a>. If something goes wrong, don't hesitate
+    to open an <a href="https://github.com/hsahovic/poke-env/issues">issue!</a></p>
