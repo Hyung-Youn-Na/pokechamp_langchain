@@ -26,6 +26,7 @@ from pokechamp.openrouter_player import OpenRouterPlayer
 from pokechamp.gemini_player import GeminiPlayer
 from pokechamp.ollama_player import OllamaPlayer
 from pokechamp.vllm_player import VLLMPlayer
+from pokechamp.featherless_player import FeatherlessPlayer
 from pokechamp.data_cache import (
     get_cached_move_effect,
     get_cached_pokemon_move_dict,
@@ -145,6 +146,11 @@ class LLMPlayer(Player):
                 model_name = backend.replace("vllm/", "")
                 print(f"Using vLLM with model: {model_name}")
                 self.llm = VLLMPlayer(model=model_name, device=device)
+            elif backend.startswith("featherless/"):
+                # Featherless AI (OpenAI-compatible API)
+                model_name = backend.replace("featherless/", "")
+                print(f"Using Featherless AI with model: {model_name}")
+                self.llm = FeatherlessPlayer(self.api_key, model=model_name)
             elif backend.startswith(
                 (
                     "openai/",
