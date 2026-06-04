@@ -356,8 +356,8 @@ async def main():
         pbar.update(1)
 
     # Print experiment results summary
-    n_battles = len(battle_metrics)
-    wins = sum(m["won"] for m in battle_metrics)
+    n_battles = player.n_finished_battles
+    wins = player.n_won_battles
     win_rate = wins / n_battles * 100 if n_battles > 0 else 0
     avg_turns = (
         sum(m["turns"] for m in battle_metrics) / n_battles if n_battles > 0 else 0
