@@ -33,6 +33,7 @@ pokechamp/
 │   ├── gemini_player.py # Google Gemini backend
 │   ├── openrouter_player.py # OpenRouter API backend
 │   ├── prompts.py       # Battle prompts & algorithms
+│   ├── dynamic_move.py  # Dynamic move type/power/priority calculations
 │   └── translate.py     # Battle translation utilities
 ├── bayesian/            # [PREDICT] Bayesian prediction system
 │   ├── pokemon_predictor.py    # Pokemon team predictions
@@ -51,6 +52,7 @@ pokechamp/
 - **Clean separation**: Core battle engine (`poke_env`) is independent of LLM code
 - **Modular design**: Each component has clear responsibilities
 - **Extensible**: Easy to add new LLM backends or battle algorithms
+- **Dynamic Moves**: Real-time move type/power/priority resolution based on battle state (weather, tera type, items, status conditions)
 - **Testable**: Comprehensive test coverage for all functionality
 
 ## Quick Start
@@ -71,6 +73,9 @@ uv sync
 ```sh
 # Basic battle
 uv run python local_1v1.py --player_name pokechamp --opponent_name abyssal
+
+# With dynamic move calculations (shows flag annotations + type/power/priority calcs in prompts)
+uv run python local_1v1.py --player_name pokechamp --opponent_name abyssal --enable_dynamic_flags --enable_dynamic_calcs
 
 # Try MCP integration
 uv run python local_1v1.py --player_prompt_algo mcp --player_backend gemini-2.5-flash --opponent_name abyssal
@@ -218,6 +223,15 @@ uv run python scripts/battles/local_1v1.py --player_name starter_kit --player_ba
 uv run python local_1v1.py --player_prompt_algo mcp --player_backend gemini-2.5-flash --opponent_name abyssal
 ```
 
+#### Dynamic Move Calculation Flags
+```sh
+# Enable flag annotations in prompts (type immunities, crit flags, etc.)
+uv run python scripts/battles/local_1v1.py --player_name pokechamp --opponent_name abyssal --enable_dynamic_flags
+
+# Enable full dynamic type/power/priority calculations (requires --enable_dynamic_flags)
+uv run python scripts/battles/local_1v1.py --player_name pokechamp --opponent_name abyssal --enable_dynamic_flags --enable_dynamic_calcs
+```
+
 ### VGC Double Battles
 ```sh
 # VGC tournament
@@ -289,13 +303,14 @@ uv run pytest tests/
 
 # Specific test categories  
 uv run pytest tests/ -m bayesian      # Bayesian functionality
-uv run pytest tests/ -m moves         # Move normalization
+uv run pytest tests/ -m moves         # Move normalization & dynamic calculations
 uv run pytest tests/ -m teamloader    # Team loading
 ```
 
 The test suite includes:
 - [OK] Bayesian prediction accuracy (100% success rate)
 - [OK] Move normalization (284 unique moves tested)
+- [OK] Dynamic move calculations (214 tests for type/power/priority resolution)
 - [OK] Team loading and rejection handling
 - [OK] Bot system integration
 - [OK] Core battle engine functionality
