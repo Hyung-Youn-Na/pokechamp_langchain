@@ -77,6 +77,7 @@ parser.add_argument(
         "ollama/gemma3:4b",
         "ollama/gemma4:31b",
         "ollama/deepseek-v4-flash:cloud",
+        "ollama/nemotron-3-super:cloud",
         # vLLM models
         "vllm/Qwen/Qwen3.6-27B",
         "vllm/google/gemma-4-26B-A4B-it",
@@ -125,6 +126,7 @@ parser.add_argument(
         "ollama/gemma3:4b",
         "ollama/gemma4:31b",
         "ollama/deepseek-v4-flash:cloud",
+        "ollama/nemotron-3-super:cloud",
         # Meta models
         "meta-llama/llama-3.1-70b-instruct",
         "meta-llama/llama-3.1-8b-instruct",

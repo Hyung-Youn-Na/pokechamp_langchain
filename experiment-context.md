@@ -16,10 +16,6 @@
    - 커밋 메시지에 EXP-ID 포함 (예: `feat(prompt): macro_prompt to user [EXP-002]`)
    - 해당 실험 README.md에 커밋 해시 기록
 7. **로그 분리**: `--log_dir`로 실험 전용 디렉토리 지정. `./battle_log/one_vs_one` (기본값) 사용 금지.
-8. **상세 정보 필요시**:
-   - `--enable_*` 플래그 사양 → [flags-reference.md](flags-reference.md)
-   - 개선 우선순위/진단 → [improvement-plan/](improvement-plan/)
-   - 과거 세션 작업 → [SESSIONS.md](SESSIONS.md)
 
 ---
 
@@ -72,7 +68,7 @@ uv run python scripts/battles/local_1v1.py \
 - Ollama Cloud 인증 설정 완료 (default 모델: `deepseek-v4-flash:cloud`, 별도 지정 없으면 이 모델 사용)
 - `uv sync` 완료
 
-> **모델 정책**: `--player_backend`는 Ollama Cloud의 자유 모델 중 선택. 별도 지정이 없으면 `ollama/deepseek-v4-flash:cloud`를 기본값으로 사용. 다른 Ollama Cloud 모델로 교체해 ablation 가능 (예: `ollama/qwen3-coder:cloud`).
+> **모델 정책**: `--player_backend`는 Ollama Cloud의 자유 모델 중 선택. 별도 지정이 없으면 `ollama/deepseek-v4-flash:cloud`를 기본값으로 사용. 다른 Ollama Cloud 모델로 교체해 ablation 가능 (예: `ollama/qwen3-coder:cloud`, `ollama/nemotron-3-super:cloud`).
 
 ### 핵심 설정
 
@@ -110,7 +106,7 @@ uv run python scripts/battles/local_1v1.py \
 ├── EXP-001-baseline/
 │   ├── README.md
 │   └── battle_log/
-├── EXP-002-prompt-p0/
+├── EXP-002-xxx/
 │   ├── README.md
 │   └── battle_log/
 └── ...
@@ -151,7 +147,6 @@ uv run python scripts/battles/local_1v1.py \
 - [ ] README.md에 결과/분석 작성
 - [ ] [섹션 5 실험 인덱스](#5-실험-인덱스)에 한 줄 추가
 - [ ] 코드 변경 있으면 커밋 해시 README에 기록
-- [ ] [SESSIONS.md](SESSIONS.md)에 세션 요약 추가
 
 ---
 
@@ -159,40 +154,7 @@ uv run python scripts/battles/local_1v1.py \
 
 | ID | 이름 | 날짜 | 상태 | 승률 | 비고 |
 |----|------|------|------|------|------|
-| EXP-001 | baseline | 2026-05-26 | completed | 63.33% (19/30) | 기준점, 코드 변경 없음 |
-| EXP-002 | flags-only | 2026-05-26 | completed | 66.67% (20/30) | +3.33pp vs baseline |
-| EXP-003 | flags-calcs | 2026-05-26 | completed | 73.33% (22/30) | +10.00pp vs baseline, +6.67pp vs EXP-002 |
-| EXP-004 | baseline (deepseek-v4-flash) | 2026-06-02 | completed | 90.0% (27/30) | deepseek-v4-flash:cloud 기준점, dynamic flags 없음 |
-| EXP-005 | flags-only (deepseek-v4-flash) | 2026-06-03 | completed | 70.0% (21/30) | --enable_dynamic_flags, -20.00pp vs EXP-004 |
-| EXP-006 | flags+calcs (deepseek-v4-flash) | 2026-06-03 | completed | 40.0% (12/30) | --enable_dynamic_flags --enable_dynamic_calcs, -50.00pp vs EXP-004, -30.00pp vs EXP-005 |
-| EXP-007 | all flags (deepseek-v4-flash) | 2026-06-03 | completed | 60.0% (18/30) | --enable_dynamic_flags --enable_dynamic_calcs --enable_showdown_oracle, -30.00pp vs EXP-004, +20.00pp vs EXP-006 |
-| EXP-008 | io baseline (deepseek-v4-flash) | 2026-06-03 | completed | 20.0% (6/30) | io prompt, no dynamic flags, -70.00pp vs EXP-004 |
-| EXP-009 | io flags-only (deepseek-v4-flash) | 2026-06-04 | completed | 46.7% (14/30) | io prompt + --enable_dynamic_flags, -23.33pp vs EXP-005, +26.67pp vs EXP-008 |
-| EXP-010 | io flags+calcs (deepseek-v4-flash) | 2026-06-04 | completed | 60.0% (18/30) | io prompt + --enable_dynamic_flags --enable_dynamic_calcs, +20.00pp vs EXP-006, +13.33pp vs EXP-009 |
-| EXP-011 | io all flags (deepseek-v4-flash) | 2026-06-04 | completed | 46.7% (14/30) | io prompt + --enable_dynamic_flags --enable_dynamic_calcs --enable_showdown_oracle, -13.33pp vs EXP-007, -13.33pp vs EXP-010 |
-
-### 미측정 코드 변경 (실험 인덱스에 없음)
-
-다음 코드 변경은 Phase 1 이후 main에 merge되었으나, 공식 실험으로 측정되지 않았습니다.
-후속 실험(EXP-004+)에서 baseline 대비 효과를 검증해야 합니다.
-
-| 변경 | 커밋 | 내용 | 비고 |
-|------|------|------|------|
-| switch prompt 보강 | `b97f81d` | switch pokemon prompt에 full move/ability info 추가 | EXP-001 이전 적용, baseline에 포함됨 |
-| 확장 dynamic type resolver | `8806a5a`, `c1f1044` | species/form/property/terrain/item 기반 동적 타입 해석 추가 | EXP-003 이후 추가, 미측정 |
-| oracle integration | `c0bc155`, `95be5e0`, `b564023` | ShowdownOracle: 정확한 데미지/KO 확률 계산 → prompt 주입 | `--enable_showdown_oracle`, 미측정 |
-
-### 개선 계획 (미구현)
-
-improvement-plan에 정리된 P0~P4 항목. 코드 변경 전 실험 계획 필요.
-
-| 우선순위 | 항목 | 상태 |
-|----------|------|------|
-| P0 | macro_prompt를 system → user로 이동 | 계획 |
-| P1 | 영문 문법/오타 수정 + 두 분기 공통화 | 계획 |
-| P2 | Gen 9 OU 특화 휴리스틱 추가 | 계획 |
-| P3 | 출력 계약을 system 최상단 통합 | 계획 |
-| P4 | "sacrifice" 휴리스틱 재검토 | 계획 |
+| — | — | — | — | — | 실험 없음 |
 
 ---
 
