@@ -1641,7 +1641,6 @@ def state_translate(
             " When face to a opponent is boosting or has already boosted its attack/special attack/speed, knock it out as soon as possible, even sacrificing your pokemon."
             " if choose to switch, you forfeit to take a move this turn and the opposing pokemon will definitely move first. Therefore, you should pay attention to speed, type-resistance and defense of your switch-in pokemon to bear the damage from the opposing pokemon."
             " And If the switch-in pokemon has a slower speed then the opposing pokemon, the opposing pokemon will move twice continuously."
-            " Prefer super-effective and STAB moves. Do not switch out consecutively for more than 2 turns."
         )
 
         system_prompt = system_prompt + sim.strategy
