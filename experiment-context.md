@@ -16,6 +16,7 @@
    - 커밋 메시지에 EXP-ID 포함 (예: `feat(prompt): macro_prompt to user [EXP-002]`)
    - 해당 실험 README.md에 커밋 해시 기록
 7. **로그 분리**: `--log_dir`로 실험 전용 디렉토리 지정. `./battle_log/one_vs_one` (기본값) 사용 금지.
+8. **배틀 실행 금지 (★)**: `--N` 배틀 실행은 **에이전트가 직접 하지 않음**. 에이전트는 (a) 코드 변경, (b) 디렉토리/README 준비, (c) **실행 명령어 안내**까지만 담당. 사용자가 명령어를 직접 실행 후 결과를 알려주면 분석 진행.
 
 ---
 
@@ -50,11 +51,15 @@
 
 ## 3. Baseline 실행
 
+> ⚠️ **실험 실행 정책**: 배틀 실험(`--N 30` 등)은 **에이전트가 직접 실행하지 않고 명령어만 안내**. 사용자가 터미널에서 직접 실행. 에이전트는 실험 준비(디렉토리 생성, README 템플릿 작성, 코드 변경)까지만 수행.
+
+### 명령어 안내 (사용자 직접 실행)
+
 ```sh
 uv run python scripts/battles/local_1v1.py \
   --player_name pokechamp \
   --player_prompt_algo minimax \
-  --player_backend ollama/deepseek-v4-flash:cloud \
+  --player_backend ollama/glm-5.1:cloud \
   --opponent_name abyssal \
   --N 30 \
   --battle_format gen9ou \
@@ -65,10 +70,10 @@ uv run python scripts/battles/local_1v1.py \
 
 **사전 조건**:
 - Pokémon Showdown 서버가 `localhost:8000`에서 실행 중
-- Ollama Cloud 인증 설정 완료 (default 모델: `deepseek-v4-flash:cloud`, 별도 지정 없으면 이 모델 사용)
+- Ollama Cloud 인증 설정 완료 (default 모델: `glm-5.1:cloud`, 별도 지정 없으면 이 모델 사용)
 - `uv sync` 완료
 
-> **모델 정책**: `--player_backend`는 Ollama Cloud의 자유 모델 중 선택. 별도 지정이 없으면 `ollama/deepseek-v4-flash:cloud`를 기본값으로 사용. 다른 Ollama Cloud 모델로 교체해 ablation 가능 (예: `ollama/qwen3-coder:cloud`, `ollama/nemotron-3-super:cloud`).
+> **모델 정책**: `--player_backend`는 Ollama Cloud의 자유 모델 중 선택. 별도 지정이 없으면 `ollama/glm-5.1:cloud`를 기본값으로 사용. 다른 Ollama Cloud 모델로 교체해 ablation 가능 (예: `ollama/qwen3-coder:cloud`, `ollama/nemotron-3-super:cloud`, `ollama/deepseek-v4-flash:cloud`).
 
 ### 핵심 설정
 
@@ -158,6 +163,21 @@ uv run python scripts/battles/local_1v1.py \
 | EXP-002 | 전술 원칙 프롬프트 | 2026-06-04 | ✅ 완료 | 73.3% (22/30) | 장황한 프롬프트 역효과, -10pp |
 | EXP-003 | 최소 프롬프트 추가 | 2026-06-04 | ✅ 완료 | 66.7% (20/30) | 1문장 추가도 역효과, -16.6pp |
 | EXP-004 | Value Function 수정 | 2026-06-04 | ✅ 완료 | 70.0% (21/30) | 리프 평가 변경도 역효과, -13.3pp |
+| EXP-005 | Dynamic Flags (KAG) | 2026-06-04 | ✅ 완료 | 73.3% (22/30) | 데이터 증강도 역효과, 턴수 81.8 |
+| EXP-006 | IO + Nemotron-3-Super | 2026-06-05 | ✅ 완료 | 6.7% (2/30) | io+nemotron 치명적, -76.6pp, 스위칭 루프 |
+| EXP-007 | Verbose Prompt + IO+Ne | 2026-06-05 | ✅ 완료 | 13.3% (4/30) | 장문 프롬프트 약간 개선, 턴수 98.7 |
+| EXP-008 | Minimal Prompt + IO+Ne | 2026-06-05 | ✅ 완료 | 23.3% (7/30) | 1줄 추가 최고성능(io+ne), 턴수 110 |
+| EXP-009 | Value Func + IO+Ne | 2026-06-05 | ⏭️ SKIP | — | value_func은 io 알고리즘 미사용 |
+| EXP-010 | Dynamic Flags + IO+Ne | 2026-06-05 | ✅ 완료 | 13.3% (4/30) | 데이터증강 효과미미, 턴수 62.1 |
+| EXP-011 | IO Baseline + glm-5.1 | 2026-06-05 | ✅ 완료 | 53.3% (16/30) | io+glm-5.1, 118s/판, 턴수 55.4 |
+| EXP-012 | IO Baseline + deepseek-v4-pro | 2026-06-05 | ✅ 완료 | 20.0% (6/30) | io+deepseek-pro, 105s/판, 턴수 94.6, 스위칭 루프 의심 |
+| EXP-013 | IO Baseline + nemotron-3-s | 2026-06-05 | ✅ 완료 | 23.3% (7/30) | io+nemotron3s, 턴수 132.5, 스위칭 루프 심각 |
+| EXP-014 | IO Baseline + deepseek-v4-flash | 2026-06-05 | ✅ 완료 | 53.3% (16/30) | io+deepseek-flash, 턴수 51.2, minimax 대비 -30pp |
+| EXP-015 | IO Baseline + gemma4:31b | 2026-06-05 | ✅ 완료 | 70.0% (21/30) | io+gemma4 최고성능, 턴수 36.1, 효율적 전투 |
+| EXP-016 | IO Baseline + kimi-k2.6 | 2026-06-05 | ✅ 완료 | 56.7% (17/30) | io+kimi-k2.6, 648s/판(매우느림), 턴수 51.6, completion 28k |
+| EXP-017 | IO + gemma4 + LLM Lead | 2026-06-08 | ✅ 완료 | 50.0% (15/30) | io+gemma4+llm_lead, 턴수 34.4, JSON실패 394회, -20pp vs EXP-015 |
+| EXP-018 | IO + GLM-5.1 속도 측정 | 2026-06-08 | ✅ 완료 | 60.0% (3/5) | io+glm-5.1, 190s/판, 턴수 30.0, 속도 측정 목적 (N=5) |
+| EXP-019 | IO+Gemma4+LLM Lead+Temp0 | 2026-06-08 | ✅ 완료 | 50.0% (15/30) | EXP-017 대비 승률 변화없음, JSON실패 143회, temp0 효과미미 |
 
 ---
 
