@@ -76,8 +76,15 @@ parser.add_argument(
         "ollama/qwen2.5",
         "ollama/gemma3:4b",
         "ollama/gemma4:31b",
+        "ollama/gemma4:31b-cloud",
         "ollama/deepseek-v4-flash:cloud",
+        "ollama/deepseek-v4-pro:cloud",
         "ollama/nemotron-3-super:cloud",
+        "ollama/nemotron-3-ultra:cloud",
+        "ollama/minimax-m3:cloud",
+        "ollama/qwen3.5:397b-cloud",
+        "ollama/glm-5.1:cloud",
+        "ollama/kimi-k2.6:cloud",
         # vLLM models
         "vllm/Qwen/Qwen3.6-27B",
         "vllm/google/gemma-4-26B-A4B-it",
@@ -125,8 +132,15 @@ parser.add_argument(
         "ollama/qwen2.5",
         "ollama/gemma3:4b",
         "ollama/gemma4:31b",
+        "ollama/gemma4:31b-cloud",
         "ollama/deepseek-v4-flash:cloud",
+        "ollama/deepseek-v4-pro:cloud",
         "ollama/nemotron-3-super:cloud",
+        "ollama/nemotron-3-ultra:cloud",
+        "ollama/minimax-m3:cloud",
+        "ollama/qwen3.5:397b-cloud",
+        "ollama/glm-5.1:cloud",
+        "ollama/kimi-k2.6:cloud",
         # Meta models
         "meta-llama/llama-3.1-70b-instruct",
         "meta-llama/llama-3.1-8b-instruct",
@@ -207,6 +221,12 @@ parser.add_argument(
     default=False,
     help="Enable Showdown oracle for move outcome prediction (Node.js required)",
 )
+parser.add_argument(
+    "--enable_llm_lead_selection",
+    action="store_true",
+    default=False,
+    help="Enable LLM-based lead Pokemon selection during team preview",
+)
 
 args = parser.parse_args()
 
@@ -245,6 +265,7 @@ async def main():
         enable_dynamic_flags=args.enable_dynamic_flags,
         enable_dynamic_calcs=args.enable_dynamic_calcs,
         enable_showdown_oracle=args.enable_showdown_oracle,
+        enable_llm_lead_selection=args.enable_llm_lead_selection,
     )
 
     opponent = get_llm_player(

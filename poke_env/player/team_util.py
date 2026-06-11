@@ -265,6 +265,7 @@ def get_llm_player(
     enable_dynamic_flags: bool = False,
     enable_dynamic_calcs: bool = False,
     enable_showdown_oracle: bool = False,
+    enable_llm_lead_selection: bool = False,
 ) -> Player:
     from pokechamp.llm_player import LLMPlayer
     from pokechamp.prompts import prompt_translate, state_translate2, state_translate3
@@ -301,6 +302,7 @@ def get_llm_player(
             enable_dynamic_flags=enable_dynamic_flags,
             enable_dynamic_calcs=enable_dynamic_calcs,
             enable_showdown_oracle=enable_showdown_oracle,
+            enable_llm_lead_selection=enable_llm_lead_selection,
         )
     if name == "abyssal":
         return AbyssalPlayer(
@@ -372,6 +374,7 @@ def get_llm_player(
                 enable_dynamic_flags=enable_dynamic_flags,
                 enable_dynamic_calcs=enable_dynamic_calcs,
                 enable_showdown_oracle=enable_showdown_oracle,
+                enable_llm_lead_selection=enable_llm_lead_selection,
             )
     elif "pokechamp" in name:
         # Use VGC player for VGC formats, timeout player for online mode, regular player for others
@@ -414,6 +417,7 @@ def get_llm_player(
                 enable_dynamic_flags=enable_dynamic_flags,
                 enable_dynamic_calcs=enable_dynamic_calcs,
                 enable_showdown_oracle=enable_showdown_oracle,
+                enable_llm_lead_selection=enable_llm_lead_selection,
             )
         else:
             return LLMPlayer(
@@ -434,6 +438,7 @@ def get_llm_player(
                 enable_dynamic_flags=enable_dynamic_flags,
                 enable_dynamic_calcs=enable_dynamic_calcs,
                 enable_showdown_oracle=enable_showdown_oracle,
+                enable_llm_lead_selection=enable_llm_lead_selection,
             )
     elif "vgc" in name:
         return LLMVGCPlayer(

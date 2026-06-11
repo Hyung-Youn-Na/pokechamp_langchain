@@ -5,6 +5,7 @@ import datetime
 import json
 import os
 import random
+import re
 import sys
 
 import numpy as np
@@ -85,6 +86,7 @@ class LLMPlayer(Player):
         enable_dynamic_flags: bool = False,
         enable_dynamic_calcs: bool = False,
         enable_showdown_oracle: bool = False,
+        enable_llm_lead_selection: bool = True,
     ):
 
         super().__init__(
@@ -200,6 +202,7 @@ class LLMPlayer(Player):
         self.enable_dynamic_flags = enable_dynamic_flags
         self.enable_dynamic_calcs = enable_dynamic_calcs
         self.enable_showdown_oracle = enable_showdown_oracle
+        self.enable_llm_lead_selection = enable_llm_lead_selection
 
         # LLM call tracking — incremented per get_LLM_action call, reset per battle
         self.llm_call_count = 0
@@ -374,7 +377,33 @@ class LLMPlayer(Player):
             except Exception as e:
                 print(f"Failed to send thinking message: {e}")
 
+        # Structured logging for battle viewer
+        self._log_llm_call(
+            battle, system_prompt, user_prompt, output, raw_message
+        )
+
         return output
+
+    def _log_llm_call(self, battle, system_prompt, user_prompt, output, raw_message):
+        """Write structured JSON log for the battle viewer (if log_dir is set)."""
+        if not self.log_dir or battle is None:
+            return
+        try:
+            log_entry = {
+                "turn": battle.turn,
+                "battle_tag": battle.battle_tag,
+                "system_prompt": system_prompt,
+                "user_prompt": user_prompt,
+                "llm_response": raw_message,
+                "parsed_action": output,
+                "llm_call_count": self.llm_call_count,
+                "timestamp": datetime.datetime.now().isoformat(),
+            }
+            log_file = os.path.join(self.log_dir, "llm_log.jsonl")
+            with open(log_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+        except Exception as e:
+            print(f"Failed to write LLM log: {e}")
 
     def check_all_pokemon(self, pokemon_str: str) -> Pokemon:
         valid_pokemon = None
@@ -1724,3 +1753,229 @@ class LLMPlayer(Player):
             best_move = max(battle.available_moves, key=lambda move: move.base_power)
             return self.create_order(best_move)
         return self.choose_random_move(battle)
+
+    # ------------------------------------------------------------------
+    # LLM-based team preview / lead selection for singles
+    # ------------------------------------------------------------------
+
+    _LEAD_SELECTION_SYSTEM_PROMPT = (
+        "You are an expert competitive Pokemon gen9ou (OverUsed singles 6v6) "
+        "team analyst. Your task is to choose the optimal lead Pokemon and "
+        "team order for battle.\n\n"
+        "Key considerations for lead selection in gen9ou singles:\n"
+        "1. Type matchup advantage against the opponent's likely leads\n"
+        "2. Speed tier - outspeeding the opponent's likely lead is critical\n"
+        "3. Entry hazard setting (Stealth Rock, Spikes) vs anti-lead "
+        "(Defog, Rapid Spin, Taunt)\n"
+        "4. Lead momentum - can your lead force a favorable switch or get "
+        "an early KO?\n"
+        "5. Team order after the lead - order remaining Pokemon by how soon "
+        "you might need them as switch-ins\n"
+        "6. Synergy - your lead should set up the rest of your team for success\n\n"
+        "Opponent data is limited during team preview: you can see their "
+        "species, types, base stats, and possible abilities, but NOT their "
+        "exact moves, items, or abilities.\n\n"
+        "Respond with ONLY a 6-digit number where each digit is a unique "
+        "number 1-6, representing your team order. The FIRST digit is your "
+        "lead Pokemon. Example: \"421365\" means lead with Pokemon 4, "
+        "then 2, 1, 3, 6, 5 in reserve."
+    )
+
+    def teampreview(self, battle: AbstractBattle) -> str:
+        """Return a teampreview order using LLM analysis for lead selection.
+
+        Falls back to random_teampreview on any error or when disabled.
+        """
+        if not self.enable_llm_lead_selection:
+            return self.random_teampreview(battle)
+
+        try:
+            own_team = list(battle.team.values())
+            opp_team = list(battle._teampreview_opponent_team)
+
+            if not own_team:
+                return self.random_teampreview(battle)
+
+            team_data = self._format_lead_selection_data(own_team, opp_team)
+            user_prompt = self._create_lead_selection_prompt(team_data)
+
+            response = self.get_LLM_action(
+                system_prompt=self._LEAD_SELECTION_SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+                model=self.backend,
+                temperature=0.3,
+                max_tokens=100,
+            )
+
+            order = self._parse_teampreview_response(response, len(own_team))
+            if order:
+                print(f"[teampreview] LLM selected team order: {order}")
+                return f"/team {order}"
+        except Exception as e:
+            print(f"[teampreview] Error: {e}")
+
+        return self.random_teampreview(battle)
+
+    def _format_lead_selection_data(
+        self, own_team: List[Pokemon], opp_team: List[Pokemon]
+    ) -> Dict[str, list]:
+        """Format both teams into structured dicts for prompt building."""
+        team_data = {"own_pokemon": [], "opponent_pokemon": []}
+
+        for i, pokemon in enumerate(own_team, 1):
+            try:
+                info = {
+                    "index": i,
+                    "name": pokemon.species,
+                    "type1": pokemon.type_1.name if pokemon.type_1 else "Unknown",
+                    "type2": pokemon.type_2.name if pokemon.type_2 else None,
+                    "ability": pokemon.ability or "Unknown",
+                    "item": pokemon.item or "None",
+                    "moves": (
+                        [m.name for m in pokemon.moves.values()]
+                        if hasattr(pokemon, "moves") and pokemon.moves
+                        else []
+                    ),
+                    "base_stats": (
+                        {
+                            k: pokemon.base_stats.get(k, 0)
+                            for k in ("hp", "atk", "def", "spa", "spd", "spe")
+                        }
+                        if hasattr(pokemon, "base_stats") and pokemon.base_stats
+                        else {}
+                    ),
+                }
+            except Exception:
+                info = {
+                    "index": i,
+                    "name": str(pokemon),
+                    "type1": "Unknown",
+                    "type2": None,
+                    "ability": "Unknown",
+                    "item": "None",
+                    "moves": [],
+                    "base_stats": {},
+                }
+            team_data["own_pokemon"].append(info)
+
+        for pokemon in opp_team:
+            try:
+                info = {
+                    "name": pokemon.species,
+                    "type1": pokemon.type_1.name if pokemon.type_1 else "Unknown",
+                    "type2": pokemon.type_2.name if pokemon.type_2 else None,
+                    "possible_abilities": (
+                        list(pokemon._possible_abilities)
+                        if hasattr(pokemon, "_possible_abilities")
+                        and pokemon._possible_abilities
+                        else []
+                    ),
+                    "base_stats": (
+                        {
+                            k: pokemon.base_stats.get(k, 0)
+                            for k in ("hp", "atk", "def", "spa", "spd", "spe")
+                        }
+                        if hasattr(pokemon, "base_stats") and pokemon.base_stats
+                        else {}
+                    ),
+                }
+            except Exception:
+                info = {
+                    "name": str(pokemon),
+                    "type1": "Unknown",
+                    "type2": None,
+                    "possible_abilities": [],
+                    "base_stats": {},
+                }
+            team_data["opponent_pokemon"].append(info)
+
+        return team_data
+
+    def _create_lead_selection_prompt(self, team_data: Dict[str, list]) -> str:
+        """Build the user prompt with formatted team data."""
+        lines = ["Your Team (choose the best lead):"]
+
+        for p in team_data["own_pokemon"]:
+            types = p["type1"]
+            if p["type2"]:
+                types += f"/{p['type2']}"
+            line = f"{p['index']}. {p['name']} ({types})"
+            line += f"  Ability: {p['ability']}, Item: {p['item']}"
+            if p["moves"]:
+                line += f"\n   Moves: {', '.join(p['moves'])}"
+            if p["base_stats"]:
+                s = p["base_stats"]
+                line += (
+                    f"\n   Stats: HP:{s['hp']} Atk:{s['atk']} Def:{s['def']} "
+                    f"SpA:{s['spa']} SpD:{s['spd']} Spe:{s['spe']}"
+                )
+            lines.append(line)
+
+        lines.append("")
+        lines.append(
+            "Opponent's Team (species/types only - moves/items unknown):"
+        )
+
+        for p in team_data["opponent_pokemon"]:
+            types = p["type1"]
+            if p["type2"]:
+                types += f"/{p['type2']}"
+            line = f"- {p['name']} ({types})"
+            if p["possible_abilities"]:
+                line += f"  Possible Abilities: {', '.join(p['possible_abilities'])}"
+            if p["base_stats"]:
+                s = p["base_stats"]
+                line += (
+                    f"\n  Stats: HP:{s['hp']} Atk:{s['atk']} Def:{s['def']} "
+                    f"SpA:{s['spa']} SpD:{s['spd']} Spe:{s['spe']}"
+                )
+            lines.append(line)
+
+        lines.append("")
+        lines.append(
+            "Respond with ONLY a 6-digit number (e.g. 312645) where "
+            "the FIRST digit is your lead Pokemon."
+        )
+
+        return "\n".join(lines)
+
+    def _parse_teampreview_response(
+        self, response: str, team_size: int
+    ) -> Optional[str]:
+        """Parse LLM response into a valid team order string.
+
+        Returns None on parse failure (caller falls back to random).
+        """
+        if not response:
+            return None
+
+        response = response.strip()
+
+        # Strategy 1: look for a contiguous N-digit permutation
+        pattern = r"\b(\d{" + str(team_size) + r"})\b"
+        match = re.search(pattern, response)
+        if match:
+            digits = match.group(1)
+            if self._is_valid_team_order(digits, team_size):
+                return digits
+
+        # Strategy 2: collect individual digits and take first valid N
+        all_digits = re.findall(r"\b(\d)\b", response)
+        seen = set()
+        unique_digits = []
+        for d in all_digits:
+            if d not in seen and 1 <= int(d) <= team_size:
+                seen.add(d)
+                unique_digits.append(d)
+        if len(unique_digits) == team_size:
+            return "".join(unique_digits)
+
+        return None
+
+    @staticmethod
+    def _is_valid_team_order(digits: str, team_size: int) -> bool:
+        """Check that *digits* is a valid permutation of 1..team_size."""
+        if len(digits) != team_size:
+            return False
+        expected = set(str(i) for i in range(1, team_size + 1))
+        return set(digits) == expected
