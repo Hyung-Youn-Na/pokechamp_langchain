@@ -409,33 +409,43 @@ class AbstractBattle(ABC):
             else:
                 folder = str(self._save_replays)
 
-            if not os.path.exists(folder):
-                os.mkdir(folder)
+            os.makedirs(folder, exist_ok=True)
 
-            with open(
-                os.path.join(
-                    folder, f"{self._player_username} - {self.battle_tag}.html"
-                ),
-                "w+",
-                encoding="utf-8",
-            ) as f:
-                formatted_replay = REPLAY_TEMPLATE
+            try:
+                with open(
+                    os.path.join(
+                        folder, f"{self._player_username} - {self.battle_tag}.html"
+                    ),
+                    "w+",
+                    encoding="utf-8",
+                ) as f:
+                    formatted_replay = REPLAY_TEMPLATE
 
-                formatted_replay = formatted_replay.replace(
-                    "{BATTLE_TAG}", f"{self.battle_tag}"
-                )
-                formatted_replay = formatted_replay.replace(
-                    "{PLAYER_USERNAME}", f"{self._player_username}"
-                )
-                formatted_replay = formatted_replay.replace(
-                    "{OPPONENT_USERNAME}", f"{self._opponent_username}"
-                )
-                replay_log = f">{self.battle_tag}" + "\n".join(
-                    ["|".join(split_message) for split_message in self._replay_data]
-                )
-                formatted_replay = formatted_replay.replace("{REPLAY_LOG}", replay_log)
+                    formatted_replay = formatted_replay.replace(
+                        "{BATTLE_TAG}", f"{self.battle_tag}"
+                    )
+                    formatted_replay = formatted_replay.replace(
+                        "{PLAYER_USERNAME}", f"{self._player_username}"
+                    )
+                    formatted_replay = formatted_replay.replace(
+                        "{OPPONENT_USERNAME}", f"{self._opponent_username}"
+                    )
+                    replay_log = f">{self.battle_tag}" + "\n".join(
+                        [
+                            "|".join(split_message)
+                            for split_message in self._replay_data
+                        ]
+                    )
+                    formatted_replay = formatted_replay.replace(
+                        "{REPLAY_LOG}", replay_log
+                    )
 
-                f.write(formatted_replay)
+                    f.write(formatted_replay)
+            except Exception as e:
+                if self.logger is not None:
+                    self.logger.warning(
+                        "Failed to save battle replay: %s", e
+                    )
 
         self._finished = True
 
