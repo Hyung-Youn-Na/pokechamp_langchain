@@ -3,6 +3,8 @@ from tqdm import tqdm
 import os
 import sys
 import argparse
+import json
+from datetime import datetime, timezone
 
 # Import visual effects early
 try:
@@ -213,7 +215,7 @@ parser.add_argument(
     "--enable_dynamic_calcs",
     action="store_true",
     default=False,
-    help="Enable dynamic move calculations in prompts (requires vllm/* backend)",
+    help="Enable dynamic move calculations in prompts",
 )
 parser.add_argument(
     "--enable_showdown_oracle",
@@ -309,7 +311,7 @@ async def main():
             player.update_team(player_teamloader.yield_team())
             opponent.update_team(opponent_teamloader.yield_team())
 
-    # play against bot for five battles
+    # play N battles against the opponent
     N = args.N
 
     # Per-battle metrics tracking for experiment output
@@ -399,15 +401,61 @@ async def main():
         sum(m["llm_calls"] for m in battle_metrics) / n_battles if n_battles > 0 else 0
     )
 
-    print(f"\n{'='*50}")
-    print(f"EXPERIMENT RESULTS ({n_battles} battles)")
-    print(f"{'='*50}")
-    print(f"Win Rate:              {win_rate:.1f}% ({wins}/{n_battles})")
-    print(f"Avg Turns per Battle:  {avg_turns:.1f}")
-    print(f"Avg Prompt Tokens:     {avg_prompt_tokens:.0f}")
-    print(f"Avg Completion Tokens: {avg_completion_tokens:.0f}")
-    print(f"Avg LLM Calls/Battle:  {avg_llm_calls:.1f}")
-    print(f"{'='*50}")
+    summary_text = (
+        f"{'='*50}\n"
+        f"EXPERIMENT RESULTS ({n_battles} battles)\n"
+        f"{'='*50}\n"
+        f"Win Rate:              {win_rate:.1f}% ({wins}/{n_battles})\n"
+        f"Avg Turns per Battle:  {avg_turns:.1f}\n"
+        f"Avg Prompt Tokens:     {avg_prompt_tokens:.0f}\n"
+        f"Avg Completion Tokens: {avg_completion_tokens:.0f}\n"
+        f"Avg LLM Calls/Battle:  {avg_llm_calls:.1f}\n"
+        f"{'='*50}"
+    )
+    print(f"\n{summary_text}")
+
+    # Save experiment results as JSON for agent analysis
+    experiment_log = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "script": "local_1v1",
+        "config": {
+            "algorithm": args.player_prompt_algo,
+            "backend": args.player_backend,
+            "player_name": args.player_name,
+            "opponent_name": args.opponent_name,
+            "opponent_backend": args.opponent_backend,
+            "opponent_algorithm": args.opponent_prompt_algo,
+            "battle_format": args.battle_format,
+            "n_battles": args.N,
+            "seed": args.seed,
+            "temperature": args.temperature,
+            "enable_dynamic_flags": args.enable_dynamic_flags,
+            "enable_dynamic_calcs": args.enable_dynamic_calcs,
+            "enable_showdown_oracle": args.enable_showdown_oracle,
+            "enable_llm_lead_selection": args.enable_llm_lead_selection,
+        },
+        "summary": {
+            "win_rate": round(win_rate, 1),
+            "wins": wins,
+            "n_battles": n_battles,
+            "avg_turns": round(avg_turns, 1),
+            "avg_llm_calls": round(avg_llm_calls, 1),
+            "avg_prompt_tokens": round(avg_prompt_tokens),
+            "avg_completion_tokens": round(avg_completion_tokens),
+        },
+        "battles": battle_metrics,
+    }
+
+    log_dir = args.log_dir
+    os.makedirs(log_dir, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_path = os.path.join(
+        log_dir,
+        f"experiment_{args.player_prompt_algo}_{args.player_backend.replace('/', '_')}_{ts}.json",
+    )
+    with open(log_path, "w", encoding="utf-8") as f:
+        json.dump(experiment_log, f, indent=2, ensure_ascii=False)
+    print(f"Experiment log saved to: {log_path}")
 
 
 if __name__ == "__main__":

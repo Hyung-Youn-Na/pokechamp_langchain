@@ -29,6 +29,8 @@ import os
 import sys
 import argparse
 import time
+import json
+from datetime import datetime, timezone
 
 # Add the project root to Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
@@ -75,7 +77,12 @@ parser.add_argument(
 parser.add_argument("--player_device", type=int, default=0)
 
 # Opponent arguments
-parser.add_argument("--opponent_prompt_algo", default="io", choices=all_prompt_algos)
+parser.add_argument(
+    "--opponent_prompt_algo",
+    default="io",
+    choices=prompt_algos,
+    help="Opponent always uses the standard LLMPlayer; only standard algos allowed.",
+)
 parser.add_argument("--opponent_backend", type=str, default="gemini-2.5-pro")
 parser.add_argument(
     "--opponent_name", type=str, default="abyssal", choices=bot_choices
@@ -89,6 +96,12 @@ parser.add_argument(
     type=int,
     default=8192,
     help="Max tokens for LLM generation (default: 8192)",
+)
+parser.add_argument(
+    "--max_tool_calls",
+    type=int,
+    default=5,
+    help="Max tool calls per turn for ReAct agent (default: 5)",
 )
 parser.add_argument(
     "--battle_format",
@@ -130,9 +143,11 @@ if args.seed is not None:
 def save_battle_replay(battle, log_dir: str) -> bool:
     """Explicitly save HTML replay for a battle.
 
-    This is a safety net in case ``AbstractBattle._finish_battle()`` was not
-    called or failed silently (e.g. due to a blocked event-loop from a
-    synchronous LangGraph ``graph.invoke()`` call).
+    This is a safety net for when ``AbstractBattle._finish_battle()`` did not
+    write the replay HTML file — most likely because the synchronous LangGraph
+    ``graph.invoke()`` call blocked the event-loop so the replay-saving step
+    inside ``_finish_battle()`` did not run. The win/loss result itself is
+    still recorded normally via the ``|win|``/``|tie|`` message handler.
 
     Returns True if a replay was saved (newly created), False otherwise.
     """
@@ -187,6 +202,7 @@ def _get_langchain_player(
     enable_dynamic_calcs: bool = False,
     enable_showdown_oracle: bool = False,
     enable_llm_lead_selection: bool = False,
+    max_tool_calls: int = 5,
 ):
     """Create a LangChainPlayer for LangGraph-based algorithms."""
     from pokechamp.langchain_backend import LangChainBackend
@@ -229,6 +245,7 @@ def _get_langchain_player(
         enable_dynamic_calcs=enable_dynamic_calcs,
         enable_showdown_oracle=enable_showdown_oracle,
         enable_llm_lead_selection=enable_llm_lead_selection,
+        max_tool_calls=max_tool_calls,
     )
     return player
 
@@ -239,6 +256,8 @@ async def main():
     print(f"{'='*50}")
     print(f"Player: {args.player_name} ({args.player_backend})")
     print(f"  Algorithm: {args.player_prompt_algo}")
+    if args.player_prompt_algo == "react":
+        print(f"  Max Tool Calls: {args.max_tool_calls}")
     print(f"Opponent: {args.opponent_name} ({args.opponent_backend})")
     print(f"  Algorithm: {args.opponent_prompt_algo}")
     print(f"Format: {args.battle_format}")
@@ -260,6 +279,7 @@ async def main():
             enable_dynamic_calcs=args.enable_dynamic_calcs,
             enable_showdown_oracle=args.enable_showdown_oracle,
             enable_llm_lead_selection=args.enable_llm_lead_selection,
+            max_tool_calls=args.max_tool_calls,
         )
     else:
         player = get_llm_player(
@@ -352,9 +372,9 @@ async def main():
         won = 1 if (latest_battle and latest_battle.won) else 0
         turns = latest_battle.turn if latest_battle else 0
 
-        # Explicitly save HTML replay as a safety net.  The standard
-        # mechanism (``AbstractBattle._finish_battle``) may fail to fire
-        # when the synchronous LangGraph agent blocks the event-loop.
+        # Explicitly save HTML replay as a safety net.  The replay-write step
+        # inside ``AbstractBattle._finish_battle`` may be skipped when the
+        # synchronous LangGraph agent blocks the event-loop.
         for tag, b in player.battles.items():
             if not getattr(b, "_finished", False):
                 save_battle_replay(b, args.log_dir)
@@ -420,20 +440,70 @@ async def main():
         else 0
     )
 
-    print(f"\n{'='*50}")
-    print(f"LANGCHAIN EXPERIMENT RESULTS ({n_battles} battles)")
-    print(f"{'='*50}")
-    print(f"Algorithm:             {args.player_prompt_algo}")
-    print(f"Backend:               {args.player_backend}")
-    print(f"Win Rate:              {win_rate:.1f}% ({wins}/{n_battles})")
-    print(f"Avg Turns per Battle:  {avg_turns:.1f}")
-    print(f"Avg LLM Calls/Battle:  {avg_calls:.1f}")
-    print(f"JSON Parse Failures:   {total_parse_failures}")
-    print(f"Avg Prompt Tokens:     {avg_prompt:.0f}")
-    print(f"Avg Completion Tokens: {avg_completion:.0f}")
-    print(f"Avg Time per Battle:   {avg_elapsed:.1f}s")
-    print(f"Seed:                  {args.seed}")
-    print(f"{'='*50}")
+    summary_text = (
+        f"{'='*50}\n"
+        f"LANGCHAIN EXPERIMENT RESULTS ({n_battles} battles)\n"
+        f"{'='*50}\n"
+        f"Algorithm:             {args.player_prompt_algo}\n"
+        f"Backend:               {args.player_backend}\n"
+        f"Win Rate:              {win_rate:.1f}% ({wins}/{n_battles})\n"
+        f"Avg Turns per Battle:  {avg_turns:.1f}\n"
+        f"Avg LLM Calls/Battle:  {avg_calls:.1f}\n"
+        f"JSON Parse Failures:   {total_parse_failures}\n"
+        f"Avg Prompt Tokens:     {avg_prompt:.0f}\n"
+        f"Avg Completion Tokens: {avg_completion:.0f}\n"
+        f"Avg Time per Battle:   {avg_elapsed:.1f}s\n"
+        f"Seed:                  {args.seed}\n"
+        f"{'='*50}"
+    )
+    print(f"\n{summary_text}")
+
+    # Save experiment results as JSON for agent analysis
+    experiment_log = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "script": "local_1v1_langchain",
+        "config": {
+            "algorithm": args.player_prompt_algo,
+            "backend": args.player_backend,
+            "opponent_name": args.opponent_name,
+            "opponent_backend": args.opponent_backend,
+            "opponent_algorithm": args.opponent_prompt_algo,
+            "battle_format": args.battle_format,
+            "n_battles": args.N,
+            "seed": args.seed,
+            "temperature": args.temperature,
+            "max_tokens": args.max_tokens,
+            "max_tool_calls": args.max_tool_calls,
+            "enable_dynamic_flags": args.enable_dynamic_flags,
+            "enable_dynamic_calcs": args.enable_dynamic_calcs,
+            "enable_showdown_oracle": args.enable_showdown_oracle,
+            "enable_llm_lead_selection": args.enable_llm_lead_selection,
+        },
+        "summary": {
+            "win_rate": round(win_rate, 1),
+            "wins": wins,
+            "n_battles": n_battles,
+            "avg_turns": round(avg_turns, 1),
+            "avg_llm_calls": round(avg_calls, 1),
+            "json_parse_failures": total_parse_failures,
+            "avg_prompt_tokens": round(avg_prompt),
+            "avg_completion_tokens": round(avg_completion),
+            "avg_time_per_battle_seconds": round(avg_elapsed, 1),
+            "total_time_seconds": round(sum(m["elapsed_seconds"] for m in battle_metrics), 1),
+        },
+        "battles": battle_metrics,
+    }
+
+    log_dir = args.log_dir
+    os.makedirs(log_dir, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_path = os.path.join(
+        log_dir,
+        f"experiment_{args.player_prompt_algo}_{args.player_backend.replace('/', '_')}_{ts}.json",
+    )
+    with open(log_path, "w", encoding="utf-8") as f:
+        json.dump(experiment_log, f, indent=2, ensure_ascii=False)
+    print(f"Experiment log saved to: {log_path}")
 
 
 if __name__ == "__main__":
