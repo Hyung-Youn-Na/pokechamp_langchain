@@ -180,6 +180,8 @@ uv run python scripts/battles/local_1v1.py \
 
 > ablation은 위 3종 중 하나를 기준으로 변수 1개만 변경. **다음 EXP 번호**는 `scripts/exp/new_experiment.py` 가 자동 할당한다 (§8.3).
 
+> **opponent 필드 기록 안내 (abyssal).** `--opponent_name abyssal`일 때 config의 `opponent_backend`/`opponent_algorithm`은 argparse 원값(기본 `gemini-2.5-pro`/`io`)의 직렬화일 뿐, abyssal 동작과 무관한 **노이즈 필드**. `AbyssalPlayer`(`poke_env/player/baselines.py:559`)은 LLM 미사용 순수 휴리스틱(`Player` 서브클래스)이며, `get_llm_player`(`poke_env/player/team_util.py:307-314`)의 abyssal 분기가 `backend`/`algo` 인자를 무시한다. ablation 공정성을 위해 baseline/EXP 모두 동일값(`abyssal`/`gemini-2.5-pro`/`io`) 유지 — `verify_single_change.py`가 값 변경을 §0-4 위반(FAIL)으로 잡는다.
+
 ### 전체 실험 이력
 
 | ID | 이름 | 날짜 | 상태 | 승률 | 비고 |
