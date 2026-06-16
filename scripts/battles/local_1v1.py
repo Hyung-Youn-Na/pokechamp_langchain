@@ -18,6 +18,11 @@ except ImportError:
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.insert(0, project_root)
 
+from pathlib import Path
+
+# §8: git 상태 메타 수집 헬퍼 (같은 디렉토리). 배틀 로그에 코드 상태 자동 기록.
+from _experiment_meta import build_meta, dump_dirty_patch, REPO  # noqa: E402
+
 from common import *
 from poke_env.player.team_util import (
     get_llm_player,
@@ -414,7 +419,20 @@ async def main():
     )
     print(f"\n{summary_text}")
 
-    # Save experiment results as JSON for agent analysis
+    # Save experiment results as JSON for agent analysis.
+    # §8: log_dir/ts 를 먼저 확정한 뒤 더티 patch dump → meta 조립 → JSON 쓰기 순으로.
+    # 실험은 보통 코드 수정 후 커밋 전(더티 트리)에 돌아, 변경 diff 를 patch 로 남긴다.
+    log_dir = args.log_dir
+    os.makedirs(log_dir, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    dirty_patch_name = (
+        f"experiment_{args.player_prompt_algo}_"
+        f"{args.player_backend.replace('/', '_')}_{ts}_dirty.patch"
+    )
+    dumped = dump_dirty_patch(REPO, Path(log_dir) / dirty_patch_name)
+    patch_file = dirty_patch_name if dumped else None
+
     experiment_log = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "script": "local_1v1",
@@ -444,11 +462,9 @@ async def main():
             "avg_completion_tokens": round(avg_completion_tokens),
         },
         "battles": battle_metrics,
+        "meta": build_meta(REPO, patch_file),
     }
 
-    log_dir = args.log_dir
-    os.makedirs(log_dir, exist_ok=True)
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_path = os.path.join(
         log_dir,
         f"experiment_{args.player_prompt_algo}_{args.player_backend.replace('/', '_')}_{ts}.json",
@@ -456,6 +472,8 @@ async def main():
     with open(log_path, "w", encoding="utf-8") as f:
         json.dump(experiment_log, f, indent=2, ensure_ascii=False)
     print(f"Experiment log saved to: {log_path}")
+    if patch_file:
+        print(f"Dirty code patch saved to: {os.path.join(log_dir, patch_file)}")
 
 
 if __name__ == "__main__":

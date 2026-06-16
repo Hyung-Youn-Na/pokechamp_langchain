@@ -10,11 +10,11 @@
 1. **범용 전략 우선 (★)**: abyssal의 특정 규칙 허점(matchup score 임계값, Tera 미고려 등)을 *직접 공략*하는 실험·코드 변경은 **금지**. 모든 개선안은 "이 변경이 다른 gen9ou 상대(다른 LLM agent, human, ladder)에게도 동일하게 도움이 되는가?"를 만족해야 함. 승률 90%는 **범용 gen9ou 전략 능력 향상의 결과**여야 함.
 2. **EXP 번호 확인**: 새 실험 시작 전 반드시 [섹션 5](#5-실험-인덱스)에서 다음 EXP 순번을 확인.
 3. **Baseline 우선**: EXP-001 baseline 미측정 상태면 어떤 ablation도 시작하지 않음.
-4. **변경 1개 원칙**: ablation 시 baseline 대비 변수 1개만 변경. 다른 모든 조건은 baseline과 동일.
+4. **변경 1개 원칙**: ablation 시 baseline 대비 변수 1개만 변경. 다른 모든 조건은 baseline과 동일. **자동 검증**: [§8.4](#84-변경-1개-원칙-자동-검증-0-4) `scripts/exp/verify_single_change.py`.
 5. **재현성**: 모든 실험에서 `--seed 42`, `--N 30` 이상.
 6. **코드 변경 동반 시**:
    - 커밋 메시지에 EXP-ID 포함 (예: `feat(prompt): macro_prompt to user [EXP-002]`)
-   - 해당 실험 README.md에 커밋 해시 기록
+   - 코드 상태(commit·argv·dirty patch)는 배틀 로그 `meta` 블록에 **자동 기록**됨 ([§8](#8-실험-코드파라미터-변경-자동-추적)). README 수동 해시 기록은 폐지(준수율 0%로 실패).
 7. **로그 분리**: `--log_dir`로 실험 전용 디렉토리 지정. `./battle_log/one_vs_one` (기본값) 사용 금지.
 8. **배틀 실행 금지 (★)**: `--N` 배틀 실행은 **에이전트가 직접 하지 않음**. 에이전트는 (a) 코드 변경, (b) 디렉토리/README 준비, (c) **실행 명령어 안내**까지만 담당. 사용자가 명령어를 직접 실행 후 결과를 알려주면 분석 진행.
 
@@ -112,7 +112,7 @@ uv run python scripts/battles/local_1v1.py \
 │   ├── io-glm51/              #   ← EXP-032 (io, 53.3%)
 │   ├── react-glm51/           #   ← EXP-031 (react, 76.7%)
 │   └── minimax-glm51/         #   ← EXP-033 (minimax, 80.0%)
-├── active/                    # 현재/다음 실험 (EXP-034+)
+├── active/                    # 현재/다음 실험 (번호는 new_experiment.py 가 자동 할당)
 │   └── EXP-NNN-name/
 ├── archive/                   # 종료된 실험 (EXP-001~030, EXP-TEST)
 │   └── EXP-NNN-name/
@@ -124,7 +124,7 @@ uv run python scripts/battles/local_1v1.py \
 ### 네이밍
 
 - baseline: `baselines/{algo}-{model}/` (예: `minimax-glm51`)
-- 실험: `EXP-{NNN}-{kebab-case-name}` — NNN은 3자리 순번. **다음 순번 = EXP-034**.
+- 실험: `EXP-{NNN}-{kebab-case-name}` — NNN은 3자리 순번. **다음 순번**은 `scripts/exp/new_experiment.py` 가 자동 할당.
 
 ### baseline 보존 규칙 ★
 
@@ -178,7 +178,7 @@ uv run python scripts/battles/local_1v1.py \
 | react-glm51 | react | 76.7% (23/30) | 24.4 | 119.1 | 357,737 | 11,610 | 426s/판, 토큰 다소 |
 | minimax-glm51 | minimax | 80.0% (24/30) | 28.9 | 61.0 | 116,837 | 9,558 | 최고, 성능/비용 양호 |
 
-> **다음 실험 = EXP-034**. ablation은 위 3종 중 하나를 기준으로 변수 1개만 변경.
+> ablation은 위 3종 중 하나를 기준으로 변수 1개만 변경. **다음 EXP 번호**는 `scripts/exp/new_experiment.py` 가 자동 할당한다 (§8.3).
 
 ### 전체 실험 이력
 
@@ -237,3 +237,75 @@ uv run python scripts/battles/local_1v1.py \
 - **canonical vs snapshot**: `.temp/experiments/baselines/` 가 canonical live copy, `backups/baselines/` 는 recovery-only snapshot (편집 금지).
 - **범위**: 현재 baseline 3종만. `active/`·`archive/` 백업은 별도 결정 (archive는 `experiment_*.json` 이 없어 별도 접근 필요).
 - **갱신**: `BASELINE_NAMES` 에 baseline 추가 후 `backup` 재실행 → 새 버전 blob. 상세는 [`backups/baselines/RESTORE.md`](backups/baselines/RESTORE.md).
+- **코드 상태 한계 ★**: baseline 3종은 2026-06-12 에 **더티(커밋 전) 작업트리**에서 실행됐다. 당시 `experiment_*.json` 의 `meta` 로깅 코드는 커밋되지 않은 채 이후 덮어쓰기돼 **코드 상태가 영영 소실** 됐다. 따라서 baseline의 *정확한 코드 커밋을 역추론하거나 태그로 고정하는 것은 불가능*. baseline은 **데이터**(JSON·replay·로그) 만 공식이며, 코드 비교 기준은 JSON `config`(파라미터) 한정. 상세 한계는 [§8.5](#85-baseline-코드-상태-한계-선언).
+
+---
+
+## 8. 실험 코드·파라미터 변경 자동 추적
+
+> [§0-6](#0-agent-행동-규칙-read-first) 수동 기록(commit 해시를 README에 적으라)은
+> 준수율 0%로 실패했다. 대신 배틀 스크립트가 JSON `meta` 블록에 **자동** 으로 기록한다.
+> §7 백업과 동일 철학("수동 규칙은 실패 → 자동화로 마찰 제거, 결론은 git에").
+
+### 8.1 자동 meta 기록 ★
+
+배틀 스크립트(`scripts/battles/local_1v1.py`, `local_1v1_langchain.py`)가 각 실험
+`experiment_*.json` 최상위에 `meta` 블록을 자동 추가한다. 공통 헬퍼:
+[`scripts/battles/_experiment_meta.py`](scripts/battles/_experiment_meta.py) (stdlib only,
+git 호출 전부 예외 방어 — git 없는 환경에서도 배틀은 죽지 않음).
+
+| 필드 | 의미 |
+|------|------|
+| `git_commit` / `git_commit_short` | 실험 실행 시점 HEAD 커밋 |
+| `git_branch` | 브랜치명 |
+| `git_dirty` | 작업트리 더티(커밋 전 변경) 여부 |
+| `git_dirty_files` | 변경된 파일 목록 (tracked 수정 + untracked 신규) |
+| `git_dirty_stat` | `git diff HEAD --stat` 요약 줄 (tracked 수정만) |
+| `dirty_patch_file` | 더티 diff patch 파일명 (log_dir 내; clean tree면 `null`) |
+| `argv` | `sys.argv` 전체 = 실행 명령 100% 재현 |
+| `python_version`, `repo_root` | 실행 환경 |
+
+구 baseline JSON(`meta` 없음)과 호환 — 분석 스크립트는 `.get("meta", {})` 로 읽는다.
+
+### 8.2 더티 코드 보존 ★
+
+실험은 보통 코드 수정 후 커밋 전(더티 트리)에 돈다. 더티 diff는 log_dir에 patch로
+남지만 `.temp/` 전체가 gitignore라 **push 하면 소실**. 배틀 후 보존:
+
+```sh
+uv run python scripts/exp/preserve_code_state.py EXP-NNN-name
+#   → backups/code_state/EXP-NNN-name/ 에 patch + meta.json 복사 (tracked, .temp/ 바깥)
+git add backups/code_state/ && git commit -m "exp: preserve code state [EXP-NNN]" && git push
+```
+
+`backups/code_state/` 는 `.temp/` 바깥이라 tracked. push = 오프디스크 내구성
+([§7](#7-baseline-백업-) RESTORE.md 검증 D 와 동일 원칙). clean tree면 보존할 것이
+없어 메시지만 출력.
+
+### 8.3 실험 시작 도우미
+
+```sh
+uv run python scripts/exp/new_experiment.py --name {kebab-name} --baseline {io|react|minimax}
+```
+
+다음 EXP 번호 자동 할당(`active/`+`archive/`+§5 이력표 스캔) → 디렉토리 + README(§4
+템플릿) 생성 + baseline 맞춤 실행 명령 안내 + 더티 경고. §0-2(번호 확인)·§0-7(로그
+분리) 자동 준수.
+
+### 8.4 "변경 1개 원칙" 자동 검증 (§0-4)
+
+```sh
+uv run python scripts/exp/verify_single_change.py EXP-NNN-name --baseline {io|react|minimax}
+```
+
+실험 `config` 와 baseline `config` 비교 → **파라미터 diff 수 + 코드 파일 수 = 총 변경**.
+1 이면 ✅ PASS, 아니면 ❌ FAIL + 변경 내역. 도구 자체(`scripts/exp/`,
+`_experiment_meta.py`) 변경은 노이즈로 자동 제외.
+
+### 8.5 Baseline 코드 상태 한계 선언 ★
+
+baseline 3종의 정확한 **코드 커밋은 소실** 됐다 (§7 "코드 상태 한계" 참조). 따라서:
+- baseline 코드 상태를 재현하거나 태그로 고정하는 것은 **불가능**.
+- §8.4 코드 변경 검증은 "실험 시점 더티 파일" 기준이지, baseline 코드와의 직접 diff가 아님.
+- 파라미터 diff 는 baseline JSON `config`(canonical) 와 정확히 비교.
+- **§8 자동 추적은 본 시스템 도입 이후 신규 실험부터 유효**. 이전 실험(archive)은 `meta`가 없어 코드 변경 검증 불가.
