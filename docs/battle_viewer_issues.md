@@ -369,8 +369,8 @@ if not turn_info.player_action:
 - `_process_langgraph_experiment()`에서도 동일 경로 생성
 - `battle_log/` 아래에도 `viewer/`가 생성될 수 있어 혼란
 - EXP-028에서 두 개의 viewer 디렉토리가 존재:
-  - `.temp/experiments/EXP-028-react-glm51/viewer/` (180KB)
-  - `.temp/experiments/EXP-028-react-glm51/battle_log/viewer/` (342KB)
+  - `.temp/experiments/archive/EXP-028-react-glm51/viewer/` (180KB)
+  - `.temp/experiments/archive/EXP-028-react-glm51/battle_log/viewer/` (342KB)
 
 ---
 

@@ -110,6 +110,8 @@ class ReActTurn:
     battle_state: str = ""  # Extracted battle state from first step's user_prompt
     historical_summary: str = ""  # Extracted historical turns from user_prompt
     system_prompt: str = ""
+    decision_index: int = 0  # 0-based index for multiple decisions in one turn
+    decision_label: str = ""  # Human-readable label, e.g. "Decision 2 of 3"
 
 
 @dataclass
@@ -419,81 +421,132 @@ def parse_langgraph_logs(
             )
 
         battle = battles[btag]
-        react_turn = ReActTurn(turn=turn, battle_tag=btag)
 
-        # Sort entries by llm_call_in_turn
-        entries.sort(key=lambda e: e.get("llm_call_in_turn", 0))
+        # --- Detect decision boundaries ---
+        # When choose_move() is called multiple times in the same turn
+        # (Volt Switch, force switch after faint, etc.), each call creates
+        # a new LLMLoggingCallback with _call_counter starting at 0.
+        # We detect this via:
+        #   Primary: explicit decision_index field (new logs)
+        #   Fallback: llm_call_in_turn counter resets (old logs)
+        # DO NOT sort by llm_call_in_turn -- entries are already
+        # chronological from the JSONL file.
+        decision_groups: list[list[dict]] = []
+        current_group: list[dict] = []
+        prev_call_idx = 0
+        prev_decision_idx = 0
 
-        # Tool result iterator for this turn
+        for entry in entries:
+            call_idx = entry.get("llm_call_in_turn", 0)
+            dec_idx_field = entry.get("decision_index", None)
+
+            start_new = False
+            if dec_idx_field is not None:
+                # New logs: use explicit decision_index
+                if dec_idx_field != prev_decision_idx:
+                    start_new = True
+                prev_decision_idx = dec_idx_field
+            else:
+                # Old logs: detect counter reset
+                if current_group and call_idx <= prev_call_idx:
+                    start_new = True
+            prev_call_idx = call_idx
+
+            if start_new and current_group:
+                decision_groups.append(current_group)
+                current_group = []
+            current_group.append(entry)
+
+        if current_group:
+            decision_groups.append(current_group)
+
+        total_decisions = len(decision_groups)
+
+        # Tool result iterator for this turn (shared across decisions)
         tool_key = f"{btag}|{turn}"
         turn_tool_results = list(tool_results.get(tool_key, []))
         tool_result_idx = 0
 
-        for entry in entries:
-            call_idx = entry.get("llm_call_in_turn", 0)
-            raw_response = entry.get("llm_response", "")
-            tool_calls_raw = entry.get("tool_calls")  # list or None
-            is_final = tool_calls_raw is None
-            timestamp = entry.get("timestamp", "")
-            start_time = entry.get("start_time", "")
-            duration_ms = 0.0
-            if start_time and timestamp:
-                try:
-                    from datetime import datetime
-
-                    t0 = datetime.fromisoformat(start_time)
-                    t1 = datetime.fromisoformat(timestamp)
-                    duration_ms = (t1 - t0).total_seconds() * 1000
-                except (ValueError, TypeError):
-                    pass
-
-            # Extract first step's battle state
-            if call_idx == 1:
-                user_prompt = entry.get("user_prompt", "")
-                react_turn.battle_state = _extract_battle_state(user_prompt)
-                react_turn.historical_summary = _extract_historical_turns(user_prompt)
-                react_turn.system_prompt = entry.get("system_prompt", "")
-
-            # Build tool calls
-            tool_calls = []
-            if tool_calls_raw:
-                for tc in tool_calls_raw:
-                    tc_info = ToolCallInfo(
-                        tool_name=tc.get("name", ""),
-                        args=tc.get("args", {}),
-                        call_id=tc.get("id", ""),
-                    )
-                    # Match with tool_results by tool name
-                    if tool_result_idx < len(turn_tool_results):
-                        tr = turn_tool_results[tool_result_idx]
-                        if (
-                            tr["tool"] == tc_info.tool_name
-                            or not tr.get("tool")
-                        ):
-                            tc_info.result = tr.get("result", "")
-                            tc_info.is_error = tr.get("is_error", False)
-                            tool_result_idx += 1
-                    tool_calls.append(tc_info)
-
-            # Parse final action
-            final_action = {}
-            if is_final:
-                final_action = _extract_final_action(raw_response)
-
-            step = ReActStep(
-                call_index=call_idx,
-                reasoning=raw_response,
-                tool_calls=tool_calls,
-                is_final=is_final,
-                final_action=final_action,
-                token_usage=entry.get("token_usage", {}),
-                timestamp=timestamp,
-                duration_ms=duration_ms,
+        for dec_idx, dec_entries in enumerate(decision_groups):
+            react_turn = ReActTurn(
+                turn=turn,
+                battle_tag=btag,
+                decision_index=dec_idx,
+                decision_label=(
+                    f"Decision {dec_idx + 1} of {total_decisions}"
+                    if total_decisions > 1
+                    else ""
+                ),
             )
-            react_turn.steps.append(step)
 
-        battle.turns.append(react_turn)
-        battle.total_llm_calls += len(react_turn.steps)
+            for step_num, entry in enumerate(dec_entries, start=1):
+                raw_response = entry.get("llm_response", "")
+                tool_calls_raw = entry.get("tool_calls")  # list or None
+                is_final = tool_calls_raw is None
+                timestamp = entry.get("timestamp", "")
+                start_time = entry.get("start_time", "")
+                duration_ms = 0.0
+                if start_time and timestamp:
+                    try:
+                        from datetime import datetime
+
+                        t0 = datetime.fromisoformat(start_time)
+                        t1 = datetime.fromisoformat(timestamp)
+                        duration_ms = (t1 - t0).total_seconds() * 1000
+                    except (ValueError, TypeError):
+                        pass
+
+                # Extract battle state from first step of each decision
+                if step_num == 1:
+                    user_prompt = entry.get("user_prompt", "")
+                    react_turn.battle_state = _extract_battle_state(
+                        user_prompt
+                    )
+                    react_turn.historical_summary = (
+                        _extract_historical_turns(user_prompt)
+                    )
+                    react_turn.system_prompt = entry.get("system_prompt", "")
+
+                # Build tool calls
+                tool_calls = []
+                if tool_calls_raw:
+                    for tc in tool_calls_raw:
+                        tc_info = ToolCallInfo(
+                            tool_name=tc.get("name", ""),
+                            args=tc.get("args", {}),
+                            call_id=tc.get("id", ""),
+                        )
+                        # Match with tool_results by tool name
+                        if tool_result_idx < len(turn_tool_results):
+                            tr = turn_tool_results[tool_result_idx]
+                            if (
+                                tr["tool"] == tc_info.tool_name
+                                or not tr.get("tool")
+                            ):
+                                tc_info.result = tr.get("result", "")
+                                tc_info.is_error = tr.get("is_error", False)
+                                tool_result_idx += 1
+                        tool_calls.append(tc_info)
+
+                # Parse final action
+                final_action = {}
+                if is_final:
+                    final_action = _extract_final_action(raw_response)
+
+                step = ReActStep(
+                    call_index=step_num,  # Renumbered within decision
+                    reasoning=raw_response,
+                    tool_calls=tool_calls,
+                    is_final=is_final,
+                    final_action=final_action,
+                    token_usage=entry.get("token_usage", {}),
+                    timestamp=timestamp,
+                    duration_ms=duration_ms,
+                )
+                react_turn.steps.append(step)
+
+            battle.turns.append(react_turn)
+            battle.total_llm_calls += len(react_turn.steps)
 
     return battles
 
@@ -1374,6 +1427,21 @@ REACT_VIEWER_CSS = """
   }
   .collapsible-toggle:hover { background: #0f3460; }
   .collapsible-toggle.expanded { border-color: #e94560; color: #e94560; }
+
+  /* Decision separator for multi-decision turns */
+  .decision-header {
+    background: #2d1b4e;
+    border: 1px solid #8e44ad;
+    border-radius: 6px;
+    padding: 6px 12px;
+    margin: 12px 0 8px 0;
+    text-align: center;
+  }
+  .decision-label {
+    color: #bb86fc;
+    font-weight: 600;
+    font-size: 12px;
+  }
 </style>
 """
 
@@ -1437,116 +1505,173 @@ def generate_react_viewer(
     replay_relative_path: Optional[str] = None,
 ) -> str:
     """Generate the HTML viewer for a LangGraph ReAct battle."""
+    from itertools import groupby as _groupby
+
     output_path = os.path.join(output_dir, f"{battle.battle_tag}.html")
 
-    # Build turn navigation buttons
+    # Group turns by turn number (multiple decisions may share same turn)
+    turn_groups: list[tuple[int, list[ReActTurn]]] = []
+    for turn_num, group_iter in _groupby(battle.turns, key=lambda t: t.turn):
+        turn_groups.append((turn_num, list(group_iter)))
+
+    # Build turn navigation buttons — one per turn number
     turn_buttons = ""
-    for turn_data in battle.turns:
+    for turn_num, decisions in turn_groups:
         classes = ["turn-btn"]
+        # Aggregate flags across all decisions in this turn
         has_error = any(
-            tc.is_error for step in turn_data.steps for tc in step.tool_calls
+            tc.is_error
+            for d in decisions
+            for step in d.steps
+            for tc in step.tool_calls
         )
-        has_tools = any(step.tool_calls for step in turn_data.steps)
+        has_tools = any(step.tool_calls for d in decisions for step in d.steps)
+        multi = "multi-decision" if len(decisions) > 1 else ""
         if has_error:
             classes.append("has-error")
         elif has_tools:
             classes.append("has-tools")
+        if multi:
+            classes.append(multi)
         cls = " ".join(classes)
-        turn_buttons += f'<button class="{cls}" data-turn="{turn_data.turn}">{turn_data.turn}</button>\n'
+        turn_buttons += (
+            f'<button class="{cls}" data-turn="{turn_num}">'
+            f"{turn_num}</button>\n"
+        )
 
-    # Build battle state panel (left side)
+    # Build battle state panel (left side) — one per turn number
     battle_sections = ""
-    for turn_data in battle.turns:
-        # System prompt (collapsible)
-        sys_html = ""
-        if turn_data.system_prompt:
-            sys_html = f"""<div class="battle-section" id="sys-{turn_data.turn}">
+    for turn_num, decisions in turn_groups:
+        primary = decisions[0]
+        sections_html = ""
+
+        # System prompt (collapsible) from primary decision
+        if primary.system_prompt:
+            sections_html += f"""<div class="battle-section">
               <div class="battle-section-header" style="cursor:pointer" onclick="toggleBattleSection(this)">
-                <h3>🤖 Turn {turn_data.turn} — System Prompt</h3>
+                <h3>🤖 Turn {turn_num} — System Prompt</h3>
                 <span style="font-size:11px;color:#888">▶ click to expand</span>
               </div>
-              <div class="battle-section-body" style="display:none">{_html_escape(turn_data.system_prompt)}</div>
+              <div class="battle-section-body" style="display:none">{_html_escape(primary.system_prompt)}</div>
             </div>"""
 
-        # Historical summary
-        hist_html = ""
-        if turn_data.historical_summary:
-            hist_html = f"""<div class="battle-section" id="hist-{turn_data.turn}">
+        # Historical summary from primary decision
+        if primary.historical_summary:
+            sections_html += f"""<div class="battle-section">
               <div class="battle-section-header">
-                <h3>📜 Turn {turn_data.turn} — History</h3>
+                <h3>📜 Turn {turn_num} — History</h3>
               </div>
-              <div class="battle-section-body">{_html_escape(turn_data.historical_summary)}</div>
+              <div class="battle-section-body">{_html_escape(primary.historical_summary)}</div>
             </div>"""
 
-        # Current battle state
-        state_html = ""
-        if turn_data.battle_state:
-            state_html = f"""<div class="battle-section" id="state-{turn_data.turn}">
+        # Battle state: show each decision's state if multi-decision
+        for dec_idx, dec in enumerate(decisions):
+            if not dec.battle_state:
+                continue
+            suffix = (
+                f" (Decision {dec_idx + 1})" if len(decisions) > 1 else ""
+            )
+            sections_html += f"""<div class="battle-section">
               <div class="battle-section-header">
-                <h3>⚔️ Turn {turn_data.turn} — Battle State</h3>
+                <h3>⚔️ Turn {turn_num} — Battle State{suffix}</h3>
               </div>
-              <div class="battle-section-body">{_html_escape(turn_data.battle_state)}</div>
+              <div class="battle-section-body">{_html_escape(dec.battle_state)}</div>
             </div>"""
 
         battle_sections += f"""
-        <div class="turn-battle-group" id="battle-group-{turn_data.turn}" style="display:none">
-          {sys_html}
-          {hist_html}
-          {state_html}
+        <div class="turn-battle-group" data-turn-group="{turn_num}" style="display:none">
+          {sections_html}
         </div>"""
 
-    # Build agent step cards (right side)
+    # Build agent step cards (right side) — grouped by turn number
     step_cards = ""
-    for turn_data in battle.turns:
+    for turn_num, decisions in turn_groups:
         turn_steps_html = ""
-        for step in turn_data.steps:
-            # Tool calls HTML
-            tools_html = ""
-            for tc in step.tool_calls:
-                result_cls = "error" if tc.is_error else "success"
-                args_str = json.dumps(tc.args, ensure_ascii=False) if tc.args else ""
-                result_html = _collapsible_text(tc.result, 200, f"tool-result {result_cls}") if tc.result else ""
 
-                tools_html += f"""
+        for dec_idx, turn_data in enumerate(decisions):
+            # Decision separator for multi-decision turns
+            if len(decisions) > 1:
+                turn_steps_html += f"""
+          <div class="decision-header">
+            <span class="decision-label">🔄 Decision {dec_idx + 1} of {len(decisions)}</span>
+          </div>"""
+
+            # Per-decision mini stats
+            dec_tool_count = sum(len(s.tool_calls) for s in turn_data.steps)
+            dec_step_count = len(turn_data.steps)
+            dec_tokens = sum(
+                s.token_usage.get("total_tokens", 0)
+                for s in turn_data.steps
+            )
+            turn_steps_html += f"""
+          <div class="stats-bar" style="background:#2d1b4e;border-radius:4px;margin-bottom:6px;">
+            <div class="stat">📋 <span class="stat-val">{dec_step_count}</span> steps</div>
+            <div class="stat">🔧 <span class="stat-val">{dec_tool_count}</span> tool calls</div>
+            <div class="stat">🪙 <span class="stat-val">{dec_tokens:,}</span> tokens</div>
+          </div>"""
+
+            for step in turn_data.steps:
+                # Tool calls HTML
+                tools_html = ""
+                for tc in step.tool_calls:
+                    result_cls = "error" if tc.is_error else "success"
+                    args_str = (
+                        json.dumps(tc.args, ensure_ascii=False)
+                        if tc.args
+                        else ""
+                    )
+                    result_html = (
+                        _collapsible_text(
+                            tc.result, 200, f"tool-result {result_cls}"
+                        )
+                        if tc.result
+                        else ""
+                    )
+
+                    tools_html += f"""
               <div class="tool-call {result_cls}">
                 <span class="tool-name {result_cls}">🔧 {tc.tool_name}</span>
                 <span class="tool-args">{_html_escape(args_str)}</span>
                 {result_html}
               </div>"""
 
-            # Final action HTML
-            final_html = ""
-            if step.is_final:
-                if step.final_action:
-                    action_json = json.dumps(step.final_action, ensure_ascii=False)
-                    final_html = f"""
+                # Final action HTML
+                final_html = ""
+                if step.is_final:
+                    if step.final_action:
+                        action_json = json.dumps(
+                            step.final_action, ensure_ascii=False
+                        )
+                        final_html = f"""
               <div class="final-action">
                 <div class="final-action-label">✅ Final Decision</div>
                 <div class="final-action-json">{_html_escape(action_json)}</div>
               </div>"""
-                else:
-                    final_html = """
+                    else:
+                        final_html = """
               <div class="no-final">⚠️ No valid JSON action found in response</div>"""
 
-            # Duration string
-            duration_str = ""
-            if step.duration_ms > 0:
-                if step.duration_ms > 1000:
-                    duration_str = f"{step.duration_ms/1000:.1f}s"
-                else:
-                    duration_str = f"{step.duration_ms:.0f}ms"
+                # Duration string
+                duration_str = ""
+                if step.duration_ms > 0:
+                    if step.duration_ms > 1000:
+                        duration_str = f"{step.duration_ms/1000:.1f}s"
+                    else:
+                        duration_str = f"{step.duration_ms:.0f}ms"
 
-            # Token string
-            token_str = ""
-            if step.token_usage:
-                total = step.token_usage.get("total_tokens", 0)
-                if total:
-                    token_str = f"{total:,} tokens"
+                # Token string
+                token_str = ""
+                if step.token_usage:
+                    total = step.token_usage.get("total_tokens", 0)
+                    if total:
+                        token_str = f"{total:,} tokens"
 
-            card_cls = "step-card final" if step.is_final else "step-card"
-            step_label = "🏁 Final" if step.is_final else f"Step {step.call_index}"
+                card_cls = "step-card final" if step.is_final else "step-card"
+                step_label = (
+                    "🏁 Final" if step.is_final else f"Step {step.call_index}"
+                )
 
-            turn_steps_html += f"""
+                turn_steps_html += f"""
           <div class="{card_cls}">
             <div class="step-card-header">
               <span class="step-num">{step_label}</span>
@@ -1560,22 +1685,30 @@ def generate_react_viewer(
             </div>
           </div>"""
 
-        # Summary stats for this turn
-        tool_count = sum(len(s.tool_calls) for s in turn_data.steps)
-        error_count = sum(
-            1 for s in turn_data.steps for tc in s.tool_calls if tc.is_error
+        # Overall turn stats (aggregate all decisions)
+        total_steps = sum(len(d.steps) for d in decisions)
+        total_tools = sum(
+            len(s.tool_calls) for d in decisions for s in d.steps
         )
-        step_count = len(turn_data.steps)
+        total_errors = sum(
+            1
+            for d in decisions
+            for s in d.steps
+            for tc in s.tool_calls
+            if tc.is_error
+        )
         total_tokens_turn = sum(
-            s.token_usage.get("total_tokens", 0) for s in turn_data.steps
+            s.token_usage.get("total_tokens", 0)
+            for d in decisions
+            for s in d.steps
         )
 
         step_cards += f"""
-        <div class="turn-steps-group" id="steps-{turn_data.turn}" style="display:none">
+        <div class="turn-steps-group" data-turn-group="{turn_num}" style="display:none">
           <div class="stats-bar">
-            <div class="stat">📋 <span class="stat-val">{step_count}</span> steps</div>
-            <div class="stat">🔧 <span class="stat-val">{tool_count}</span> tool calls</div>
-            <div class="stat">❌ <span class="stat-val">{error_count}</span> errors</div>
+            <div class="stat">📋 <span class="stat-val">{total_steps}</span> steps</div>
+            <div class="stat">🔧 <span class="stat-val">{total_tools}</span> tool calls</div>
+            <div class="stat">❌ <span class="stat-val">{total_errors}</span> errors</div>
             <div class="stat">🪙 <span class="stat-val">{total_tokens_turn:,}</span> tokens</div>
           </div>
           {turn_steps_html}
@@ -1597,6 +1730,9 @@ def generate_react_viewer(
         <h2>🔧 Tool Usage</h2>
         <div class="tool-grid">{cards}</div>
       </div>"""
+
+    # Compute unique turn count for the header stat
+    unique_turns = len(turn_groups)
 
     replay_indicator = " · Replay" if replay_relative_path else ""
     # Build left panel: iframe replay if available, otherwise text battle state
@@ -1626,7 +1762,7 @@ def generate_react_viewer(
     <h1>{battle.battle_tag}</h1>
     <span class="meta">ReAct Agent{replay_indicator} · {experiment_name}</span>
     {f'<span class="badge badge-win">WIN</span>' if battle.winner and battle.winner == battle.player_name else f'<span class="badge badge-loss">LOSS</span>' if battle.winner and battle.winner == battle.opponent_name else f'<span class="badge badge-tie">{_html_escape(battle.winner)}</span>' if battle.winner else ''}
-    <span class="meta">{len(battle.turns)} turns · {battle.total_llm_calls} LLM calls · {battle.total_tokens.get('total_tokens', 0):,} tokens</span>
+    <span class="meta">{unique_turns} turns · {battle.total_llm_calls} LLM calls · {battle.total_tokens.get('total_tokens', 0):,} tokens</span>
     <a href="index.html" style="color:#3498db;font-size:12px;margin-left:auto;">← All Battles</a>
   </div>
   <div class="container">
@@ -1682,10 +1818,8 @@ def generate_react_viewer(
     function showTurn(turnNum) {{
       // Hide all turn groups
       document.querySelectorAll('.turn-battle-group, .turn-steps-group').forEach(el => el.style.display = 'none');
-      // Show selected turn
-      var battleGroup = document.getElementById('battle-group-' + turnNum);
-      if (battleGroup) battleGroup.style.display = 'block';
-      document.getElementById('steps-' + turnNum).style.display = 'block';
+      // Show all elements for this turn number using data-turn-group
+      document.querySelectorAll(`[data-turn-group="${{turnNum}}"]`).forEach(el => el.style.display = 'block');
       // Hide placeholders
       var battlePlaceholder = document.getElementById('battlePlaceholder');
       if (battlePlaceholder) battlePlaceholder.style.display = 'none';
@@ -1741,7 +1875,11 @@ def generate_react_index(
     output_path = os.path.join(output_dir, "index.html")
 
     # Aggregate stats
-    total_turns = sum(len(b.turns) for b in battles)
+    # Count unique turn numbers (multiple decisions may share same turn)
+    total_unique_turns = sum(
+        len(set(t.turn for t in b.turns)) for b in battles
+    )
+    total_decisions = sum(len(b.turns) for b in battles)
     total_calls = sum(b.total_llm_calls for b in battles)
     total_tokens = sum(b.total_tokens.get("total_tokens", 0) for b in battles)
     wins = sum(1 for b in battles if b.winner and b.winner == b.player_name)
@@ -1769,6 +1907,7 @@ def generate_react_index(
     # Build table rows
     rows = ""
     for b in sorted(battles, key=lambda x: x.battle_tag):
+        unique_turns = len(set(t.turn for t in b.turns))
         tool_errors = sum(
             1
             for t in b.turns
@@ -1777,7 +1916,9 @@ def generate_react_index(
             if tc.is_error
         )
         avg_steps = (
-            f"{b.total_llm_calls / len(b.turns):.1f}" if b.turns else "0"
+            f"{b.total_llm_calls / unique_turns:.1f}"
+            if unique_turns
+            else "0"
         )
         total_tool_calls = sum(b.tool_stats.values())
 
@@ -1794,7 +1935,7 @@ def generate_react_index(
         rows += f"""
       <tr>
         <td><a href="{b.battle_tag}.html">{b.battle_tag}</a></td>
-        <td>{len(b.turns)}</td>
+        <td>{unique_turns}</td>
         <td>{b.total_llm_calls} (avg {avg_steps}/turn)</td>
         <td>{total_tool_calls} ({tool_errors} errors)</td>
         <td>{b.total_tokens.get('total_tokens', 0):,}</td>
@@ -1812,7 +1953,7 @@ def generate_react_index(
   <h1>{_html_escape(experiment_name)}</h1>
   <div class="summary">
     ReAct Agent (LangGraph) |
-    {len(battles)} battles · {total_turns} turns · {total_calls} LLM calls · {total_tokens:,} tokens
+    {len(battles)} battles · {total_unique_turns} turns · {total_calls} LLM calls · {total_tokens:,} tokens
     {f' · {wins}W / {losses}L / {ties}T ({wins/len(battles)*100:.1f}%)' if battles and wins + losses + ties > 0 else ''}
   </div>
   <table>
@@ -2054,9 +2195,10 @@ def _process_langgraph_experiment(
             if tc.is_error
         )
         replay_indicator = " [with replay]" if replay_rel_path else ""
+        unique_turns = len(set(t.turn for t in battle.turns))
         print(
             f"  Generated: {os.path.basename(viewer_path)}{replay_indicator} "
-            f"({len(battle.turns)} turns, {battle.total_llm_calls} LLM calls, "
+            f"({unique_turns} turns, {battle.total_llm_calls} LLM calls, "
             f"{sum(battle.tool_stats.values())} tool calls, {tool_errors} errors)"
         )
 
