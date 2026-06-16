@@ -19,7 +19,7 @@
 | 중간 배틀 (15-24턴) | 73.7% (14/19) | 🔴 10.0% (1/10) | ⬆ +63.7pp |
 | 긴 배틀 (25+턴) | 81.8% (9/11) | 38.5% (5/13) | ⬆ +43.3pp |
 
-출처: `experiment_react_glm-5.1_cloud.json` summary + battles[] (4.3 스니펫). EXP-030 구간은 `docs/exp-030-react-glm51-analysis.md`.
+출처: `experiment_react_glm-5.1_cloud.json` summary + battles[] (4.3 스니펫). EXP-030 구간은 `docs/archive/exp-030-react-glm51-analysis.md`.
 
 > EXP-031 은 **짧은 배틀(<15턴)이 0건** (최소 15턴, 평균 24.4턴). EXP-030 에는 짧은 배틀이 7건 있었다. EXP-031 의 배틀이 전반적으로 길어진 것은 상대(gemini-2.5-pro io)의 결정력 또는 pokechamp 의 킬각 포착 지연과 상관이 있어 보인다 (2.2절).
 
@@ -70,7 +70,7 @@ EXP-030 → EXP-031 의 가장 큰 정량 차이는 **턴당 도구 호출 max 1
 | `tool_execution` 에 `max_tool_calls` 전달 + truncate | `react_agent.py` | 남은 버짓만큼만 실행 ("execute what fits") |
 | `MAX_TOOL_CALLS`(전역 상수) → `_make_*(max_tool_calls)` 매개변수화 | `react_agent.py`, `common.py` | config `max_tool_calls=5` 주입 |
 
-EXP-027 분석(`docs/exp-027-react-glm51-analysis.md`)에서 지적된 *"messages 리듀서 누락 → `tool_call_count` 항상 0 → `MAX_TOOL_CALLS` 미작동 → 무한 도구 호출"* 문제의 **잔여 원인(messages 기반 카운트 + truncate 부재)**을 EXP-031 코드가 마저 해결한 것으로 보인다. EXP-030 은 `add_messages` 리듀서는 있었으나 카운트를 여전히 `sum(ToolMessage)`로 스캔했고, `tool_execution` 이 초과 분을 자르지 않아 한 턴에 최대 110건의 도구 호출이 연쇄 발생했다.
+EXP-027 분석(`docs/archive/exp-027-react-glm51-analysis.md`)에서 지적된 *"messages 리듀서 누락 → `tool_call_count` 항상 0 → `MAX_TOOL_CALLS` 미작동 → 무한 도구 호출"* 문제의 **잔여 원인(messages 기반 카운트 + truncate 부재)**을 EXP-031 코드가 마저 해결한 것으로 보인다. EXP-030 은 `add_messages` 리듀서는 있었으나 카운트를 여전히 `sum(ToolMessage)`로 스캔했고, `tool_execution` 이 초과 분을 자르지 않아 한 턴에 최대 110건의 도구 호출이 연쇄 발생했다.
 
 ### 2.2 가설 / 인과 추론: `simulate_turn` 과의존 억제가 승률 향상의 주원인
 
@@ -154,7 +154,7 @@ EXP-027 분석(`docs/exp-027-react-glm51-analysis.md`)에서 지적된 *"message
 | `get_team_analysis` 미사용 | — | 🔴 5회 | 🔴 7회 | 미해결 |
 | JSON 파싱 실패 | 69% | prose fallback | 4건 (json_parse_failures) | 거의 해결 |
 
-출처: 본 EXP 데이터 + `docs/exp-027`·`exp-030` 분석 보고서.
+출처: 본 EXP 데이터 + `docs/archive/exp-027`·`exp-030` 분석 보고서.
 
 ---
 

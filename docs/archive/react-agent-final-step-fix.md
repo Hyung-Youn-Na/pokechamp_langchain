@@ -37,4 +37,4 @@ GLM-5.1이 `tools=None` 상태에서도 대화 맥락에 따라 `tool_calls`를 
 
 - `pokechamp/agents/react_agent.py` — 수정 1, 2, 4
 - `pokechamp/langchain_backend.py` — 수정 3
-- [LangGraph 아키텍처 문서](langgraph-architecture.md)
+- [LangGraph 아키텍처 문서](../architecture/langgraph-architecture.md)

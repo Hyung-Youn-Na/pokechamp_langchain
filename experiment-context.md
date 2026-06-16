@@ -204,7 +204,7 @@ uv run python scripts/battles/local_1v1.py \
 | EXP-018 | IO + GLM-5.1 속도 측정 | 2026-06-08 | ✅ 완료 | 60.0% (3/5) | io+glm-5.1, 190s/판, 턴수 30.0, 속도 측정 목적 (N=5) |
 | EXP-019 | IO+Gemma4+LLM Lead+Temp0 | 2026-06-08 | ✅ 완료 | 50.0% (15/30) | EXP-017 대비 승률 변화없음, JSON실패 143회, temp0 효과미미 |
 | EXP-020 | — | — | ⏭️ SKIP | — | 번호 스킵 (실험 미진행) |
-| EXP-021~030 | ReAct 중간 산물 (10건) | 2026-06-09~11 | 📦 archive | — | stopping-criteria 개선 전 비효율 실행. 30판 배틀 수행됐으나 metrics 산출·README 누락. `archive/EXP-021~030` (약 250MB, EXP-030 단일 jsonl=177MB). 최종 성공은 EXP-031, 비교 근거는 `docs/exp-030-react-glm51-analysis.md` |
+| EXP-021~030 | ReAct 중간 산물 (10건) | 2026-06-09~11 | 📦 archive | — | stopping-criteria 개선 전 비효율 실행. 30판 배틀 수행됐으나 metrics 산출·README 누락. `archive/EXP-021~030` (약 250MB, EXP-030 단일 jsonl=177MB). 최종 성공은 EXP-031, 비교 근거는 `docs/archive/exp-030-react-glm51-analysis.md` |
 | EXP-031 ★ | Baseline: ReAct + glm-5.1 | 2026-06-12 | ✅ baseline | 76.7% (23/30) | **react baseline** → `baselines/react-glm51`. 24.4턴, 119.1 LLM호출, 426s/판 |
 | EXP-032 ★ | Baseline: IO + glm-5.1 | 2026-06-12 | ✅ baseline | 53.3% (16/30) | **io baseline** → `baselines/io-glm51`. 39.0턴, 31.2 LLM호출. 장기전 붕괴 |
 | EXP-033 ★ | Baseline: Minimax + glm-5.1 | 2026-06-12 | ✅ baseline | 80.0% (24/30) | **minimax baseline** → `baselines/minimax-glm51`. 28.9턴, 61.0 LLM호출. 최고 성능 |

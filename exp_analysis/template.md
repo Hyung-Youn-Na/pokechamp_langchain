@@ -1,6 +1,6 @@
 <!--
   PokéChamp 실험 분석 보고서 템플릿 (exp-030 패턴 일반화, IO/minimax/react 공용)
-  사용법: cp exp_analysis/template.md docs/exp-{NNN}-{algo}-{model}-analysis.md
+  사용법: cp exp_analysis/template.md docs/analysis/exp-{NNN}-{algo}-{model}-analysis.md
   작성 가이드: exp_analysis/ANALYSIS_MANUAL.md 8절.
   모든 <!-- ... --> 주석은 작성 완료 후 제거.
 -->
@@ -113,7 +113,7 @@
 
 ## 4. 이전 실험 대비 개선 현황
 
-<!-- 출처: 비교 EXP 분석 보고서(docs/exp-NNN-*.md)의 문제점 + 본 EXP 데이터. 상태: ✅ 해결 / 🟡 완화 / 🔴 미해결 -->
+<!-- 출처: 비교 EXP 분석 보고서(docs/analysis/exp-NNN-*.md)의 문제점 + 본 EXP 데이터. 상태: ✅ 해결 / 🟡 완화 / 🔴 미해결 -->
 
 | 이슈 | EXP-{이전} | EXP-{본 EXP} | 상태 |
 |------|------------|--------------|------|
