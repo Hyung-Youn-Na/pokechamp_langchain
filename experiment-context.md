@@ -222,3 +222,18 @@ uv run python scripts/battles/local_1v1.py \
 | [poke_env/player/local_simulation.py](poke_env/player/local_simulation.py) | `LocalSim` 턴 시뮬레이션 |
 | [poke_env/player/baselines.py](poke_env/player/baselines.py) | `AbyssalPlayer` 등 휴리스틱 baseline |
 | [bayesian/pokemon_predictor.py](bayesian/pokemon_predictor.py) | 베이지안 예측 프로덕션 인터페이스 |
+
+---
+
+## 7. Baseline 백업 ★
+
+> `baselines/` 3종은 `.temp/` (gitignore)에만 존재해 디스크 장애 시 **복구 불가**. 이를
+> git-tracked blob 으로 보존해 `git clone` 한 번에 복원 가능하게 한다.
+
+- **도구**: [`scripts/backup/backup_baselines.py`](scripts/backup/backup_baselines.py) — `backup` / `verify` / `restore` 서브커맨드. stdlib only.
+- **산물**: [`backups/baselines/`](backups/baselines/) — `baselines-full-vN.tar.zst` (전체 162파일, ~2.97MB zstd) + `.sha256manifest.json` (파일별 sha256). `RESTORE.md` 참조.
+- **왜 tar.zst**: `.gitignore` 가 `*.html`·`*.jsonl` 을 전역 무시 → blob 으로 우회. 매니페스트는 `.json` (`.jsonl` 은 ignore됨).
+- **내구성 = push ★**: blob 가 로컬 `.git` (`.temp/` 와 동일 디스크) 에 있으므로, **`git push` 해야만** GitHub 원격에 복제본이 생겨 디스크 장애에서 살아남음. commit 후 반드시 push + 원격 확인(`git cat-file -s`, RESTORE.md 검증 D).
+- **canonical vs snapshot**: `.temp/experiments/baselines/` 가 canonical live copy, `backups/baselines/` 는 recovery-only snapshot (편집 금지).
+- **범위**: 현재 baseline 3종만. `active/`·`archive/` 백업은 별도 결정 (archive는 `experiment_*.json` 이 없어 별도 접근 필요).
+- **갱신**: `BASELINE_NAMES` 에 baseline 추가 후 `backup` 재실행 → 새 버전 blob. 상세는 [`backups/baselines/RESTORE.md`](backups/baselines/RESTORE.md).

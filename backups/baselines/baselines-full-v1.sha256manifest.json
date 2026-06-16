@@ -1,0 +1,828 @@
+{
+  "blob": {
+    "file": "baselines-full-v1.tar.zst",
+    "sha256": "aba1f01ad5c728c9dfa0a3e7dbb90adbddaa70ce613cba0b94ecc31d4ea2aa1b",
+    "bytes": 2968287,
+    "codec": "zstd",
+    "file_count": 162,
+    "git_commit": "27323c8",
+    "source_root": ".temp/experiments/baselines",
+    "baselines": [
+      "io-glm51",
+      "react-glm51",
+      "minimax-glm51"
+    ]
+  },
+  "files": [
+    {
+      "path": "io-glm51/README.md",
+      "sha256": "aaa04b5300744ba789dff2007dd1c0798d415905f0841975c1eac9e2d1e1b1cc",
+      "bytes": 2855
+    },
+    {
+      "path": "io-glm51/battle_log/experiment_io_ollama_glm-5.1:cloud_20260612_052842.json",
+      "sha256": "c5f35551b4fb277ff1126f5db296404255f9030dae0ea92daf51d8b01136baf8",
+      "bytes": 4741
+    },
+    {
+      "path": "io-glm51/battle_log/llm_log.jsonl",
+      "sha256": "cca2f674c90f1e46b8c75dcd285e6abd4a49db7a97bdd1f9a9d5ddbc8e93c502",
+      "bytes": 7508295
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-663.html",
+      "sha256": "6a18e75a562c58cca7fa6b3a6850229683e19851fe47a7c845ee66351d9bcae1",
+      "bytes": 35919
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-664.html",
+      "sha256": "d8262ae55d008a153380515606fc795fb9395503a8df6e65b39a81d15afd18d4",
+      "bytes": 33206
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-665.html",
+      "sha256": "ef3847bfe232b4cdef0345a21e6ee453bfc616848fc11301c5d1ad3bd122ab18",
+      "bytes": 29602
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-666.html",
+      "sha256": "eb5e746c5244ba515d8602c03237a7e566343f5fd512db0f2f3a09171886c40c",
+      "bytes": 28145
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-667.html",
+      "sha256": "4e60824e5a45a4ccca41f4149539a22339a4ec49aed49e1c9c42d5bc609b3807",
+      "bytes": 27159
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-668.html",
+      "sha256": "014d2a0e109b7adca4a28287369f0a3de461bba4c223efa218d9f91959a38d30",
+      "bytes": 25092
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-669.html",
+      "sha256": "e814bf410febec132b5ddb858d038d14cd37c65255cdcf55a60b9d49b788feef",
+      "bytes": 29630
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-670.html",
+      "sha256": "24658ebc3efdae288c1f664db277b81e68a76da7b48954c7e8e6a25366d386dc",
+      "bytes": 23633
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-671.html",
+      "sha256": "44f37982e276dedd404329b51d1c067f5c04ef61623d61a1bf8198afbad0bdd7",
+      "bytes": 27642
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-672.html",
+      "sha256": "66c3d4e4487e19cfe56e5d96af74acc2e8d357b3970232ca0f7ad367759905c6",
+      "bytes": 35174
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-673.html",
+      "sha256": "7da9e09e867d254d9257916e2cd327671b33ac4d1c2a666dee362d703f269543",
+      "bytes": 21150
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-674.html",
+      "sha256": "08ef0939e05bc8a158476ce6b466899f94a527bcbc2927c63eaafb07acb6fa7d",
+      "bytes": 28324
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-675.html",
+      "sha256": "4648b44300094e17e82e9db281b6998fa487d706bc8ec509864569a02c9b87f7",
+      "bytes": 42299
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-676.html",
+      "sha256": "f47c3527521d474ce6c7c088b2671f367f7a15f8deb7ada4bf1ae76fb4267cca",
+      "bytes": 25606
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-677.html",
+      "sha256": "cca194119e92694042d536db4542a5c65d049df27707fe329e2c71bad1c7901b",
+      "bytes": 25711
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-678.html",
+      "sha256": "0ec30cd277aa0843375046062000f2505602fd059acfc072536b3ff400e65e49",
+      "bytes": 25658
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-679.html",
+      "sha256": "3036adfbe669f3339f822d75697053e8bbadfa43bd8d1838eebe0560640b9e0b",
+      "bytes": 42551
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-680.html",
+      "sha256": "3683ebe4372d3c6e64cc9826cb1fdb2311c96cbbf15cdf59ff7b6c510caab030",
+      "bytes": 34624
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-681.html",
+      "sha256": "2d33b5c69a0bf31ac35c474cb5f05e82f1464b8cd8a686ebe9c326de3fd202f7",
+      "bytes": 43321
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-682.html",
+      "sha256": "e320f063bea4ae60a069bdd208d574626d47d36582d0ba7df0848752d9afcb07",
+      "bytes": 20691
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-683.html",
+      "sha256": "544da00f4f7aa2395208db485bf9b6124afa413eb57a5f96e62a74db969feee1",
+      "bytes": 20752
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-684.html",
+      "sha256": "5f668603a537fd4e5b1c13f7956e2ae7fb32292cc9c63bc01ee51bd44dbf8e3e",
+      "bytes": 26472
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-685.html",
+      "sha256": "5dc59b72c31e169ddc2d6415f7b8b890025b6d27c2da14d184cdabc03ea746d5",
+      "bytes": 27179
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-686.html",
+      "sha256": "faf3d8850377b16fbcffb95613618c30d1d91ad58b14dba013f4375a129b05f2",
+      "bytes": 31304
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-687.html",
+      "sha256": "d062aeae556d0ac6bb5f448fbdd3c03fec41e74b1bae6e105d1491fee432bc2f",
+      "bytes": 25303
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-688.html",
+      "sha256": "31702cab393a931589e15ad6507f86219cb54604fd3f51232692ceff2249c5cb",
+      "bytes": 26304
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-689.html",
+      "sha256": "649d4802d06279ce5f47dcc0a9e0dd89c83fbff9d9b75f91d17a9fb5f0be0972",
+      "bytes": 29116
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-690.html",
+      "sha256": "ced2f77fd32aa4a8059242dee056e87bea9d257b641f19bbcf5b302fb608a617",
+      "bytes": 35499
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-691.html",
+      "sha256": "8912171f0241b4838e27db910c8ce8cecdbe7480797a688fad65945c7a743065",
+      "bytes": 30960
+    },
+    {
+      "path": "io-glm51/battle_log/pokechamp5783 - battle-gen9ou-692.html",
+      "sha256": "bf257287fc5a687b03fdef15c5cabd9eaa33385ccc5e20024c1feade8cf32b51",
+      "bytes": 28661
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-663.html",
+      "sha256": "1ccce1e7f18ce371b152f408bca5ca9c7e7cf668e95d897400d73d028f509ae2",
+      "bytes": 422119
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-664.html",
+      "sha256": "b2399f64bd9914e9311b29ab97b2c5857a19e2edc80d922c3a625e39570d251a",
+      "bytes": 299144
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-665.html",
+      "sha256": "f772ad9961961b826fb354bc5e125f667aeb686aac463bf31f93d64090595efd",
+      "bytes": 292121
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-666.html",
+      "sha256": "cb0e6990fccd83762657cd041e0c8c46ec7f505261da26ae58c3534e327d69bd",
+      "bytes": 265617
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-667.html",
+      "sha256": "d2639a9a7a2defe7d75ca3483502219cf0d7f816926ddc37095fc89dbc147e9a",
+      "bytes": 223300
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-668.html",
+      "sha256": "27609abf0239e452e5d4eb8601cddad9cccc0d560604c219e1d1806c7af79ff0",
+      "bytes": 202572
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-669.html",
+      "sha256": "28850647730adffc29d93aee8477d17891caa38cf31071fbf00125d9f035da88",
+      "bytes": 277338
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-670.html",
+      "sha256": "709aecd4193dbb675257f1e3b02f13b73e33c2cffb2a05532259fafc605a874e",
+      "bytes": 182993
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-671.html",
+      "sha256": "5256486e41dc9f80d158684beaf3a93e0f0cd9f49febb854735666871f5142b5",
+      "bytes": 298317
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-672.html",
+      "sha256": "3aa1867142709990486a1253f152d0380e4e9202eea601195434ee96ae4a2eb4",
+      "bytes": 351130
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-673.html",
+      "sha256": "1a091f26e01430e8d336d218708da5bcb30886bd8b297bd688f21a7bcb03a0c1",
+      "bytes": 178954
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-674.html",
+      "sha256": "20eaed298b6eb04984a819acf004810d08ef7758825e86f3e7d1bbd00258390d",
+      "bytes": 256889
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-675.html",
+      "sha256": "7e3eb58f1b2473b780d9249c89bd76a731916fd6381b6607be88f2d5bf5b0d6b",
+      "bytes": 451945
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-676.html",
+      "sha256": "59b08de7f93e0b784acf31108e6d820b9c2cf3a32f0d23262b451addfffd1a89",
+      "bytes": 214386
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-677.html",
+      "sha256": "9e41356e7637af394739bb570abd5b630615374cf3115b26f7ce229681724b3c",
+      "bytes": 204678
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-678.html",
+      "sha256": "70aa971e66e3c1e49a09617e1435a15ec5fc3c59d114f0b4d1d1d2f25965e45f",
+      "bytes": 204422
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-679.html",
+      "sha256": "44c5f84e2aec4a7d32cd9b24afa45c7ca6b66fc3900ba311f3e1549a7677db73",
+      "bytes": 444594
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-680.html",
+      "sha256": "792bc5749b031c82e44c13776de3875237267ba5534ca0cd612e2e3839604868",
+      "bytes": 329061
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-681.html",
+      "sha256": "2d1729eac605387561e2e7b314a2cf99ba97b7de46a8baa7fbb248fcc903ea65",
+      "bytes": 382007
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-682.html",
+      "sha256": "c3cd8eccb3090a1be275f5ee93f179d13c47a863b745dc8f0eaf867503a2c21f",
+      "bytes": 179193
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-683.html",
+      "sha256": "842f8c3a1a76193a4fed81ed3634ba6998cf3f51b59d89e48c9e7b693cff9edb",
+      "bytes": 168750
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-684.html",
+      "sha256": "7884357babfab1d43164fb9f4c87b9698071ecd1e7ca4cadab88020d53a729a1",
+      "bytes": 243089
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-685.html",
+      "sha256": "4af9f96709815af4c8cb710e30c559e1ab27817df9bf89af81e93db2fd210559",
+      "bytes": 237926
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-686.html",
+      "sha256": "b57ad3bd091ef1a80c55dba27c76c7f136371a55f5ef2b83e5deea35d371cb05",
+      "bytes": 343944
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-687.html",
+      "sha256": "eea83f2c1038272d62d71c3ae417b54cd30c516e263d9d30acc5d07eea7f69d5",
+      "bytes": 224883
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-688.html",
+      "sha256": "2a64f94c8e1410fb6526cec6232f598b8f7ccefad10ef339fd9afc397f8fddac",
+      "bytes": 188158
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-689.html",
+      "sha256": "f1d80aee7ff0eb1bba2e57ac320f609c27c411fb5d148fa9fa8697c190e0c9d5",
+      "bytes": 318077
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-690.html",
+      "sha256": "41edf17ecaeb2f12761cc724a13a0d3e49425ee585a2cdeca2f1a5cab7198f98",
+      "bytes": 371347
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-691.html",
+      "sha256": "2f6a9e0414eb9a4b0412ea56a0fb2d9c913e80c80d143bcd64be4f8858163604",
+      "bytes": 325206
+    },
+    {
+      "path": "io-glm51/viewer/battle-gen9ou-692.html",
+      "sha256": "05d78b9ca1ddaacb9b8bcec4d2941fb1c6521eaaf10bf583fde88f6980050981",
+      "bytes": 241637
+    },
+    {
+      "path": "io-glm51/viewer/index.html",
+      "sha256": "8c4cf880974f8ab7c675b779846f6a18765f91029464991131ef21653dbf4bb7",
+      "bytes": 9031
+    },
+    {
+      "path": "minimax-glm51/README.md",
+      "sha256": "61c58349c853a1fcc9a4994938cae4dfddca5f7c6d4a0ca020697d30143de9c2",
+      "bytes": 3129
+    },
+    {
+      "path": "minimax-glm51/battle_log/experiment_minimax_ollama_glm-5.1:cloud_20260612_083702.json",
+      "sha256": "1dc74b756b11429175029ac6cb460fa6eb2ba716c4da743a469d51fed7788b74",
+      "bytes": 4776
+    },
+    {
+      "path": "minimax-glm51/battle_log/llm_log.jsonl",
+      "sha256": "b3954ff24aca06341071ae7fa2ce5846a43ef8ae08886bde34fa360c702f1621",
+      "bytes": 14103872
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-693.html",
+      "sha256": "ba53184438773eaf497d05ebfe80a1f848e977b0fd27a6bbadc32390dae1060d",
+      "bytes": 123126
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-694.html",
+      "sha256": "1b4f2f99cfe7317a1fa8d58a3ffa8d71015ed2d669df069092fd86d3e270de9d",
+      "bytes": 59246
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-695.html",
+      "sha256": "4b89736278d4751101ad52f8252d0a3e3599d303a33b12b48cacfe027aa0e234",
+      "bytes": 83018
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-696.html",
+      "sha256": "f9b746533b464063b67d7d3fd82a367787657ddb99c465eff303f0eccebdacf9",
+      "bytes": 66214
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-697.html",
+      "sha256": "a4df6c6e4f3b8300f7f3a98ab2ff96f42c7a37758eb24d5a2fb2af6c74e9a00d",
+      "bytes": 75530
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-698.html",
+      "sha256": "527f0114aa186e6c69d27e2aa61aa1b60d94561c272127d08e9d80c9ff23887e",
+      "bytes": 27049
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-699.html",
+      "sha256": "2cb34d5e6add700667c2232b679ca1e2e96d4020a868054f21322d0e137d49f7",
+      "bytes": 95981
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-700.html",
+      "sha256": "c7b9be9d9b5636d48004a9df12e43906c2a87b3ac021495ee4cf8fed5dba2ee7",
+      "bytes": 102493
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-701.html",
+      "sha256": "96b569aeddd14db98b96b8679ac41a754829fd5b355887582e8914d4c0778da2",
+      "bytes": 94181
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-702.html",
+      "sha256": "25102e4ab92cb8c489920fbe21034e7c867f2106f68a84e228354b61f8eaff7e",
+      "bytes": 134109
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-703.html",
+      "sha256": "f5604de94a3efa33cedd199d52cc000aa20e60e43eeada1e448e2df92fb25568",
+      "bytes": 60567
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-704.html",
+      "sha256": "a52acb2be00dee36b156489fb761ab2d4009d5a2f487324ee93035142197b47c",
+      "bytes": 133734
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-705.html",
+      "sha256": "046fc6914693f7546cde7f31313a252b62e9c5a8ec90e49ca2ac16d2abcb231b",
+      "bytes": 106442
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-706.html",
+      "sha256": "4e3cbbf1ef9eb6991ef67829504c907608c1673e1805406980af82736a4e331a",
+      "bytes": 59143
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-707.html",
+      "sha256": "8204af855ce72053f528ce155b7cdc78559f2d1b02243a1e5981b1a2a54119a3",
+      "bytes": 46955
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-708.html",
+      "sha256": "65d68c298a89276fa0167df9a482494bb62fece633b0ad665dc3d669121460c4",
+      "bytes": 96027
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-709.html",
+      "sha256": "fe471b7b51c597f82f1b9076854a124442c9c84f34550fa3ff1ded67e2cee0f9",
+      "bytes": 109075
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-710.html",
+      "sha256": "5d3efaf98a0360555064288e8b96cd15c47b6cfd2b93bc8bca40d13ed133f0cf",
+      "bytes": 126378
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-711.html",
+      "sha256": "69a1eeca9b973c388f1d2bd835e35d7001f87341c99b61a0a0d96892ffa67123",
+      "bytes": 81321
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-712.html",
+      "sha256": "601ba00a7fc0666911ac72bb538e24b01d3e89d79759e246cae446b237763e05",
+      "bytes": 97974
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-713.html",
+      "sha256": "25f35474c77e4610c9bcf8f2a6b5e0c4ba44bb9b3e7c67e2bf8879ceb331847b",
+      "bytes": 63141
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-714.html",
+      "sha256": "a4381eef76467e28953e6016be861e0907d2625c07c7e67aa8a81ca0456e47ed",
+      "bytes": 68970
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-715.html",
+      "sha256": "04424947a0ed7de28a81359d6539eb2203864ba6cfeae28031b09af0fd511863",
+      "bytes": 146797
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-716.html",
+      "sha256": "5f2f8f0f4205624d9a24c421de12a25c79239c3946c152d6c8a5744c47d0ea47",
+      "bytes": 104610
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-717.html",
+      "sha256": "0bf216499829a568e4935bc759b50c620a868be450cc6f5680dee138c06fb854",
+      "bytes": 109949
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-718.html",
+      "sha256": "2406b5ece4b487c4c74dcd32f3b139c703b39c655a68c3593179c83bce3f8a83",
+      "bytes": 82970
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-719.html",
+      "sha256": "6ebdc077da32bc80464a0acd565fa8b055475766a655f8492659457a94507d08",
+      "bytes": 178733
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-720.html",
+      "sha256": "721e3460e4a5f1c2b923f5ee5d72fbebd623f4abf8ee2867df2cbd3a501c4400",
+      "bytes": 91512
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-721.html",
+      "sha256": "6450039e11465e3722d070c473fc88dfc72687dc758cfbf1c5c0e2ab270194d6",
+      "bytes": 85304
+    },
+    {
+      "path": "minimax-glm51/battle_log/pokechamp6397 - battle-gen9ou-722.html",
+      "sha256": "58481e05adcc0660443440f14749fb79216d8034252b53000b3bcbdf512d3160",
+      "bytes": 47916
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-693.html",
+      "sha256": "5a8322d060c4d0a14d6690375e1ce0632988251c1db543c5712547c1dd446b50",
+      "bytes": 194550
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-694.html",
+      "sha256": "cc39a76351fdfd227ddd143127929249852903d962114d25599df3890043a58e",
+      "bytes": 127014
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-695.html",
+      "sha256": "b97177226f10a5832187065868ddb69e709a512ed2e2c959305de98080dcde48",
+      "bytes": 166397
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-696.html",
+      "sha256": "f68371c85ab5f7adcd2d6d09b81a22dfd3cd74627d39439e93aa74d7dce257cd",
+      "bytes": 142021
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-697.html",
+      "sha256": "f2b69fefb3661f24802cd0acd42711d4ab0aa6621a2aba2dbe1749816e530f1e",
+      "bytes": 153613
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-698.html",
+      "sha256": "4dfa1dbf210272ffcd6c4ae287cf3cfdcb4f9419fd102ccf37060a364bd94d35",
+      "bytes": 53506
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-699.html",
+      "sha256": "cfba8dd400310c944b8c9494ed581744cffd7fb1c2f96b96d4a2a9dd618b5c53",
+      "bytes": 242042
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-700.html",
+      "sha256": "b836a0c7747ffcd6b6b462c36c15eb91034a9a9b01c94f7e396b3697cf54699b",
+      "bytes": 200691
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-701.html",
+      "sha256": "87df1af4aed88ed4ee1e8a4caa1ce333a40573f6456fcd4b311641824bd9e354",
+      "bytes": 184755
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-702.html",
+      "sha256": "cc68ad591f28e337796335d834c58c5bbfb57e87ad3d29a98300566f2d70b69d",
+      "bytes": 270328
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-703.html",
+      "sha256": "c20b065349fda8e836a5c150d1247422589d78cc0a509a09a423ec8a802fe1c8",
+      "bytes": 135251
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-704.html",
+      "sha256": "304962c4879b2c29f68c17fc482c84387258acac1bf66431ce11a93303e72548",
+      "bytes": 272825
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-705.html",
+      "sha256": "5f55d1a9bd1611f0866451671d26bfa1569084a6fcf81979c57e30fe768ad7d9",
+      "bytes": 220658
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-706.html",
+      "sha256": "873f75e8db210cbd731608a73dc28e177a0b1cc22e11205be1cb18027ae27d3c",
+      "bytes": 103808
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-707.html",
+      "sha256": "105c8649f8676c2323c76fce0eb786cc4a4347471b309e9058c266e64e72e2fb",
+      "bytes": 94819
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-708.html",
+      "sha256": "820673faa5c345a60566a86fa2c9ad5eb950321bd91a9bae1a4481dd803179f9",
+      "bytes": 219498
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-709.html",
+      "sha256": "4db2b3c32c822ce74f739ea152628f3ed291ed3ee17772c40ce698966d35f45e",
+      "bytes": 222168
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-710.html",
+      "sha256": "2b172abef4e3254adf79e4ae666c63e2e3f130df8ebe4a5bfdb5092dd4f762a1",
+      "bytes": 257487
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-711.html",
+      "sha256": "bac11995112fa743d87df4905fc7d1a07c5145f7e0f56028978e5199f5249d4d",
+      "bytes": 168782
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-712.html",
+      "sha256": "b1850762e483f842c04855a66a2bdd1f7c44d8aa77f4ffcb9624f53c47ec02ab",
+      "bytes": 210780
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-713.html",
+      "sha256": "949b52ef7f29185c44c88399f328359dbfc5d57d56ee661502399e7e08835417",
+      "bytes": 115914
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-714.html",
+      "sha256": "2d77ae796c6c378d374bf06670cd01d453fc82a4ed063aca62fd3f29bacd8292",
+      "bytes": 137785
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-715.html",
+      "sha256": "73fe9a31cccbb7b67311e0e8eba300551e2944956fc6becfd2b276b87c6955fd",
+      "bytes": 274432
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-716.html",
+      "sha256": "157b9a4d7629f54811c4fbd3add9c7bbfb584830ce02921e4731b2cf853d3325",
+      "bytes": 212838
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-717.html",
+      "sha256": "3eb4fd62d466e1fc54f61a8dd9b4ff2d9ad537ab0bec64799fcff14d3c5f1cda",
+      "bytes": 194783
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-718.html",
+      "sha256": "eac03c530a6464d7a08118d642d3aaaa47f47c631c7c2d10195c3053bca86468",
+      "bytes": 239395
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-719.html",
+      "sha256": "1c23b15bc8262bdeb944cdf683108f3ce36dd3d49723921a7a80969cc5366637",
+      "bytes": 330090
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-720.html",
+      "sha256": "a1815b3ee5d839172dc8a801fe40bbfe94b635916baa2c83be997433de755073",
+      "bytes": 173321
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-721.html",
+      "sha256": "69f3752973deb2a0086fb5ca3ec0473d49f81a1bc52032a239eb4546065156f7",
+      "bytes": 164760
+    },
+    {
+      "path": "minimax-glm51/viewer/battle-gen9ou-722.html",
+      "sha256": "511814603288c0647aa7bef533da0669b3d8c7a88656de30df3a6f7420c067fe",
+      "bytes": 94915
+    },
+    {
+      "path": "minimax-glm51/viewer/index.html",
+      "sha256": "55d64acfa1d934c095dda0ccf9879ad8e051f51517a5d16b1aad44c2defc30fc",
+      "bytes": 9067
+    },
+    {
+      "path": "react-glm51/README.md",
+      "sha256": "181453fe628a34f88b81f93aeb785e42dd17c8bc0ce847d9bda569f48d0576c5",
+      "bytes": 2909
+    },
+    {
+      "path": "react-glm51/battle_log/experiment_react_glm-5.1_cloud.json",
+      "sha256": "01d56d44ffb2a5af429b9549b0ccd4c9a6a9cb4a86a732dda27c69f3cd30758f",
+      "bytes": 10019
+    },
+    {
+      "path": "react-glm51/battle_log/langgraph_llm_log.jsonl",
+      "sha256": "55a5740fd4e5b838b52585f4d03ec3962062ade1b2911a42a44d17fd9b93f319",
+      "bytes": 33065091
+    },
+    {
+      "path": "react-glm51/battle_log/langgraph_tool_log.jsonl",
+      "sha256": "a658c122cc2acde9875e388f53dd04ca2fa7da12915e6328b6ac1a00cb65a88c",
+      "bytes": 2676406
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-631.html",
+      "sha256": "fff4901407d9c67bacb8de7cc0c02afb7ec4d538ac1a24fbeb41bb9cf8735e64",
+      "bytes": 14968
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-632.html",
+      "sha256": "fcae1bdb95cc9b0e2f86b5dbbeed46fd9c84b2fbc80b8326ca9faf5f320aeafb",
+      "bytes": 15782
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-633.html",
+      "sha256": "276bc3803d1cd701ccdf9e71b46f615743dd6479b6dda73a1dbe526017f78bc7",
+      "bytes": 11431
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-634.html",
+      "sha256": "7c8ca3009d28904e213ea59e67aa02f4d721189d07d01549cf8f30290d106e45",
+      "bytes": 14783
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-635.html",
+      "sha256": "3ef3c307e965d3bb0cf781cc7507eb588944e7cfb83fa800b9bf05c4fc913ffd",
+      "bytes": 12334
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-636.html",
+      "sha256": "e39d4591476b229ebe029e7d10a6f0b5e61544f07b03d257660d299ce826fc3a",
+      "bytes": 12660
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-637.html",
+      "sha256": "cb17b4470dbec31239996b2164c1ba0b3b5f916cb5ef15a5ece93383150c046f",
+      "bytes": 13277
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-638.html",
+      "sha256": "49f1d205024b71d7be343f91f3d2dd452016269d20f017d80ad993546e34316a",
+      "bytes": 11213
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-639.html",
+      "sha256": "e8d5829d0d88b76aa2dd63840c4250c697fcc9b084f79205ea24c9f43c8b0c3e",
+      "bytes": 10871
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-640.html",
+      "sha256": "636c555ca1c20aea8748ad2ac8667ad89a591b6ac19b2298d8ac2f34235726a5",
+      "bytes": 10182
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-641.html",
+      "sha256": "fe9b35c92c0aef2af95eb9d99cfca8bbed435a12f47c2fe4c6cfe6d386a34503",
+      "bytes": 15130
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-642.html",
+      "sha256": "7970e524f610ee8b744b042231e27c36685d78a6b0de1efd76ddc014e2527c7e",
+      "bytes": 11814
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-643.html",
+      "sha256": "ffb2376cda45c078d41fd67fe87251fef4a8dffc56fec2389e61d358c1bb0382",
+      "bytes": 12335
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-644.html",
+      "sha256": "52955cc08fd590cbb91d335b11fde1711251dbca6c71b8114500967c1250a8b7",
+      "bytes": 13228
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-645.html",
+      "sha256": "dc62c7d1990c7a479ddc0cc08e8ae67e5a2ccde00dc08420153c9e30fb60af63",
+      "bytes": 13071
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-646.html",
+      "sha256": "9ce0aa41879882823f19c26d4f7b6c0c56a611ff7b53b2ebfbf08d0ca30ace9b",
+      "bytes": 14168
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-647.html",
+      "sha256": "5e1624ba6b0efd4f4af1ab8590951dd2337b95cdec546bb125b4bd68f2ae5003",
+      "bytes": 12203
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-648.html",
+      "sha256": "bd071cbf87f0d03cc64bdd37ab74a3e456dcbe52937a2f66ca772b64af3babf6",
+      "bytes": 16690
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-649.html",
+      "sha256": "1f6cf4b0517c69ff4071a4fb34759bea3c527a76b1a21e47011e7af52fd1bc42",
+      "bytes": 11696
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-650.html",
+      "sha256": "4d155298768b3674c88bc2bd13597ca8ac77c6a192995982d547f558e6981054",
+      "bytes": 12835
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-651.html",
+      "sha256": "baff6de7db9d7f10211b7d04e80e693ce31901b786c40dba150dd287938508af",
+      "bytes": 12527
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-652.html",
+      "sha256": "7d42f8bcbc9683dde04daffbaa3d3a4d6646abf067a63975a49765dbd18fe973",
+      "bytes": 14263
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-653.html",
+      "sha256": "d36400674cf807b331886611fb0b74f8f127337c0cbcf3c6e0fc634a7796ce3e",
+      "bytes": 12862
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-654.html",
+      "sha256": "be895c7cb7cd5e73ba70bf4f7f433e6d5f509e9f98e058b39f0bcdb2e7e2d8e0",
+      "bytes": 11291
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-655.html",
+      "sha256": "4c811b64d83f2dc34cb7215b619699f36436825e816c1d7b03bbc59b22dbc497",
+      "bytes": 20870
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-656.html",
+      "sha256": "51836cb9a0b45eb9a5287aecf0f7c3b6df7cf33966977ce41b1162da1527b74b",
+      "bytes": 12741
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-657.html",
+      "sha256": "f32f2b23c8b79a3b171bc1511763a5a540ca0694c71b2d48614c78ee490ae0da",
+      "bytes": 11473
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-658.html",
+      "sha256": "ff6b0c6846d0c43b639ce1f2fb0074f91978487c66394bd25c051c3095dcd9f9",
+      "bytes": 14170
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-659.html",
+      "sha256": "e5469f65351e9db56c85bce8ec3e9a5bef3b2cc5e5c87cd821323960e1608e01",
+      "bytes": 12295
+    },
+    {
+      "path": "react-glm51/battle_log/pokechamp7493 - battle-gen9ou-660.html",
+      "sha256": "78e81bdcf93a9afcd7623257de7c1837db97255f0513bd2fa3d285650d448c59",
+      "bytes": 12234
+    }
+  ]
+}

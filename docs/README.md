@@ -3,8 +3,11 @@
 > 실험·개발 관련 문서의 네비게이션 인덱스. 배틀 데이터 자체는 `.temp/experiments/` (3분할: `baselines/`/`active/`/`archive/`)에, 핵심 규칙은 루트의 `experiment-context.md`에 있다.
 
 ## 핵심 (루트)
-- [`experiment-context.md`](../experiment-context.md) — ★ 실험 규칙·행동 규칙·baseline 인덱스. **모든 작업의 출발점** (섹션 0 행동 규칙, 섹션 5 baseline 전경표).
+- [`experiment-context.md`](../experiment-context.md) — ★ 실험 규칙·행동 규칙·baseline 인덱스. **모든 작업의 출발점** (섹션 0 행동 규칙, 섹션 5 baseline 전경표, 섹션 7 baseline 백업).
 - [`exp_analysis/`](../exp_analysis/) — 분석 절차 매뉴얼([`ANALYSIS_MANUAL.md`](../exp_analysis/ANALYSIS_MANUAL.md)) + 보고서 템플릿([`template.md`](../exp_analysis/template.md)). 새 분석은 이 절차를 따른다.
+
+## 백업 (`backups/`)
+- [`backups/baselines/RESTORE.md`](../backups/baselines/RESTORE.md) — 공식 baseline 3종의 git-tracked 백업·복원 안내. 도구는 [`scripts/backup/backup_baselines.py`](../scripts/backup/backup_baselines.py). 디스크 장애 시 `git clone` 으로 baseline 전체 복원.
 
 ## 실험 분석 보고서 (`analysis/`)
 동일 조건(glm-5.1, temp 0.3, seed 42, N=30, 상대 abyssal)의 baseline 3종 + 비교 분석.
