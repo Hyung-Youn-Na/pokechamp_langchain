@@ -61,10 +61,16 @@ class LangChainPlayer(LLMPlayer):
 
     def __init__(self, *args, **kwargs):
         self._max_tokens = kwargs.pop("max_tokens", 8192)
+        self._max_tool_calls = kwargs.pop("max_tool_calls", 5)
         super().__init__(*args, **kwargs)
         self._agent_graphs = {}
         self._chat_model: Optional[BaseChatModel] = None
         self.json_parse_failures = 0
+        # Track decision counts per (battle_tag, turn) to assign
+        # unique decision_index values when choose_move() is called
+        # multiple times in the same turn.
+        self._decision_counts: dict[str, int] = {}
+        self._last_decision_turn: dict[str, int] = {}
 
     def _get_chat_model(self) -> BaseChatModel:
         """Get or create the LangChain chat model from the backend."""
@@ -107,7 +113,7 @@ class LangChainPlayer(LLMPlayer):
         llm = self._get_chat_model()
 
         if algo == "react":
-            graph = create_react_agent(llm)
+            graph = create_react_agent(llm, max_tool_calls=self._max_tool_calls)
         elif algo == "io_langchain":
             graph = create_io_agent(llm)
         elif algo == "cot_langchain":
@@ -219,10 +225,28 @@ class LangChainPlayer(LLMPlayer):
         # Set up LLM logging callback if log_dir is configured
         callbacks = []
         if self.log_dir:
+            # Track decision_index: how many choose_move calls for
+            # this (battle, turn).  Resets when the turn number changes.
+            btag = battle.battle_tag
+            current_turn = battle.turn
+            last_turn = self._last_decision_turn.get(btag, -1)
+            if current_turn != last_turn:
+                # New turn — reset decision counter
+                self._decision_counts[btag] = 0
+                self._last_decision_turn[btag] = current_turn
+            else:
+                # Same turn — another decision (e.g. after Volt Switch)
+                self._decision_counts[btag] = (
+                    self._decision_counts.get(btag, 0) + 1
+                )
+
+            decision_index = self._decision_counts.get(btag, 0)
+
             log_callback = LLMLoggingCallback(
                 log_dir=self.log_dir,
-                battle_tag=battle.battle_tag,
-                turn=battle.turn,
+                battle_tag=btag,
+                turn=current_turn,
+                decision_index=decision_index,
             )
             callbacks.append(log_callback)
 

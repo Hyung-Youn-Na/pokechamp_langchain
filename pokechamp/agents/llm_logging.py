@@ -67,6 +67,7 @@ class LLMLoggingCallback(BaseCallbackHandler):
         log_dir: str,
         battle_tag: str = "",
         turn: int = 0,
+        decision_index: int = 0,
         log_file_name: str = "langgraph_llm_log.jsonl",
     ):
         """
@@ -74,11 +75,16 @@ class LLMLoggingCallback(BaseCallbackHandler):
             log_dir: Directory to write the log file into.
             battle_tag: Current battle identifier.
             turn: Current turn number.
+            decision_index: Index of this decision within the turn
+                (0 for first decision, 1+ when choose_move() is called
+                multiple times in the same turn, e.g. after Volt Switch
+                or force switch).
             log_file_name: Name of the JSONL log file.
         """
         self.log_dir = log_dir
         self.battle_tag = battle_tag
         self.turn = turn
+        self.decision_index = decision_index
         self.log_file_name = log_file_name
         self._lock = threading.Lock()
         self._call_counter = 0
@@ -196,6 +202,7 @@ class LLMLoggingCallback(BaseCallbackHandler):
             "start_time": start_time,
             "battle_tag": self.battle_tag,
             "turn": self.turn,
+            "decision_index": self.decision_index,
             "llm_call_in_turn": self._call_counter,
             "system_prompt": system_prompt,
             "user_prompt": user_prompt,

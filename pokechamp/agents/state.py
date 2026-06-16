@@ -58,6 +58,9 @@ class BattleAgentState(TypedDict):
     reasoning: str
     evaluation_scores: Dict[str, float]
 
+    # -- Tool call tracking (accumulated via reducer) --
+    tool_call_count: Annotated[int, _add_int]
+
     # -- LLM usage tracking (accumulated via reducer) --
     total_prompt_tokens: Annotated[int, _add_int]
     total_completion_tokens: Annotated[int, _add_int]

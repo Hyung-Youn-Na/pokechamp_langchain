@@ -103,6 +103,7 @@ def build_battle_state(
         constraint_prompt=constraint_prompt,
         reasoning="",
         evaluation_scores={},
+        tool_call_count=0,
         total_prompt_tokens=0,
         total_completion_tokens=0,
         llm_call_count=0,
@@ -196,7 +197,9 @@ def extract_action_from_prose(
     )
     if rec_match:
         rec_section = rec_match.group(1)
-        action = _search_in_text(rec_section, available_move_ids, available_switch_species)
+        action = _search_in_text(
+            rec_section, available_move_ids, available_switch_species
+        )
         if action is not None:
             return action
 
@@ -219,7 +222,7 @@ def parse_action_json(
     if content.startswith("```"):
         first_newline = content.find("\n")
         if first_newline >= 0:
-            content = content[first_newline + 1:]
+            content = content[first_newline + 1 :]
         if content.endswith("```"):
             content = content[:-3].rstrip()
 
@@ -264,15 +267,10 @@ def parse_action_json(
 
     # Move aliases: move_name, chosen_move → move
     move_value = (
-        action.get("move")
-        or action.get("move_name")
-        or action.get("chosen_move")
+        action.get("move") or action.get("move_name") or action.get("chosen_move")
     )
     # Switch aliases: chosen_switch → switch
-    switch_value = (
-        action.get("switch")
-        or action.get("chosen_switch")
-    )
+    switch_value = action.get("switch") or action.get("chosen_switch")
 
     # Move / Dynamax / Terastallize
     if "terastallize" in action and action["terastallize"] is not None:
@@ -364,7 +362,11 @@ def _pokemon_info(pokemon: Pokemon) -> Dict[str, Any]:
         "status": str(pokemon.status) if pokemon.status else None,
         "boosts": dict(pokemon.boosts) if pokemon.boosts else {},
         "item": str(pokemon.item) if pokemon.item else None,
-        "tera_type": str(getattr(pokemon, "_terastallized_type", None)) if getattr(pokemon, "_terastallized_type", None) else None,
+        "tera_type": (
+            str(getattr(pokemon, "_terastallized_type", None))
+            if getattr(pokemon, "_terastallized_type", None)
+            else None
+        ),
     }
 
 
