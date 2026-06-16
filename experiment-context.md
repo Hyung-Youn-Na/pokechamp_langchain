@@ -98,28 +98,39 @@ uv run python scripts/battles/local_1v1.py \
 | 토큰 사용량 | prompt + completion | `LLMPlayer.prompt_tokens`, `completion_tokens` |
 | 평균 응답 시간 | ms/call | 총 시간 ÷ 호출 수 |
 
-> ⚠️ **현재 baseline 미측정**. EXP-001 실행 후 결과를 [섹션 5](#5-실험-인덱스)에 기록.
+> ✅ **baseline 측정 완료** — io/react/minimax 3종 baseline(`baselines/`)이 EXP-031~033으로 측정됨. [섹션 5](#5-실험-인덱스) 상단 "현재 baseline 전경" 참조. 새 ablation은 위 baseline 중 하나를 기준으로 변수 1개만 변경.
 
 ---
 
 ## 4. 실험 규칙
 
-### 디렉토리 구조
+### 디렉토리 구조 (3분할)
 
 ```
 .temp/experiments/
-├── EXP-001-baseline/
-│   ├── README.md
-│   └── battle_log/
-├── EXP-002-xxx/
-│   ├── README.md
-│   └── battle_log/
-└── ...
+├── baselines/                 # ★ 공식 baseline (수정 금지, ablation의 비교 기준)
+│   ├── io-glm51/              #   ← EXP-032 (io, 53.3%)
+│   ├── react-glm51/           #   ← EXP-031 (react, 76.7%)
+│   └── minimax-glm51/         #   ← EXP-033 (minimax, 80.0%)
+├── active/                    # 현재/다음 실험 (EXP-034+)
+│   └── EXP-NNN-name/
+├── archive/                   # 종료된 실험 (EXP-001~030, EXP-TEST)
+│   └── EXP-NNN-name/
+└── model-timing/              # 모델별 응답속도 벤치마크
 ```
+
+**이동 규칙**: 새 실험은 `active/`에서 시작 → 분석 완료 후 `archive/`로 이동. baseline은 `baselines/`에 영구 보관.
 
 ### 네이밍
 
-`EXP-{NNN}-{kebab-case-name}` — NNN은 3자리 순번 (001, 002, ...)
+- baseline: `baselines/{algo}-{model}/` (예: `minimax-glm51`)
+- 실험: `EXP-{NNN}-{kebab-case-name}` — NNN은 3자리 순번. **다음 순번 = EXP-034**.
+
+### baseline 보존 규칙 ★
+
+- `baselines/` 3종(io/react/minimax)은 **동일 조건**(glm-5.1, temp 0.3, seed 42, N=30, 상대 abyssal)으로 공정 비교 가능한 공식 baseline.
+- **임의 수정·재실행 금지**. ablation의 "변경 1개 원칙"(섹션 0-4) 비교 기준이므로 고정.
+- 재측정 필요 시 `active/EXP-0NN` 신규 번호로 새 실험 생성, baseline은 그대로 유지.
 
 ### README.md 템플릿
 
@@ -157,6 +168,20 @@ uv run python scripts/battles/local_1v1.py \
 
 ## 5. 실험 인덱스
 
+### 현재 baseline 전경 (★ 동일 조건 공정 비교)
+
+> 조건: glm-5.1, temp 0.3, seed 42, N=30, 상대 abyssal (gemini-2.5-pro, io). 경로: `.temp/experiments/baselines/`.
+
+| Baseline ★ | algo | 승률 | 평균 턴 | LLM 호출/판 | prompt tok | completion tok | 비고 |
+|-------------|------|------|---------|------------|------------|----------------|------|
+| io-glm51 | io | 53.3% (16/30) | 39.0 | 31.2 | 65,221 | 2,777 | 장기전 붕괴 |
+| react-glm51 | react | 76.7% (23/30) | 24.4 | 119.1 | 357,737 | 11,610 | 426s/판, 토큰 다소 |
+| minimax-glm51 | minimax | 80.0% (24/30) | 28.9 | 61.0 | 116,837 | 9,558 | 최고, 성능/비용 양호 |
+
+> **다음 실험 = EXP-034**. ablation은 위 3종 중 하나를 기준으로 변수 1개만 변경.
+
+### 전체 실험 이력
+
 | ID | 이름 | 날짜 | 상태 | 승률 | 비고 |
 |----|------|------|------|------|------|
 | EXP-001 | Baseline 측정 | 2026-06-04 | ✅ 완료 | 83.3% (25/30) | minimax + deepseek-v4-flash:cloud, 변경 없음 |
@@ -178,6 +203,11 @@ uv run python scripts/battles/local_1v1.py \
 | EXP-017 | IO + gemma4 + LLM Lead | 2026-06-08 | ✅ 완료 | 50.0% (15/30) | io+gemma4+llm_lead, 턴수 34.4, JSON실패 394회, -20pp vs EXP-015 |
 | EXP-018 | IO + GLM-5.1 속도 측정 | 2026-06-08 | ✅ 완료 | 60.0% (3/5) | io+glm-5.1, 190s/판, 턴수 30.0, 속도 측정 목적 (N=5) |
 | EXP-019 | IO+Gemma4+LLM Lead+Temp0 | 2026-06-08 | ✅ 완료 | 50.0% (15/30) | EXP-017 대비 승률 변화없음, JSON실패 143회, temp0 효과미미 |
+| EXP-020 | — | — | ⏭️ SKIP | — | 번호 스킵 (실험 미진행) |
+| EXP-021~030 | ReAct 중간 산물 (10건) | 2026-06-09~11 | 📦 archive | — | stopping-criteria 개선 전 비효율 실행. 30판 배틀 수행됐으나 metrics 산출·README 누락. `archive/EXP-021~030` (약 250MB, EXP-030 단일 jsonl=177MB). 최종 성공은 EXP-031, 비교 근거는 `docs/exp-030-react-glm51-analysis.md` |
+| EXP-031 ★ | Baseline: ReAct + glm-5.1 | 2026-06-12 | ✅ baseline | 76.7% (23/30) | **react baseline** → `baselines/react-glm51`. 24.4턴, 119.1 LLM호출, 426s/판 |
+| EXP-032 ★ | Baseline: IO + glm-5.1 | 2026-06-12 | ✅ baseline | 53.3% (16/30) | **io baseline** → `baselines/io-glm51`. 39.0턴, 31.2 LLM호출. 장기전 붕괴 |
+| EXP-033 ★ | Baseline: Minimax + glm-5.1 | 2026-06-12 | ✅ baseline | 80.0% (24/30) | **minimax baseline** → `baselines/minimax-glm51`. 28.9턴, 61.0 LLM호출. 최고 성능 |
 
 ---
 
