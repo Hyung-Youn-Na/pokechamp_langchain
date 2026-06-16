@@ -65,7 +65,7 @@ def scan_exp_numbers() -> set[int]:
                 if m:
                     nums.add(int(m.group(1)))
     if CONTEXT.exists():
-        for m in re.finditer(r"EXP-(\d{3})", CONTEXT.read_text(encoding="utf-8")):
+        for m in re.finditer(r"\|\s*EXP-(\d{3})", CONTEXT.read_text(encoding="utf-8")):
             nums.add(int(m.group(1)))
     return nums
 
@@ -85,7 +85,7 @@ def build_command(exp_dir_rel: str, info: dict) -> str:
         f"  --player_backend ollama/glm-5.1:cloud \\\n"
         f"  --opponent_name abyssal \\\n"
         f"  --opponent_backend gemini-2.5-pro \\\n"
-        f"  --opponent_algorithm io \\\n"
+        f"  --opponent_prompt_algo io \\\n"
         f"  --N 30 \\\n"
         f"  --battle_format gen9ou \\\n"
         f"  --temperature 0.3 \\\n"

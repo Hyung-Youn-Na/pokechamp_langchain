@@ -52,19 +52,30 @@ def find_baseline_json(baseline: str) -> Path | None:
     return cand[-1] if cand else None
 
 
-def config_diff(base_cfg: dict, exp_cfg: dict) -> list[dict]:
+def config_diff(
+    base_cfg: dict, exp_cfg: dict
+) -> tuple[list[dict], list[str], list[str]]:
+    """(값 변경 목록, baseline 전용 키, 실험 전용 키).
+
+    양쪽 모두 있는 키만 값 비교(진짜 ablation). 한쪽에만 있는 키는 스키마
+    차이(다른 스크립트로 돌았거나 기록 차이)로 분류해 total 에서 제외한다.
+    예: io/minimax config(player_name + enable_*) vs react config(max_tokens/
+    max_tool_calls, player_name 없음) — 스키마 차이가 ablation 으로 오탐되는 걸 막는다.
+    """
+    common = set(base_cfg) & set(exp_cfg)
+    base_only = sorted((set(base_cfg) - common) - IGNORE_CONFIG_KEYS)
+    exp_only = sorted((set(exp_cfg) - common) - IGNORE_CONFIG_KEYS)
     changes: list[dict] = []
-    keys = (set(base_cfg) | set(exp_cfg)) - IGNORE_CONFIG_KEYS
-    for k in sorted(keys):
-        if base_cfg.get(k) != exp_cfg.get(k):
+    for k in sorted(common - IGNORE_CONFIG_KEYS):
+        if base_cfg[k] != exp_cfg[k]:
             changes.append(
                 {
                     "key": k,
-                    "baseline": base_cfg.get(k),
-                    "experiment": exp_cfg.get(k),
+                    "baseline": base_cfg[k],
+                    "experiment": exp_cfg[k],
                 }
             )
-    return changes
+    return changes, base_only, exp_only
 
 
 def main() -> int:
@@ -101,7 +112,7 @@ def main() -> int:
     exp_cfg = exp_data.get("config", {})
     exp_meta = exp_data.get("meta") or {}
 
-    cfg_changes = config_diff(base_cfg, exp_cfg)
+    cfg_changes, base_only, exp_only = config_diff(base_cfg, exp_cfg)
 
     if exp_meta:
         dirty_files = exp_meta.get("git_dirty_files", [])
@@ -132,6 +143,13 @@ def main() -> int:
     if not cfg_changes:
         print("  (없음)")
     print()
+    if base_only or exp_only:
+        print("스키마 차이 (다른 스크립트/기록 — total 제외):")
+        if base_only:
+            print(f"  baseline 전용 키: {base_only}")
+        if exp_only:
+            print(f"  실험 전용 키    : {exp_only}")
+        print()
     print(f"코드 변경 (dirty files): {len(real_dirty)}개")
     for f in real_dirty:
         print(f"  - {f}")

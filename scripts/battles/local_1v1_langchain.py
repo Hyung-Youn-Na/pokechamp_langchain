@@ -483,6 +483,7 @@ async def main():
         "config": {
             "algorithm": args.player_prompt_algo,
             "backend": args.player_backend,
+            "player_name": args.player_name,
             "opponent_name": args.opponent_name,
             "opponent_backend": args.opponent_backend,
             "opponent_algorithm": args.opponent_prompt_algo,

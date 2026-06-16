@@ -261,6 +261,7 @@ git 호출 전부 예외 방어 — git 없는 환경에서도 배틀은 죽지 
 | `git_dirty` | 작업트리 더티(커밋 전 변경) 여부 |
 | `git_dirty_files` | 변경된 파일 목록 (tracked 수정 + untracked 신규) |
 | `git_dirty_stat` | `git diff HEAD --stat` 요약 줄 (tracked 수정만) |
+| `git_error` | git 호출 실패/비-repo 시 메시지 (정상 `null`) |
 | `dirty_patch_file` | 더티 diff patch 파일명 (log_dir 내; clean tree면 `null`) |
 | `argv` | `sys.argv` 전체 = 실행 명령 100% 재현 |
 | `python_version`, `repo_root` | 실행 환경 |
@@ -279,8 +280,13 @@ git add backups/code_state/ && git commit -m "exp: preserve code state [EXP-NNN]
 ```
 
 `backups/code_state/` 는 `.temp/` 바깥이라 tracked. push = 오프디스크 내구성
-([§7](#7-baseline-백업-) RESTORE.md 검증 D 와 동일 원칙). clean tree면 보존할 것이
-없어 메시지만 출력.
+([§7](#7-baseline-백업-) RESTORE.md 검증 D 와 동일 원칙).
+
+- **untracked 새 파일**은 `git diff HEAD` patch 에 내용이 없으므로, preserve 가
+  `backups/code_state/EXP-NNN/untracked/` 로 파일을 직접 복사해 보존한다.
+- **clean tree**(코드를 이미 커밋한 뒤 배틀)는 더티 patch 가 없다. preserve 가 그
+  커밋이 origin 에 도달했는지(`git branch -r --contains`) 확인하고 미push 면 경고한다
+  (커밋만 있고 push 안 하면 디스크 장애에 소실).
 
 ### 8.3 실험 시작 도우미
 

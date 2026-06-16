@@ -42,16 +42,22 @@ def resolve_exp_dir(arg: str) -> Path:
 
 
 def find_latest_experiment_json(exp_dir: Path) -> Path | None:
-    """exp_dir/battle_log/experiment_*.json 중 mtime 최신. 없으면 None."""
+    """exp_dir/battle_log/experiment_*.json 중 mtime 최신. 없으면 None.
+
+    mtime 동률(같은 초) 시 파일명(ts 접미사 포함)을 보조 정렬키로 써 결정성 확보.
+    """
     bdir = exp_dir / "battle_log"
     if not bdir.is_dir():
         return None
     candidates = sorted(
-        bdir.glob("experiment_*.json"), key=lambda p: p.stat().st_mtime
+        bdir.glob("experiment_*.json"), key=lambda p: (p.stat().st_mtime, p.name)
     )
     return candidates[-1] if candidates else None
 
 
 def load_experiment_json(path: Path) -> dict:
-    """experiment JSON 로드."""
-    return json.loads(path.read_text(encoding="utf-8"))
+    """experiment JSON 로드. 문법 오류 시 명확한 에러로 종료."""
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"오류: experiment JSON 파싱 실패 — {path}: {exc}") from exc
