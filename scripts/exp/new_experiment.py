@@ -65,7 +65,9 @@ def scan_exp_numbers() -> set[int]:
                 if m:
                     nums.add(int(m.group(1)))
     if CONTEXT.exists():
-        for m in re.finditer(r"\|\s*EXP-(\d{3})", CONTEXT.read_text(encoding="utf-8")):
+        for m in re.finditer(
+            r"(?m)^\|\s*EXP-(\d{3})", CONTEXT.read_text(encoding="utf-8")
+        ):
             nums.add(int(m.group(1)))
     return nums
 
