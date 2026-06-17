@@ -367,12 +367,12 @@ async def main():
             getattr(player.llm, "completion_tokens", 0) if hasattr(player, "llm") else 0
         )
 
-        latest_battle = None
-        latest_turn = 0
-        for tag, b in player.battles.items():
-            if b.turn > latest_turn:
-                latest_turn = b.turn
-                latest_battle = b
+        # 직전 종료 배틀 = player.battles 에 가장 최근 추가된 것
+        # (Python dict 는 삽입순을 보존하므로 list[-1] 이 직전 배틀).
+        # 이전 코드는 max-turn 배틀을 재사용(reuse)해 won/turns 가 단일
+        # 배틀 값으로 고정되는 버그(running-max reuse)가 있었다 — EXP-034 발견.
+        battles_list = list(player.battles.values())
+        latest_battle = battles_list[-1] if battles_list else None
 
         won = 1 if (latest_battle and latest_battle.won) else 0
         turns = latest_battle.turn if latest_battle else 0
