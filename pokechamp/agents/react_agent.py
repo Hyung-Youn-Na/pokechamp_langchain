@@ -206,15 +206,24 @@ def _make_agent_loop(max_tool_calls: int):
         else:
             # Inject remaining budget hint so the LLM can plan its tool
             # usage efficiently and avoid degenerate repeat calls.
+            # Past the midpoint, nudge the model to self-check whether the
+            # next tool call would actually change its decision — steering
+            # toward early, well-grounded termination without adding NEW
+            # system instructions (avoids the EXP-002~004 prompt-bloat
+            # trap, where added prompt text consistently hurt win-rate).
             remaining = max_tool_calls - tool_call_count
-            messages.append(
-                HumanMessage(
-                    content=(
-                        f"[BUDGET: You have {remaining} tool call(s) "
-                        f"remaining. Plan accordingly.]"
-                    )
+            if tool_call_count >= 2 and remaining <= 2:
+                hint = (
+                    f"[BUDGET: {remaining} call(s) left. Before the next "
+                    f"tool, ask: will its result change my final decision? "
+                    f"If not, output your JSON action now.]"
                 )
-            )
+            else:
+                hint = (
+                    f"[BUDGET: You have {remaining} tool call(s) "
+                    f"remaining. Plan accordingly.]"
+                )
+            messages.append(HumanMessage(content=hint))
             # Bind tools to the model
             llm_with_tools = llm.bind_tools(tools)
             response = llm_with_tools.invoke(messages)

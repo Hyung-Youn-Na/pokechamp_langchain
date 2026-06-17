@@ -1,0 +1,39 @@
+{
+  "git_commit": "0eefa16a103f7b7e7c61282025233b5c8b882f22",
+  "git_commit_short": "0eefa16",
+  "git_branch": "main",
+  "git_dirty": true,
+  "git_dirty_files": [
+    "pokechamp/agents/react_agent.py"
+  ],
+  "git_dirty_stat": " 1 file changed, 16 insertions(+), 7 deletions(-)",
+  "git_error": null,
+  "dirty_patch_file": "experiment_react_ollama_glm-5.1:cloud_20260616_085111_dirty.patch",
+  "argv": [
+    "scripts/battles/local_1v1_langchain.py",
+    "--player_name",
+    "pokechamp",
+    "--player_prompt_algo",
+    "react",
+    "--player_backend",
+    "ollama/glm-5.1:cloud",
+    "--opponent_name",
+    "abyssal",
+    "--opponent_backend",
+    "gemini-2.5-pro",
+    "--opponent_prompt_algo",
+    "io",
+    "--N",
+    "30",
+    "--battle_format",
+    "gen9ou",
+    "--temperature",
+    "0.3",
+    "--seed",
+    "42",
+    "--log_dir",
+    ".temp/experiments/active/EXP-034-react-early-stop-hint/battle_log"
+  ],
+  "python_version": "3.11.11",
+  "repo_root": "/workspace"
+}

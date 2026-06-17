@@ -210,6 +210,7 @@ uv run python scripts/battles/local_1v1.py \
 | EXP-031 ★ | Baseline: ReAct + glm-5.1 | 2026-06-12 | ✅ baseline | 76.7% (23/30) | **react baseline** → `baselines/react-glm51`. 24.4턴, 119.1 LLM호출, 426s/판 |
 | EXP-032 ★ | Baseline: IO + glm-5.1 | 2026-06-12 | ✅ baseline | 53.3% (16/30) | **io baseline** → `baselines/io-glm51`. 39.0턴, 31.2 LLM호출. 장기전 붕괴 |
 | EXP-033 ★ | Baseline: Minimax + glm-5.1 | 2026-06-12 | ✅ baseline | 80.0% (24/30) | **minimax baseline** → `baselines/minimax-glm51`. 28.9턴, 61.0 LLM호출. 최고 성능 |
+| EXP-034 | ReAct BUDGET 힌트 정밀화(안 A) | 2026-06-16 | ✅ 완료 | 76.7% (23/30) | 승률 유지 + 비용절감(토큰 −42%, LLM호출 −38.5%, 시간 −43%). 조기종료율 34→80%. `react_agent.py` 단일 변경(§0-4 PASS). ⚠️ 메트릭 수집 버그(turns/won) 발견·fix. 분석 `docs/analysis/exp-034-react-glm51-analysis.md` |
 
 ---
 
