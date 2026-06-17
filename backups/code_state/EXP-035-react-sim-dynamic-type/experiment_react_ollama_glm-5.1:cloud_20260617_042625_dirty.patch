@@ -1,0 +1,409 @@
+diff --git a/pokechamp/battle_tools.py b/pokechamp/battle_tools.py
+index f98bfba..3f3f3d3 100644
+--- a/pokechamp/battle_tools.py
++++ b/pokechamp/battle_tools.py
+@@ -14,6 +14,7 @@ and return human-readable strings that an LLM agent can reason over.
+ 
+ from __future__ import annotations
+ 
++import copy
+ import json
+ from dataclasses import dataclass
+ from typing import Any, Optional
+@@ -22,6 +23,7 @@ from langchain_core.tools import tool
+ from poke_env.data import to_id_str
+ from poke_env.environment.move import Move
+ from poke_env.environment.pokemon import Pokemon
++from poke_env.environment.pokemon_type import PokemonType
+ 
+ from pokechamp.data_cache import (
+     get_cached_move_effect,
+@@ -209,6 +211,66 @@ def _pokemon_to_dict(pokemon: Pokemon) -> dict:
+     }
+ 
+ 
++# ---------------------------------------------------------------------------
++# Dynamic move resolution helper (EXP-035, 안 B)
++# ---------------------------------------------------------------------------
++
++
++def _apply_dynamic_resolution(move, user, target, ctx):
++    """Return a *copy* of ``move`` with its dynamic type/base_power resolved.
++
++    The LocalSim damage path (``calculate_remaining_hp`` → ``modify_damage``)
++    reads ``move.type`` / ``move.base_power`` as-is and never calls the
++    dynamic resolvers, so a move like Ogerpon-Wellspring's Ivy Cudgel is
++    simulated with its static type (Grass) instead of the real one (Water) —
++    producing spurious "100% HP lost" results (EXP-034 battle-731).
++
++    This mirrors exactly what ``get_move_details`` already shows the LLM, so
++    ``calculate_damage`` / ``simulate_turn`` / ``analyze_matchup`` now agree
++    with it instead of contradicting it. The original (possibly cached) Move
++    object is never mutated — a shallow copy is overridden.
++
++    Fail-safe: returns the original ``move`` unchanged on any error.
++    """
++    if user is None:
++        return move
++    try:
++        resolved = copy.copy(move)
++    except Exception:
++        return move
++
++    # Dynamic type (e.g. Ivy Cudgel → Water for Ogerpon-Wellspring)
++    try:
++        dyn_type = resolve_dynamic_type(
++            move.id,
++            weather=ctx.weather,
++            user=user,
++            tera_type=getattr(user, "_terastallized_type", None),
++            user_species=user.species,
++        )
++        if dyn_type:
++            resolved.type = PokemonType[str(dyn_type).upper()]
++    except Exception:
++        pass
++
++    # Dynamic power (e.g. Acrobatics, Facade, Knock Off, Weather Ball)
++    try:
++        dyn_power = resolve_dynamic_power(
++            move.id,
++            weather=ctx.weather,
++            user=user,
++            target=target,
++            user_item=user.item if user.item else None,
++            user_status=user.status if user.status else None,
++        )
++        if dyn_power is not None:
++            resolved.base_power = dyn_power
++    except Exception:
++        pass
++
++    return resolved
++
++
+ # ---------------------------------------------------------------------------
+ # Tools
+ # ---------------------------------------------------------------------------
+@@ -260,6 +322,11 @@ def calculate_damage(
+         })
+ 
+     try:
++        # Resolve dynamic type/power on a copy so the simulator sees the
++        # effective move (e.g. Ogerpon-W Ivy Cudgel=Water), matching what
++        # get_move_details reports. EXP-035 (안 B).
++        move = _apply_dynamic_resolution(move, mon, mon_opp, ctx)
++
+         # Use LocalSim for damage calculation via calculate_remaining_hp
+         hp1, hp2, m1_ok, m2_ok = ctx.sim.calculate_remaining_hp(
+             p1=mon,
+@@ -390,6 +457,8 @@ def analyze_matchup(
+             if "STATUS" in m_cat or m.base_power == 0:
+                 continue
+             try:
++                # Resolve dynamic type/power (EXP-035 안 B).
++                m = _apply_dynamic_resolution(m, mon, mon_opp, ctx)
+                 turns = get_number_turns_faint(mon, m, mon_opp, ctx.sim)
+                 if turns < best_turns:
+                     best_turns = turns
+@@ -571,6 +640,11 @@ def simulate_turn(player_move: str, estimated_opponent_move: str) -> str:
+         player_m = _find_move(player_move, ctx)
+         opp_m = _find_move(estimated_opponent_move, ctx)
+ 
++        # Resolve dynamic type/power on copies (EXP-035 안 B) — matches
++        # calculate_damage/get_move_details so the sim uses the effective move.
++        player_m = _apply_dynamic_resolution(player_m, mon, mon_opp, ctx)
++        opp_m = _apply_dynamic_resolution(opp_m, mon_opp, mon, ctx)
++
+         # Save current HP for comparison
+         hp_before_player = mon.current_hp_fraction
+         hp_before_opp = mon_opp.current_hp_fraction
+diff --git a/pokechamp/data_cache.py b/pokechamp/data_cache.py
+index be931ec..587e8af 100644
+--- a/pokechamp/data_cache.py
++++ b/pokechamp/data_cache.py
+@@ -1,7 +1,7 @@
+ """
+ Global data cache for Pokemon simulation data.
+ 
+-This module provides a singleton cache for all static game data to avoid 
++This module provides a singleton cache for all static game data to avoid
+ repeated file loading during battles and simulations.
+ """
+ 
+@@ -14,6 +14,7 @@ from poke_env.data.gen_data import GenData
+ # Visual effects import (optional)
+ try:
+     from pokechamp.visual_effects import visual, print_banner
++
+     VISUAL_EFFECTS = True
+ except ImportError:
+     VISUAL_EFFECTS = False
+@@ -21,20 +22,20 @@ except ImportError:
+ 
+ class GameDataCache:
+     """Singleton cache for static game data."""
+-    
++
+     _instance = None
+     _data = {}
+-    
++
+     def __new__(cls):
+         if cls._instance is None:
+             cls._instance = super().__new__(cls)
+         return cls._instance
+-    
++
+     def __init__(self):
+         # Initialize data only once
+         if not self._data:
+             self._load_all_data()
+-    
++
+     def _load_all_data(self):
+         """Load all static game data into memory."""
+         if VISUAL_EFFECTS:
+@@ -42,117 +43,174 @@ class GameDataCache:
+             print("Loading static game data...")
+         else:
+             print("[CACHE] Loading static game data into cache...")
+-        
++
+         # Move effects and Pokemon move mappings
+         try:
+             with open("./poke_env/data/static/moves/moves_effect.json", "r") as f:
+-                self._data['move_effect'] = json.load(f)
++                self._data["move_effect"] = json.load(f)
+         except FileNotFoundError:
+             print("[WARN] moves_effect.json not found, using empty dict")
+-            self._data['move_effect'] = {}
+-            
++            self._data["move_effect"] = {}
++
+         try:
+-            with open("./poke_env/data/static/moves/gen8pokemon_move_dict.json", "r") as f:
+-                self._data['pokemon_move_dict'] = json.load(f)
++            with open(
++                "./poke_env/data/static/moves/gen8pokemon_move_dict.json", "r"
++            ) as f:
++                self._data["pokemon_move_dict"] = json.load(f)
+         except FileNotFoundError:
+             print("[WARN] gen8pokemon_move_dict.json not found, using empty dict")
+-            self._data['pokemon_move_dict'] = {}
+-        
++            self._data["pokemon_move_dict"] = {}
++
+         # Ability effects and Pokemon ability mappings
+         try:
+             with open("./poke_env/data/static/abilities/ability_effect.json", "r") as f:
+-                self._data['ability_effect'] = json.load(f)
++                self._data["ability_effect"] = json.load(f)
+         except FileNotFoundError:
+             print("[WARN] ability_effect.json not found, using empty dict")
+-            self._data['ability_effect'] = {}
+-            
++            self._data["ability_effect"] = {}
++
+         try:
+-            with open("./poke_env/data/static/abilities/gen8pokemon_ability_dict.json", "r") as f:
+-                self._data['pokemon_ability_dict'] = json.load(f)
++            with open(
++                "./poke_env/data/static/abilities/gen8pokemon_ability_dict.json", "r"
++            ) as f:
++                self._data["pokemon_ability_dict"] = json.load(f)
+         except FileNotFoundError:
+             print("[WARN] gen8pokemon_ability_dict.json not found, using empty dict")
+-            self._data['pokemon_ability_dict'] = {}
+-        
++            self._data["pokemon_ability_dict"] = {}
++
+         # Item effects
+         try:
+             with open("./poke_env/data/static/items/item_effect.json", "r") as f:
+-                self._data['item_effect'] = json.load(f)
++                self._data["item_effect"] = json.load(f)
+         except FileNotFoundError:
+             print("[WARN] item_effect.json not found, using empty dict")
+-            self._data['item_effect'] = {}
+-        
++            self._data["item_effect"] = {}
++
+         # Pokemon item mappings (if needed)
+-        self._data['pokemon_item_dict'] = {}  # Currently unused
+-        
++        self._data["pokemon_item_dict"] = {}  # Currently unused
++
+         if VISUAL_EFFECTS:
+             print(visual.create_banner("LOADED", font="small", style="greenblue"))
+         else:
+             print("[OK] Static game data loaded into cache")
+-    
++
+     def get_move_effect(self) -> Dict[str, Any]:
+         """Get cached move effects data."""
+-        return self._data['move_effect']
+-    
++        return self._data["move_effect"]
++
+     def get_pokemon_move_dict(self) -> Dict[str, Any]:
+         """Get cached Pokemon move mappings."""
+-        return self._data['pokemon_move_dict']
+-    
++        return self._data["pokemon_move_dict"]
++
+     def get_ability_effect(self) -> Dict[str, Any]:
+         """Get cached ability effects data."""
+-        return self._data['ability_effect']
+-    
++        return self._data["ability_effect"]
++
+     def get_pokemon_ability_dict(self) -> Dict[str, Any]:
+         """Get cached Pokemon ability mappings."""
+-        return self._data['pokemon_ability_dict']
+-    
++        return self._data["pokemon_ability_dict"]
++
+     def get_item_effect(self) -> Dict[str, Any]:
+         """Get cached item effects data."""
+-        return self._data['item_effect']
+-    
++        return self._data["item_effect"]
++
+     def get_pokemon_item_dict(self) -> Dict[str, Any]:
+         """Get cached Pokemon item mappings."""
+-        return self._data['pokemon_item_dict']
+-    
++        return self._data["pokemon_item_dict"]
++
+     @lru_cache(maxsize=5)  # Cache up to 5 different generations
+     def get_pokedex(self, gen: int) -> Dict[str, Any]:
+         """Get cached Pokedex data for a specific generation."""
+-        cache_key = f'pokedex_gen{gen}'
+-        
++        cache_key = f"pokedex_gen{gen}"
++
+         if cache_key not in self._data:
+             try:
+-                with open(f"./poke_env/data/static/pokedex/gen{gen}pokedex.json", "r") as f:
++                with open(
++                    f"./poke_env/data/static/pokedex/gen{gen}pokedex.json", "r"
++                ) as f:
+                     self._data[cache_key] = json.load(f)
+                 print(f"[OK] Loaded gen{gen} Pokedex data")
+             except FileNotFoundError:
+                 print(f"[WARN] gen{gen}pokedex.json not found, using empty dict")
+                 self._data[cache_key] = {}
+-        
++
+         return self._data[cache_key]
+-    
++
+     @lru_cache(maxsize=10)  # Cache up to 10 different formats
+     def get_moves_set(self, format: str) -> Dict[str, Any]:
+         """Get cached moves set data for a specific format."""
+-        cache_key = f'moves_set_{format}'
+-        
++        cache_key = f"moves_set_{format}"
++
+         if cache_key not in self._data:
+             try:
+-                if format == 'gen9ou':
+-                    file_path = 'poke_env/data/static/gen9/ou/sets_1000.json'
+-                elif format == 'gen9vgc2025regi':
+-                    file_path = 'poke_env/data/static/gen9/vgc/sets_1760.json'
++                if format == "gen9ou":
++                    file_path = "poke_env/data/static/gen9/ou/sets_1000.json"
++                elif format == "gen9vgc2025regi":
++                    file_path = "poke_env/data/static/gen9/vgc/sets_1760.json"
+                 else:
+                     # Add more formats as needed
+-                    file_path = f'poke_env/data/static/{format}/sets_1000.json'
+-                
+-                with open(file_path, 'r') as f:
++                    file_path = f"poke_env/data/static/{format}/sets_1000.json"
++
++                with open(file_path, "r") as f:
+                     self._data[cache_key] = orjson.loads(f.read())
+                 print(f"[OK] Loaded {format} moves set data")
+             except FileNotFoundError:
+                 print(f"[WARN] {format} moves set not found, using empty dict")
+                 self._data[cache_key] = {}
+-        
++
++        return self._data[cache_key]
++
++    @lru_cache(maxsize=10)  # Cache up to 10 different formats
++    def get_smogon_strategies(self, format: str = "gen9ou") -> Dict[str, Any]:
++        """Get cached Smogon C&C community strategies (refined).
++
++        Qualitative guide per pokemon: recommended movesets, items, abilities,
++        tera types, EV spreads, plus overview/description text (HTML stripped).
++        Complements get_moves_set (which holds quantitative usage percentages).
++        """
++        cache_key = f"smogon_strategies_{format}"
++
++        if cache_key not in self._data:
++            if format == "gen9ou":
++                file_path = "poke_env/data/static/gen9/ou/smogon_strategies_gen9ou.json"
++            else:
++                file_path = (
++                    f"poke_env/data/static/{format}/smogon_strategies_{format}.json"
++                )
++            try:
++                with open(file_path, "r") as f:
++                    self._data[cache_key] = orjson.loads(f.read())
++                print(f"[OK] Loaded {format} Smogon strategies")
++            except FileNotFoundError:
++                print(f"[WARN] {format} Smogon strategies not found, using empty dict")
++                self._data[cache_key] = {}
++
++        return self._data[cache_key]
++
++    @lru_cache(maxsize=10)  # Cache up to 10 different formats
++    def get_smogon_roles(self, format: str = "gen9ou") -> Dict[str, Any]:
++        """Get cached Smogon role compendium index (refined).
++
++        Two views: by_role (role -> pokemon list) and by_pokemon
++        (pokemon -> role list). Derived from the SV OU Role Compendium.
++        """
++        cache_key = f"smogon_roles_{format}"
++
++        if cache_key not in self._data:
++            if format == "gen9ou":
++                file_path = "poke_env/data/static/gen9/ou/smogon_roles_gen9ou.json"
++            else:
++                file_path = f"poke_env/data/static/{format}/smogon_roles_{format}.json"
++            try:
++                with open(file_path, "r") as f:
++                    self._data[cache_key] = orjson.loads(f.read())
++                print(f"[OK] Loaded {format} Smogon role index")
++            except FileNotFoundError:
++                print(f"[WARN] {format} Smogon role index not found, using empty dict")
++                self._data[cache_key] = {}
++
+         return self._data[cache_key]
+-    
++
+     def clear_cache(self):
+         """Clear all cached data (useful for testing)."""
+         self._data.clear()
+@@ -203,6 +261,16 @@ def get_cached_moves_set(format: str) -> Dict[str, Any]:
+     return _cache.get_moves_set(format)
+ 
+ 
++def get_cached_smogon_strategies(format: str = "gen9ou") -> Dict[str, Any]:
++    """Get cached Smogon C&C community strategies for a specific format."""
++    return _cache.get_smogon_strategies(format)
++
++
++def get_cached_smogon_roles(format: str = "gen9ou") -> Dict[str, Any]:
++    """Get cached Smogon role compendium index for a specific format."""
++    return _cache.get_smogon_roles(format)
++
++
+ def clear_data_cache():
+     """Clear all cached data."""
+-    _cache.clear_cache()
+\ No newline at end of file
++    _cache.clear_cache()

@@ -1,0 +1,42 @@
+{
+  "git_commit": "dc8cba371ec07dd9b60a7496c8f3be5348f4b47a",
+  "git_commit_short": "dc8cba3",
+  "git_branch": "main",
+  "git_dirty": true,
+  "git_dirty_files": [
+    "pokechamp/battle_tools.py",
+    "pokechamp/data_cache.py",
+    "poke_env/data/static/gen9/ou/smogon_roles_gen9ou.json",
+    "poke_env/data/static/gen9/ou/smogon_strategies_gen9ou.json"
+  ],
+  "git_dirty_stat": " 2 files changed, 197 insertions(+), 55 deletions(-)",
+  "git_error": null,
+  "dirty_patch_file": "experiment_react_ollama_glm-5.1:cloud_20260617_042625_dirty.patch",
+  "argv": [
+    "scripts/battles/local_1v1_langchain.py",
+    "--player_name",
+    "pokechamp",
+    "--player_prompt_algo",
+    "react",
+    "--player_backend",
+    "ollama/glm-5.1:cloud",
+    "--opponent_name",
+    "abyssal",
+    "--opponent_backend",
+    "gemini-2.5-pro",
+    "--opponent_prompt_algo",
+    "io",
+    "--N",
+    "30",
+    "--battle_format",
+    "gen9ou",
+    "--temperature",
+    "0.3",
+    "--seed",
+    "42",
+    "--log_dir",
+    ".temp/experiments/active/EXP-035-react-sim-dynamic-type/battle_log"
+  ],
+  "python_version": "3.11.11",
+  "repo_root": "/workspace"
+}

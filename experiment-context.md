@@ -211,6 +211,7 @@ uv run python scripts/battles/local_1v1.py \
 | EXP-032 ★ | Baseline: IO + glm-5.1 | 2026-06-12 | ✅ baseline | 53.3% (16/30) | **io baseline** → `baselines/io-glm51`. 39.0턴, 31.2 LLM호출. 장기전 붕괴 |
 | EXP-033 ★ | Baseline: Minimax + glm-5.1 | 2026-06-12 | ✅ baseline | 80.0% (24/30) | **minimax baseline** → `baselines/minimax-glm51`. 28.9턴, 61.0 LLM호출. 최고 성능 |
 | EXP-034 | ReAct BUDGET 힌트 정밀화(안 A) | 2026-06-16 | ✅ 완료 | 76.7% (23/30) | 승률 유지 + 비용절감(토큰 −42%, LLM호출 −38.5%, 시간 −43%). 조기종료율 34→80%. `react_agent.py` 단일 변경(§0-4 PASS). ⚠️ 메트릭 수집 버그(turns/won) 발견·fix. 분석 `docs/analysis/exp-034-react-glm51-analysis.md` |
+| EXP-035 | ReAct 동적 타입/위력 리졸브(안 B B-1) | 2026-06-17 | ❌ 기각 | 56.7% (17/30) | −20pp 역효과(단 n=30 비유의, z≈1.64 p≈0.10). 기술 결함: 동적 위력 override가 sim `modify_base_power`와 중복 보정(acrobatics no-item 110→×2=220 BP, 2× 과대평가). ivycudgel 거짓 OHKO는 sim 본연 버그라 미해결. `battle_tools.py` 단일 변경이나 §0-4에서 smogon 메타 3개 섞여 런타임 무영향 확인. B-1 기각, 안 A 최선. 분석 `docs/analysis/exp-035-react-glm51-analysis.md` |
 
 ---
 
