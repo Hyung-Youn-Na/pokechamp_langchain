@@ -1,0 +1,503 @@
+diff --git a/docs/README.md b/docs/README.md
+index 6b6beb7..d6b074a 100644
+--- a/docs/README.md
++++ b/docs/README.md
+@@ -25,6 +25,7 @@
+ - [LangGraph ReAct 에이전트 아키텍처](architecture/langgraph-architecture.md)
+ - [LangGraph Tool 아키텍처](architecture/langgraph-tools-architecture.md)
+ - [Minimax Prompt Algorithm 작동 방식](architecture/minimax-algorithm.md)
++- [Smogon 커뮤니티 데이터 정제 — 설계 의도](architecture/smogon-meta-design.md) — 정제 산출물(strategies/roles JSON)의 구조와 각 정제 결정의 why
+ 
+ ## ReAct Agent 노트 (`agent-notes/`)
+ - [LLM 기반 도구 호출 종료 판단 설계](agent-notes/react-agent-llm-based-stopping-criteria.md)
+diff --git a/experiment-context.md b/experiment-context.md
+index 9460ec4..9913a25 100644
+--- a/experiment-context.md
++++ b/experiment-context.md
+@@ -212,6 +212,8 @@ uv run python scripts/battles/local_1v1.py \
+ | EXP-033 ★ | Baseline: Minimax + glm-5.1 | 2026-06-12 | ✅ baseline | 80.0% (24/30) | **minimax baseline** → `baselines/minimax-glm51`. 28.9턴, 61.0 LLM호출. 최고 성능 |
+ | EXP-034 | ReAct BUDGET 힌트 정밀화(안 A) | 2026-06-16 | ✅ 완료 | 76.7% (23/30) | 승률 유지 + 비용절감(토큰 −42%, LLM호출 −38.5%, 시간 −43%). 조기종료율 34→80%. `react_agent.py` 단일 변경(§0-4 PASS). ⚠️ 메트릭 수집 버그(turns/won) 발견·fix. 분석 `docs/analysis/exp-034-react-glm51-analysis.md` |
+ | EXP-035 | ReAct 동적 타입/위력 리졸브(안 B B-1) | 2026-06-17 | ❌ 기각 | 56.7% (17/30) | −20pp 역효과(단 n=30 비유의, z≈1.64 p≈0.10). 기술 결함: 동적 위력 override가 sim `modify_base_power`와 중복 보정(acrobatics no-item 110→×2=220 BP, 2× 과대평가). ivycudgel 거짓 OHKO는 sim 본연 버그라 미해결. `battle_tools.py` 단일 변경이나 §0-4에서 smogon 메타 3개 섞여 런타임 무영향 확인. B-1 기각, 안 A 최선. 분석 `docs/analysis/exp-035-react-glm51-analysis.md` |
++| EXP-036 | sim 행동순서 정확도(fix1) | 2026-06-17 | ✅ 완료 | 80.0% (24/30) | **+3.3pp vs react baseline**(비유의 z≈0.31 p≈0.75, 하락 아닌 상승). 시뮬레이터 코어 버그 시리즈 1/3. `local_simulation.py calculate_remaining_hp` priority 전 범위 정렬(기존 `==1`만 → protect/Extreme Speed/Sucker Punch 등 전 범위 + p2 priority) + protosynthesis p2 인자 복붙 fix. 비용 213k/76.5 LLM 유지. 단위 테스트 5/5 PASS. 패배 808(111턴)은 ivycudgel 거짓 OHKO 매몰(EXP-038 영역). 분석 `docs/analysis/exp-036-react-glm51-analysis.md`. →EXP-037(protect/item), EXP-038(ivycudgel/tera) |
++| EXP-037 | sim protect/item(fix2) | 2026-06-17 | ⚠️ 보류 | 66.7% (20/30) | −13.3pp vs EXP-036(80%)(비유의 z≈−1.17 p≈0.24, 인과 불명). protect 계열 0데미지(early return, 최소1데미지규칙 우회) + LifeOrb명 정규화(`"LifeOrb"`→`"lifeorb"`). fix1 누적. fix2는 **올바른 동작**(단위테스트 3/3, showdown 스펙)이라 기각 아닌 **보류**. LifeOrb는 metamon 팀 빈도 낮아 효과 미미; protect tool_result 71→15·LLM언급 161→100 감소, ohko언급 323→371 증가, 보수화 지표(setup/heal)는 변화 없음. long구간 62.5%→45.5%. 분석 `docs/analysis/exp-037-react-glm51-analysis.md`. EXP-038(fix3) 누적 후 fix2 순효과 재평가 |
+ 
+ ---
+ 
+diff --git a/poke_env/player/local_simulation.py b/poke_env/player/local_simulation.py
+index 29bbfff..a8b430b 100644
+--- a/poke_env/player/local_simulation.py
++++ b/poke_env/player/local_simulation.py
+@@ -12,6 +12,7 @@ from poke_env.environment.battle import Battle
+ from poke_env.environment.move import Move
+ from poke_env.environment.move_category import MoveCategory
+ from poke_env.environment.pokemon import Pokemon
++from poke_env.environment.pokemon_type import PokemonType
+ from poke_env.environment.side_condition import SideCondition
+ from poke_env.environment.status import Status
+ from poke_env.player.battle_order import BattleOrder
+@@ -1493,15 +1494,27 @@ class LocalSim:
+         ) * self.apply_protosynthesis(p1, "spe")
+         p2_speed = round(
+             stats2["spe"] * self.boost_multiplier("spe", boosts2["spe"])
+-        ) * self.apply_protosynthesis(p1, "spe")
+-        p1_priority = False
+-        if m1 is not None:
+-            if m1.priority == 1:
+-                p1_priority = True
+-                if m2 is not None:
+-                    if m1.priority == 1 and m2.priority == 1:
+-                        p1_priority = False
+-        if p1_speed > p2_speed or p1_priority:
++        ) * self.apply_protosynthesis(p2, "spe")
++        # Determine turn order by Gen 9 mechanics:
++        #   1) higher move priority moves first,
++        #   2) tie on priority -> higher speed moves first,
++        #   3) tie on speed -> deterministic 50/50.
++        # Out of scope for this single-turn sim: Trick Room (reverses speed)
++        # and priority-altering abilities/items (Prankster, Triage, Gale Wings,
++        # Mycelium Might, Quick Claw, Stall) — left as future work.
++        p1_pri = m1.priority if m1 is not None else 0
++        p2_pri = m2.priority if m2 is not None else 0
++        if p1_pri != p2_pri:
++            p1_first = p1_pri > p2_pri
++        elif p1_speed != p2_speed:
++            p1_first = p1_speed > p2_speed
++        else:
++            # Speed tie: deterministic coin flip keyed on move ids so that a
++            # fixed run stays reproducible (independent of PYTHONHASHSEED).
++            p1_first = (
++                sum(map(ord, str(id1))) - sum(map(ord, str(id2)))
++            ) % 2 == 0
++        if p1_first:
+             # check healing
+             if m1 != None:
+                 if m1.heal > 0:
+@@ -1527,8 +1540,8 @@ class LocalSim:
+                     if m1.heal > 0:
+                         hp1 += m1.heal
+                 hp2 = max(hp2 - d1, 0)
+-        m1_success = ((p1_speed > p2_speed) or hp1 > 0) and m1 != None
+-        m2_success = ((p1_speed <= p2_speed) or hp2 > 0) and m2 != None
++        m1_success = (p1_first or hp1 > 0) and m1 != None
++        m2_success = (not p1_first or hp2 > 0) and m2 != None
+         # print(f'[DAMAGE PRED A] {p1.species} {id1} {p2.species} {id2}')
+         # print(f'[DAMAGE PRED B] {d1} {d2} {hp1} {hp2}')
+         hp1 = int(hp1 / hp1_total * 100)
+@@ -1576,6 +1589,12 @@ class LocalSim:
+         if move.id == "acrobatics":
+             if mon.item == None or mon.item == "flyinggem":
+                 power *= 2
++        # Ivy Cudgel: an Ogerpon (any form) Terastallizing boosts base power
++        # 100 -> 120 (the Embody aspect stat boost is out of scope here).
++        if move.id == "ivycudgel" and getattr(mon, "terastallized", False):
++            _sp = str(getattr(mon, "species", "") or "").lower().replace("-", "")
++            if _sp.startswith("ogerpon"):
++                power = 120
+         if mon.ability == "supremeoverlord" and team is not None:
+             boost_atk = 0
+             for teammate in team.values():
+@@ -1902,6 +1921,21 @@ class LocalSim:
+         if not move.type:
+             move.type = "???"
+         type = move.type
++        # Ivy Cudgel's type follows Ogerpon's form (default move data is
++        # Grass); Teal/base stays Grass, the other forms override it.
++        if move.id == "ivycudgel":
++            _ivy_species = str(
++                getattr(pokemon, "species", "") or ""
++            ).lower().replace("-", "")
++            _IVYCUDGEL_OGERPON_TYPE = {
++                "ogerpon": PokemonType.GRASS,
++                "ogerponteal": PokemonType.GRASS,
++                "ogerponwellspring": PokemonType.WATER,
++                "ogerponhearthflame": PokemonType.FIRE,
++                "ogerponcornerstone": PokemonType.ROCK,
++            }
++            if _ivy_species in _IVYCUDGEL_OGERPON_TYPE:
++                type = _IVYCUDGEL_OGERPON_TYPE[_ivy_species]
+ 
+         # if (move.spreadHit) {
+         #     # multi-target modifier (doubles only)
+@@ -1946,29 +1980,35 @@ class LocalSim:
+         # (On second thought, it might be easier to get a MissingNo.)
+         stab = 1
+         if type != "???":
+-            if type.name in [type_1, type_2]:
++            attacker_types = [t for t in [type_1, type_2] if t is not None]
++            # A Terastallized attacker additionally gets STAB on its Tera type.
++            if getattr(pokemon, "terastallized", False) and getattr(
++                pokemon, "_terastallized_type", None
++            ) is not None:
++                _tera = pokemon._terastallized_type
++                _tera_name = _tera.name if hasattr(_tera, "name") else str(_tera)
++                if _tera_name not in attacker_types:
++                    attacker_types.append(_tera_name)
++            if type.name in attacker_types:
+                 stab = pokemon.stab_multiplier
+ 
+-        ## TODO: change stab based on tera
+-        # tera_stab = 1
+-        # if type.name in [type_1, type_2]:
+-
+         baseDamage *= stab
+         # print(f'stab {move.id} {stab} {baseDamage}')
+ 
+-        # types
+-        opponent_type_list = []
+-        if target.terastallized:
+-            opponent_type_list.append(target._terastallized_type)
++        # Defender typing drives the effectiveness lookup. A Terastallized
++        # target uses its single Tera type; otherwise its base type(s). (The
++        # prior code built opponent_type_list but then passed the attacker's
++        # types to calculate_move_type_damage_multipier — a bug that mis-rated
++        # damage into Terastallized targets.)
++        if getattr(target, "terastallized", False) and getattr(
++            target, "_terastallized_type", None
++        ) is not None:
++            _tera = target._terastallized_type
++            def_type_1 = _tera.name if hasattr(_tera, "name") else str(_tera)
++            def_type_2 = None
+         else:
+-            if target.type_1:
+-                type_1 = target.type_1.name
+-                opponent_type_list.append(type_1)
+-
+-                if target.type_2:
+-                    type_2 = target.type_2.name
+-                    opponent_type_list.append(type_2)
+-        # print('typing', type_1, type_2)
++            def_type_1 = target.type_1.name if target.type_1 else None
++            def_type_2 = target.type_2.name if target.type_2 else None
+         (
+             extreme_effective_type_list,
+             effective_type_list,
+@@ -1976,7 +2016,7 @@ class LocalSim:
+             extreme_resistant_type_list,
+             immune_type_list,
+         ) = calculate_move_type_damage_multipier(
+-            type_1, type_2, self.gen.type_chart, [type.name]
++            def_type_1, def_type_2, self.gen.type_chart, [type.name]
+         )
+         # print(extreme_effective_type_list, effective_type_list, resistant_type_list, extreme_resistant_type_list, immune_type_list)
+ 
+@@ -2040,12 +2080,28 @@ class LocalSim:
+             baseDamage = 1
+ 
+         # Final modifier. Modifiers that modify damage after min damage check, such as Life Orb.
+-        if pokemon.item == "LifeOrb":
++        # Items are stored lower-case (e.g. "flyinggem", "airballoon"), so match accordingly.
++        if pokemon.item == "lifeorb":
+             baseDamage *= 1.3
+ 
+         if target_move != None:
+-            if (move.is_z or pokemon.is_dynamaxed) and target_move.id == "protect":
+-                baseDamage *= 0.25
++            # Protect-family moves block the incoming attack entirely. Z-moves
++            # and Max moves break through for 25% damage (Gen 9); Max Guard
++            # additionally blocks those, but that edge case is out of scope.
++            # Protect success is assumed 100% for this single-turn sim — the
++            # decaying success chance on consecutive use is not modeled.
++            _PROTECT_MOVES = {
++                "protect", "detect", "kingsshield", "spikyshield",
++                "banefulbunker", "maxguard", "obstruct", "silktrap",
++                "burningbulwark",
++            }
++            if target_move.id in _PROTECT_MOVES:
++                if move.is_z or pokemon.is_dynamaxed:
++                    baseDamage *= 0.25
++                else:
++                    # Protect fully blocks the attack — return before the
++                    # Gen 6+ minimum-1-damage rule below resurrects it to 1.
++                    return 0
+             if target_move.category == MoveCategory.STATUS and (
+                 move.id == "suckerpunch" or move.id == "thunderclap"
+             ):
+diff --git a/pokechamp/data_cache.py b/pokechamp/data_cache.py
+index be931ec..587e8af 100644
+--- a/pokechamp/data_cache.py
++++ b/pokechamp/data_cache.py
+@@ -1,7 +1,7 @@
+ """
+ Global data cache for Pokemon simulation data.
+ 
+-This module provides a singleton cache for all static game data to avoid 
++This module provides a singleton cache for all static game data to avoid
+ repeated file loading during battles and simulations.
+ """
+ 
+@@ -14,6 +14,7 @@ from poke_env.data.gen_data import GenData
+ # Visual effects import (optional)
+ try:
+     from pokechamp.visual_effects import visual, print_banner
++
+     VISUAL_EFFECTS = True
+ except ImportError:
+     VISUAL_EFFECTS = False
+@@ -21,20 +22,20 @@ except ImportError:
+ 
+ class GameDataCache:
+     """Singleton cache for static game data."""
+-    
++
+     _instance = None
+     _data = {}
+-    
++
+     def __new__(cls):
+         if cls._instance is None:
+             cls._instance = super().__new__(cls)
+         return cls._instance
+-    
++
+     def __init__(self):
+         # Initialize data only once
+         if not self._data:
+             self._load_all_data()
+-    
++
+     def _load_all_data(self):
+         """Load all static game data into memory."""
+         if VISUAL_EFFECTS:
+@@ -42,117 +43,174 @@ class GameDataCache:
+             print("Loading static game data...")
+         else:
+             print("[CACHE] Loading static game data into cache...")
+-        
++
+         # Move effects and Pokemon move mappings
+         try:
+             with open("./poke_env/data/static/moves/moves_effect.json", "r") as f:
+-                self._data['move_effect'] = json.load(f)
++                self._data["move_effect"] = json.load(f)
+         except FileNotFoundError:
+             print("[WARN] moves_effect.json not found, using empty dict")
+-            self._data['move_effect'] = {}
+-            
++            self._data["move_effect"] = {}
++
+         try:
+-            with open("./poke_env/data/static/moves/gen8pokemon_move_dict.json", "r") as f:
+-                self._data['pokemon_move_dict'] = json.load(f)
++            with open(
++                "./poke_env/data/static/moves/gen8pokemon_move_dict.json", "r"
++            ) as f:
++                self._data["pokemon_move_dict"] = json.load(f)
+         except FileNotFoundError:
+             print("[WARN] gen8pokemon_move_dict.json not found, using empty dict")
+-            self._data['pokemon_move_dict'] = {}
+-        
++            self._data["pokemon_move_dict"] = {}
++
+         # Ability effects and Pokemon ability mappings
+         try:
+             with open("./poke_env/data/static/abilities/ability_effect.json", "r") as f:
+-                self._data['ability_effect'] = json.load(f)
++                self._data["ability_effect"] = json.load(f)
+         except FileNotFoundError:
+             print("[WARN] ability_effect.json not found, using empty dict")
+-            self._data['ability_effect'] = {}
+-            
++            self._data["ability_effect"] = {}
++
+         try:
+-            with open("./poke_env/data/static/abilities/gen8pokemon_ability_dict.json", "r") as f:
+-                self._data['pokemon_ability_dict'] = json.load(f)
++            with open(
++                "./poke_env/data/static/abilities/gen8pokemon_ability_dict.json", "r"
++            ) as f:
++                self._data["pokemon_ability_dict"] = json.load(f)
+         except FileNotFoundError:
+             print("[WARN] gen8pokemon_ability_dict.json not found, using empty dict")
+-            self._data['pokemon_ability_dict'] = {}
+-        
++            self._data["pokemon_ability_dict"] = {}
++
+         # Item effects
+         try:
+             with open("./poke_env/data/static/items/item_effect.json", "r") as f:
+-                self._data['item_effect'] = json.load(f)
++                self._data["item_effect"] = json.load(f)
+         except FileNotFoundError:
+             print("[WARN] item_effect.json not found, using empty dict")
+-            self._data['item_effect'] = {}
+-        
++            self._data["item_effect"] = {}
++
+         # Pokemon item mappings (if needed)
+-        self._data['pokemon_item_dict'] = {}  # Currently unused
+-        
++        self._data["pokemon_item_dict"] = {}  # Currently unused
++
+         if VISUAL_EFFECTS:
+             print(visual.create_banner("LOADED", font="small", style="greenblue"))
+         else:
+             print("[OK] Static game data loaded into cache")
+-    
++
+     def get_move_effect(self) -> Dict[str, Any]:
+         """Get cached move effects data."""
+-        return self._data['move_effect']
+-    
++        return self._data["move_effect"]
++
+     def get_pokemon_move_dict(self) -> Dict[str, Any]:
+         """Get cached Pokemon move mappings."""
+-        return self._data['pokemon_move_dict']
+-    
++        return self._data["pokemon_move_dict"]
++
+     def get_ability_effect(self) -> Dict[str, Any]:
+         """Get cached ability effects data."""
+-        return self._data['ability_effect']
+-    
++        return self._data["ability_effect"]
++
+     def get_pokemon_ability_dict(self) -> Dict[str, Any]:
+         """Get cached Pokemon ability mappings."""
+-        return self._data['pokemon_ability_dict']
+-    
++        return self._data["pokemon_ability_dict"]
++
+     def get_item_effect(self) -> Dict[str, Any]:
+         """Get cached item effects data."""
+-        return self._data['item_effect']
+-    
++        return self._data["item_effect"]
++
+     def get_pokemon_item_dict(self) -> Dict[str, Any]:
+         """Get cached Pokemon item mappings."""
+-        return self._data['pokemon_item_dict']
+-    
++        return self._data["pokemon_item_dict"]
++
+     @lru_cache(maxsize=5)  # Cache up to 5 different generations
+     def get_pokedex(self, gen: int) -> Dict[str, Any]:
+         """Get cached Pokedex data for a specific generation."""
+-        cache_key = f'pokedex_gen{gen}'
+-        
++        cache_key = f"pokedex_gen{gen}"
++
+         if cache_key not in self._data:
+             try:
+-                with open(f"./poke_env/data/static/pokedex/gen{gen}pokedex.json", "r") as f:
++                with open(
++                    f"./poke_env/data/static/pokedex/gen{gen}pokedex.json", "r"
++                ) as f:
+                     self._data[cache_key] = json.load(f)
+                 print(f"[OK] Loaded gen{gen} Pokedex data")
+             except FileNotFoundError:
+                 print(f"[WARN] gen{gen}pokedex.json not found, using empty dict")
+                 self._data[cache_key] = {}
+-        
++
+         return self._data[cache_key]
+-    
++
+     @lru_cache(maxsize=10)  # Cache up to 10 different formats
+     def get_moves_set(self, format: str) -> Dict[str, Any]:
+         """Get cached moves set data for a specific format."""
+-        cache_key = f'moves_set_{format}'
+-        
++        cache_key = f"moves_set_{format}"
++
+         if cache_key not in self._data:
+             try:
+-                if format == 'gen9ou':
+-                    file_path = 'poke_env/data/static/gen9/ou/sets_1000.json'
+-                elif format == 'gen9vgc2025regi':
+-                    file_path = 'poke_env/data/static/gen9/vgc/sets_1760.json'
++                if format == "gen9ou":
++                    file_path = "poke_env/data/static/gen9/ou/sets_1000.json"
++                elif format == "gen9vgc2025regi":
++                    file_path = "poke_env/data/static/gen9/vgc/sets_1760.json"
+                 else:
+                     # Add more formats as needed
+-                    file_path = f'poke_env/data/static/{format}/sets_1000.json'
+-                
+-                with open(file_path, 'r') as f:
++                    file_path = f"poke_env/data/static/{format}/sets_1000.json"
++
++                with open(file_path, "r") as f:
+                     self._data[cache_key] = orjson.loads(f.read())
+                 print(f"[OK] Loaded {format} moves set data")
+             except FileNotFoundError:
+                 print(f"[WARN] {format} moves set not found, using empty dict")
+                 self._data[cache_key] = {}
+-        
++
++        return self._data[cache_key]
++
++    @lru_cache(maxsize=10)  # Cache up to 10 different formats
++    def get_smogon_strategies(self, format: str = "gen9ou") -> Dict[str, Any]:
++        """Get cached Smogon C&C community strategies (refined).
++
++        Qualitative guide per pokemon: recommended movesets, items, abilities,
++        tera types, EV spreads, plus overview/description text (HTML stripped).
++        Complements get_moves_set (which holds quantitative usage percentages).
++        """
++        cache_key = f"smogon_strategies_{format}"
++
++        if cache_key not in self._data:
++            if format == "gen9ou":
++                file_path = "poke_env/data/static/gen9/ou/smogon_strategies_gen9ou.json"
++            else:
++                file_path = (
++                    f"poke_env/data/static/{format}/smogon_strategies_{format}.json"
++                )
++            try:
++                with open(file_path, "r") as f:
++                    self._data[cache_key] = orjson.loads(f.read())
++                print(f"[OK] Loaded {format} Smogon strategies")
++            except FileNotFoundError:
++                print(f"[WARN] {format} Smogon strategies not found, using empty dict")
++                self._data[cache_key] = {}
++
++        return self._data[cache_key]
++
++    @lru_cache(maxsize=10)  # Cache up to 10 different formats
++    def get_smogon_roles(self, format: str = "gen9ou") -> Dict[str, Any]:
++        """Get cached Smogon role compendium index (refined).
++
++        Two views: by_role (role -> pokemon list) and by_pokemon
++        (pokemon -> role list). Derived from the SV OU Role Compendium.
++        """
++        cache_key = f"smogon_roles_{format}"
++
++        if cache_key not in self._data:
++            if format == "gen9ou":
++                file_path = "poke_env/data/static/gen9/ou/smogon_roles_gen9ou.json"
++            else:
++                file_path = f"poke_env/data/static/{format}/smogon_roles_{format}.json"
++            try:
++                with open(file_path, "r") as f:
++                    self._data[cache_key] = orjson.loads(f.read())
++                print(f"[OK] Loaded {format} Smogon role index")
++            except FileNotFoundError:
++                print(f"[WARN] {format} Smogon role index not found, using empty dict")
++                self._data[cache_key] = {}
++
+         return self._data[cache_key]
+-    
++
+     def clear_cache(self):
+         """Clear all cached data (useful for testing)."""
+         self._data.clear()
+@@ -203,6 +261,16 @@ def get_cached_moves_set(format: str) -> Dict[str, Any]:
+     return _cache.get_moves_set(format)
+ 
+ 
++def get_cached_smogon_strategies(format: str = "gen9ou") -> Dict[str, Any]:
++    """Get cached Smogon C&C community strategies for a specific format."""
++    return _cache.get_smogon_strategies(format)
++
++
++def get_cached_smogon_roles(format: str = "gen9ou") -> Dict[str, Any]:
++    """Get cached Smogon role compendium index for a specific format."""
++    return _cache.get_smogon_roles(format)
++
++
+ def clear_data_cache():
+     """Clear all cached data."""
+-    _cache.clear_cache()
+\ No newline at end of file
++    _cache.clear_cache()

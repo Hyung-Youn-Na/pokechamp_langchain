@@ -12,6 +12,7 @@ from poke_env.environment.battle import Battle
 from poke_env.environment.move import Move
 from poke_env.environment.move_category import MoveCategory
 from poke_env.environment.pokemon import Pokemon
+from poke_env.environment.pokemon_type import PokemonType
 from poke_env.environment.side_condition import SideCondition
 from poke_env.environment.status import Status
 from poke_env.player.battle_order import BattleOrder
@@ -1493,15 +1494,27 @@ class LocalSim:
         ) * self.apply_protosynthesis(p1, "spe")
         p2_speed = round(
             stats2["spe"] * self.boost_multiplier("spe", boosts2["spe"])
-        ) * self.apply_protosynthesis(p1, "spe")
-        p1_priority = False
-        if m1 is not None:
-            if m1.priority == 1:
-                p1_priority = True
-                if m2 is not None:
-                    if m1.priority == 1 and m2.priority == 1:
-                        p1_priority = False
-        if p1_speed > p2_speed or p1_priority:
+        ) * self.apply_protosynthesis(p2, "spe")
+        # Determine turn order by Gen 9 mechanics:
+        #   1) higher move priority moves first,
+        #   2) tie on priority -> higher speed moves first,
+        #   3) tie on speed -> deterministic 50/50.
+        # Out of scope for this single-turn sim: Trick Room (reverses speed)
+        # and priority-altering abilities/items (Prankster, Triage, Gale Wings,
+        # Mycelium Might, Quick Claw, Stall) — left as future work.
+        p1_pri = m1.priority if m1 is not None else 0
+        p2_pri = m2.priority if m2 is not None else 0
+        if p1_pri != p2_pri:
+            p1_first = p1_pri > p2_pri
+        elif p1_speed != p2_speed:
+            p1_first = p1_speed > p2_speed
+        else:
+            # Speed tie: deterministic coin flip keyed on move ids so that a
+            # fixed run stays reproducible (independent of PYTHONHASHSEED).
+            p1_first = (
+                sum(map(ord, str(id1))) - sum(map(ord, str(id2)))
+            ) % 2 == 0
+        if p1_first:
             # check healing
             if m1 != None:
                 if m1.heal > 0:
@@ -1527,8 +1540,8 @@ class LocalSim:
                     if m1.heal > 0:
                         hp1 += m1.heal
                 hp2 = max(hp2 - d1, 0)
-        m1_success = ((p1_speed > p2_speed) or hp1 > 0) and m1 != None
-        m2_success = ((p1_speed <= p2_speed) or hp2 > 0) and m2 != None
+        m1_success = (p1_first or hp1 > 0) and m1 != None
+        m2_success = (not p1_first or hp2 > 0) and m2 != None
         # print(f'[DAMAGE PRED A] {p1.species} {id1} {p2.species} {id2}')
         # print(f'[DAMAGE PRED B] {d1} {d2} {hp1} {hp2}')
         hp1 = int(hp1 / hp1_total * 100)
@@ -1576,6 +1589,12 @@ class LocalSim:
         if move.id == "acrobatics":
             if mon.item == None or mon.item == "flyinggem":
                 power *= 2
+        # Ivy Cudgel: an Ogerpon (any form) Terastallizing boosts base power
+        # 100 -> 120 (the Embody aspect stat boost is out of scope here).
+        if move.id == "ivycudgel" and getattr(mon, "terastallized", False):
+            _sp = str(getattr(mon, "species", "") or "").lower().replace("-", "")
+            if _sp.startswith("ogerpon"):
+                power = 120
         if mon.ability == "supremeoverlord" and team is not None:
             boost_atk = 0
             for teammate in team.values():
@@ -1902,6 +1921,21 @@ class LocalSim:
         if not move.type:
             move.type = "???"
         type = move.type
+        # Ivy Cudgel's type follows Ogerpon's form (default move data is
+        # Grass); Teal/base stays Grass, the other forms override it.
+        if move.id == "ivycudgel":
+            _ivy_species = str(
+                getattr(pokemon, "species", "") or ""
+            ).lower().replace("-", "")
+            _IVYCUDGEL_OGERPON_TYPE = {
+                "ogerpon": PokemonType.GRASS,
+                "ogerponteal": PokemonType.GRASS,
+                "ogerponwellspring": PokemonType.WATER,
+                "ogerponhearthflame": PokemonType.FIRE,
+                "ogerponcornerstone": PokemonType.ROCK,
+            }
+            if _ivy_species in _IVYCUDGEL_OGERPON_TYPE:
+                type = _IVYCUDGEL_OGERPON_TYPE[_ivy_species]
 
         # if (move.spreadHit) {
         #     # multi-target modifier (doubles only)
@@ -1946,29 +1980,35 @@ class LocalSim:
         # (On second thought, it might be easier to get a MissingNo.)
         stab = 1
         if type != "???":
-            if type.name in [type_1, type_2]:
+            attacker_types = [t for t in [type_1, type_2] if t is not None]
+            # A Terastallized attacker additionally gets STAB on its Tera type.
+            if getattr(pokemon, "terastallized", False) and getattr(
+                pokemon, "_terastallized_type", None
+            ) is not None:
+                _tera = pokemon._terastallized_type
+                _tera_name = _tera.name if hasattr(_tera, "name") else str(_tera)
+                if _tera_name not in attacker_types:
+                    attacker_types.append(_tera_name)
+            if type.name in attacker_types:
                 stab = pokemon.stab_multiplier
-
-        ## TODO: change stab based on tera
-        # tera_stab = 1
-        # if type.name in [type_1, type_2]:
 
         baseDamage *= stab
         # print(f'stab {move.id} {stab} {baseDamage}')
 
-        # types
-        opponent_type_list = []
-        if target.terastallized:
-            opponent_type_list.append(target._terastallized_type)
+        # Defender typing drives the effectiveness lookup. A Terastallized
+        # target uses its single Tera type; otherwise its base type(s). (The
+        # prior code built opponent_type_list but then passed the attacker's
+        # types to calculate_move_type_damage_multipier — a bug that mis-rated
+        # damage into Terastallized targets.)
+        if getattr(target, "terastallized", False) and getattr(
+            target, "_terastallized_type", None
+        ) is not None:
+            _tera = target._terastallized_type
+            def_type_1 = _tera.name if hasattr(_tera, "name") else str(_tera)
+            def_type_2 = None
         else:
-            if target.type_1:
-                type_1 = target.type_1.name
-                opponent_type_list.append(type_1)
-
-                if target.type_2:
-                    type_2 = target.type_2.name
-                    opponent_type_list.append(type_2)
-        # print('typing', type_1, type_2)
+            def_type_1 = target.type_1.name if target.type_1 else None
+            def_type_2 = target.type_2.name if target.type_2 else None
         (
             extreme_effective_type_list,
             effective_type_list,
@@ -1976,7 +2016,7 @@ class LocalSim:
             extreme_resistant_type_list,
             immune_type_list,
         ) = calculate_move_type_damage_multipier(
-            type_1, type_2, self.gen.type_chart, [type.name]
+            def_type_1, def_type_2, self.gen.type_chart, [type.name]
         )
         # print(extreme_effective_type_list, effective_type_list, resistant_type_list, extreme_resistant_type_list, immune_type_list)
 
@@ -2040,12 +2080,28 @@ class LocalSim:
             baseDamage = 1
 
         # Final modifier. Modifiers that modify damage after min damage check, such as Life Orb.
-        if pokemon.item == "LifeOrb":
+        # Items are stored lower-case (e.g. "flyinggem", "airballoon"), so match accordingly.
+        if pokemon.item == "lifeorb":
             baseDamage *= 1.3
 
         if target_move != None:
-            if (move.is_z or pokemon.is_dynamaxed) and target_move.id == "protect":
-                baseDamage *= 0.25
+            # Protect-family moves block the incoming attack entirely. Z-moves
+            # and Max moves break through for 25% damage (Gen 9); Max Guard
+            # additionally blocks those, but that edge case is out of scope.
+            # Protect success is assumed 100% for this single-turn sim — the
+            # decaying success chance on consecutive use is not modeled.
+            _PROTECT_MOVES = {
+                "protect", "detect", "kingsshield", "spikyshield",
+                "banefulbunker", "maxguard", "obstruct", "silktrap",
+                "burningbulwark",
+            }
+            if target_move.id in _PROTECT_MOVES:
+                if move.is_z or pokemon.is_dynamaxed:
+                    baseDamage *= 0.25
+                else:
+                    # Protect fully blocks the attack — return before the
+                    # Gen 6+ minimum-1-damage rule below resurrects it to 1.
+                    return 0
             if target_move.category == MoveCategory.STATUS and (
                 move.id == "suckerpunch" or move.id == "thunderclap"
             ):
