@@ -2164,10 +2164,14 @@ def state_translate2(
         moves_opp_str, moves_opp_possible_str = sim.get_opponent_current_moves(
             mon=mon_opp, return_separate=True
         )
-        moves_opp = [Move(move_opp, sim.gen.gen) for move_opp in moves_opp_str]
+        moves_opp = [
+            Move(move_opp, sim.gen.gen)
+            for move_opp in moves_opp_str
+            if move_opp != "nothing"
+        ]
         moves_opp_possible = []
         for move_opp in moves_opp_possible_str:
-            if move_opp not in moves_opp_str:
+            if move_opp not in moves_opp_str and move_opp != "nothing":
                 moves_opp_possible.append(Move(move_opp, sim.gen.gen))
         opponent_prompt += get_opp_move_summary(
             mon_opp, moves_opp, moves_opp_possible, battle, sim
@@ -2614,10 +2618,14 @@ def state_translate3(
         moves_opp_str, moves_opp_possible_str = sim.get_opponent_current_moves(
             mon=pokemon, return_separate=True
         )
-        moves_opp = [Move(move_opp, sim.gen.gen) for move_opp in moves_opp_str]
+        moves_opp = [
+            Move(move_opp, sim.gen.gen)
+            for move_opp in moves_opp_str
+            if move_opp != "nothing"
+        ]
         moves_opp_possible = []
         for move_opp in moves_opp_possible_str:
-            if move_opp not in moves_opp_str:
+            if move_opp not in moves_opp_str and move_opp != "nothing":
                 moves_opp_possible.append(Move(move_opp, sim.gen.gen))
         opponent_prompt += get_opp_move_summary2(
             pokemon, moves_opp, moves_opp_possible, battle, sim, idx=idx
@@ -2645,10 +2653,14 @@ def state_translate3(
         moves_opp_str, moves_opp_possible_str = sim.get_opponent_current_moves(
             mon=mon_opp, return_separate=True
         )
-        moves_opp = [Move(move_opp, sim.gen.gen) for move_opp in moves_opp_str]
+        moves_opp = [
+            Move(move_opp, sim.gen.gen)
+            for move_opp in moves_opp_str
+            if move_opp != "nothing"
+        ]
         moves_opp_possible = []
         for move_opp in moves_opp_possible_str:
-            if move_opp not in moves_opp_str:
+            if move_opp not in moves_opp_str and move_opp != "nothing":
                 moves_opp_possible.append(Move(move_opp, sim.gen.gen))
         opponent_prompt += get_opp_move_summary2(
             mon_opp, moves_opp, moves_opp_possible, idx=idx, battle=battle, sim=sim
