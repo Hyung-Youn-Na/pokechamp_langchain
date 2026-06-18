@@ -383,6 +383,12 @@ manifest(`fixed-baselines/manifests/v1.json`, 공통 세트):
 
 맞춤 세트(stall matchup 등 검증 목적)는 동일 스키마 + `custom_purpose` 로 별도 manifest 작성 가능.
 
+> **첫 맞춤 세트: `manifests/dynamic-v1.json`** (dynamic-resolve baseline, EXP-035~038 재검증용).
+> [`scripts/exp/select_dynamic_teams.py`](scripts/exp/select_dynamic_teams.py) 가 modern_replays(25192팀)에서
+> dynamic score(Tera 다양성 + 동적 타입/위력/priority/어빌리티/아이템 균형) 상위 팀을 선별해 player rank1-30 ·
+> opponent rank31-60 (disjoint)로 구성. 랜덤 풀 대비 tera/ivycudgel/동적 무브가 빈발(EXP-038 문제점 해소)해
+> sim dynamic resolve fix 들의 진짜 효과 측정 가능.
+
 ### 9.3 워크플로우
 
 **0. 고정 팀 baseline 1회 측정**(각 algo, 사용자 실행 — §0-8):
