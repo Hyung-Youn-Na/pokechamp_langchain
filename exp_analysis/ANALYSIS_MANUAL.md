@@ -116,6 +116,10 @@
 | `enable_dynamic_calcs` | `false` | 동적 계산 |
 | `enable_showdown_oracle` | `false` | 오라클 |
 | `enable_llm_lead_selection` | `false` | LLM 리드 선택 |
+| `team_mode` | `random` | 팀 모드: `random`(기존) \| `fixed`(매치업 격리, experiment-context.md §9) |
+| `team_manifest` | `null` \| 경로 | fixed 모드 manifest 경로 (random이면 null) |
+| `team_manifest_hash` | `null` \| `sha256:...` | manifest 무결성 해시 (verify_single_change 가 변경 감지에 사용) |
+| `teams` | `null` \| `{player,opponent}` | player/opponent set·매치업 수 (고정 팀 메타) |
 
 **`summary`** — 집계 통계:
 
@@ -132,8 +136,10 @@
 **`battles[]`** — 배틀별 상세 (★ **error/retry 키 없음**):
 
 ```json
-{"won": 1, "turns": 37, "prompt_tokens": 94556, "completion_tokens": 3417, "llm_calls": 40}
+{"won": 1, "turns": 37, "prompt_tokens": 94556, "completion_tokens": 3417, "llm_calls": 40, "player_team_idx": null, "opponent_team_idx": null}
 ```
+
+> `player_team_idx`/`opponent_team_idx`: 고정 팀 모드에서만 manifest 인덱스(0-base)가 들어간다(random 모드·과거 실험은 null). 같은 매치업 시퀀스 재현·검증에 사용.
 
 > ⚠️ 에러/파싱 실패/retry 정보는 `battles[]`에 없다. 반드시 **로그 파일에서 별도 추출**해야 한다 (4.4·4.5절).
 
@@ -185,8 +191,8 @@ EXP-030~033 처럼 README.md가 없는 경우, `experiment_*.json` 의 `config` 
 
 ### Step 1. 입력 확인
 - **입력**: EXP 디렉토리 경로.
-- **수행**: 0.3 체크리스트로 파일 무결성 확인, 2.4 로 알고리즘 분기 결정, experiment-context.md 섹션 5 에서 비교 대상 EXP 식별.
-- **산출물**: 알고리즘 종류, 비교 대상 EXP 목록.
+- **수행**: 0.3 체크리스트로 파일 무결성 확인, 2.4 로 알고리즘 분기 결정, **`config.team_mode` 로 비교 기준 영역 결정**(`fixed`→`fixed-baselines/`, `random`→`baselines/`, experiment-context.md §9), experiment-context.md 섹션 5 에서 비교 대상 EXP 식별.
+- **산출물**: 알고리즘 종류, 팀 모드 + 비교 영역, 비교 대상 EXP 목록.
 
 ### Step 2. 정량 데이터 추출
 - **입력**: `experiment_*.json`.

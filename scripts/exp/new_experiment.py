@@ -77,9 +77,20 @@ def next_exp_id() -> int:
     return (max(nums) + 1) if nums else 1
 
 
-def build_command(exp_dir_rel: str, info: dict) -> str:
+def build_command(
+    exp_dir_rel: str,
+    info: dict,
+    team_mode: str = "random",
+    team_manifest: str | None = None,
+) -> str:
     algo = info["algo"]
     script = info["script"]
+    team_args = ""
+    if team_mode == "fixed":
+        team_args = (
+            f"  --team_mode fixed \\\n"
+            f"  --team_manifest {team_manifest} \\\n"
+        )
     return (
         f"uv run python scripts/battles/{script} \\\n"
         f"  --player_name pokechamp \\\n"
@@ -92,11 +103,29 @@ def build_command(exp_dir_rel: str, info: dict) -> str:
         f"  --battle_format gen9ou \\\n"
         f"  --temperature 0.3 \\\n"
         f"  --seed 42 \\\n"
+        f"{team_args}"
         f"  --log_dir {exp_dir_rel}/battle_log"
     )
 
 
-def build_readme(exp_id: str, name: str, baseline: str, info: dict) -> str:
+def build_readme(
+    exp_id: str,
+    name: str,
+    baseline: str,
+    info: dict,
+    team_mode: str = "random",
+    team_manifest: str | None = None,
+) -> str:
+    if team_mode == "fixed":
+        baseline_zone = "fixed-baselines"
+        team_note = (
+            f"- 팀 모드: **fixed** (manifest `{team_manifest}`)\n"
+            f"  - 매치업 격리 → 승률 변화 = 코드 변경 효과 (팀 구성 노이즈 제거)\n"
+            f"  - 비교 시 verify: `--zone fixed-baselines` 지정 (고정 팀 baseline)\n"
+        )
+    else:
+        baseline_zone = "baselines"
+        team_note = ""
     return f"""# {exp_id}: {name}
 
 ## 목적
@@ -106,8 +135,8 @@ def build_readme(exp_id: str, name: str, baseline: str, info: dict) -> str:
 <!-- 변경 → 기대 효과 -->
 
 ## 설정 (baseline 대비 변경점만 명시)
-- baseline: **{baseline}** ({info['algo']}, {info['win_rate']}) — `.temp/experiments/baselines/{baseline}-glm51`
-- 변경: <!-- §0-4 변경 1개 원칙 — baseline 대비 딱 1개만. 예: prompts.py 시스템 프롬프트 수정 -->
+- baseline: **{baseline}** ({info['algo']}, {info['win_rate']}) — `.temp/experiments/{baseline_zone}/{baseline}-glm51`
+{team_note}- 변경: <!-- §0-4 변경 1개 원칙 — baseline 대비 딱 1개만. 예: prompts.py 시스템 프롬프트 수정 -->
 - (배틀 후 자동 기록) `meta.git_commit` / `dirty_patch_file` — §8 자동 추적
 
 ## 실행 명령 (사용자 직접 실행 — §0-8)
@@ -134,6 +163,17 @@ def main() -> int:
         default="minimax",
         help="비교 기준 baseline (기본 minimax)",
     )
+    ap.add_argument(
+        "--team_mode",
+        choices=["random", "fixed"],
+        default="random",
+        help="random(기본, baselines/ 비교) | fixed(고정 팀 — ablation 격리, fixed-baselines/ 비교)",
+    )
+    ap.add_argument(
+        "--team_manifest",
+        default=".temp/experiments/fixed-baselines/manifests/v1.json",
+        help="fixed 모드 manifest 경로 (기본: 공통 v1.json)",
+    )
     args = ap.parse_args()
 
     if not KEBAB_RE.match(args.name):
@@ -156,7 +196,9 @@ def main() -> int:
     battle_log = exp_dir / "battle_log"
     battle_log.mkdir(parents=True, exist_ok=True)
 
-    readme = build_readme(exp_id, args.name, args.baseline, info)
+    readme = build_readme(
+        exp_id, args.name, args.baseline, info, args.team_mode, args.team_manifest
+    )
     (exp_dir / "README.md").write_text(readme, encoding="utf-8")
 
     exp_dir_rel = exp_dir.relative_to(REPO).as_posix()
@@ -181,21 +223,30 @@ def main() -> int:
     print(f"✓ 실험 스캐폴드 생성: {exp_dir_rel}/")
     print(f"    EXP-ID    : {exp_id} (다음 순번)")
     print(f"    baseline  : {args.baseline} ({info['algo']}, {info['win_rate']})")
+    if args.team_mode == "fixed":
+        print(f"    team_mode : fixed (매치업 격리) — manifest {args.team_manifest}")
+        print(
+            f"               비교 기준 = fixed-baselines/{args.baseline}-glm51 "
+            "(고정 팀 baseline)"
+        )
     print(f"    README    : {exp_dir_rel}/README.md")
     print()
     print("▶ 실행 명령 (코드 변경 후 사용자 직접 실행 — §0-8):")
     print()
-    print(build_command(exp_dir_rel, info))
+    print(build_command(exp_dir_rel, info, args.team_mode, args.team_manifest))
     print()
     print("▶ 배틀 후:")
     print(
         "    1. 코드 변경 보존: uv run python scripts/exp/preserve_code_state.py "
         f"{exp_name}"
     )
-    print(
+    verify_cmd = (
         "    2. 변경 1개 검증 : uv run python scripts/exp/verify_single_change.py "
         f"{exp_id} --baseline {args.baseline}"
     )
+    if args.team_mode == "fixed":
+        verify_cmd += " --zone fixed-baselines"
+    print(verify_cmd)
     print(f"    3. 분석 보고서   : exp_analysis/ANALYSIS_MANUAL.md 절차")
     print(dirty_note)
     return 0

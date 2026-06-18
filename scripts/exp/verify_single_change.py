@@ -37,15 +37,17 @@ from _common import (
     load_experiment_json,
 )
 
-# config 비교 시 무시 — 스키마/메타 키 (ablation 변수가 아님)
-IGNORE_CONFIG_KEYS = {"script", "experiment_id"}
+# config 비교 시 무시 — 스키마/메타 키 (ablation 변수가 아님).
+# team_manifest(경로)는 team_manifest_hash 가 내용 무결성을 이미 보장하므로 중복 노이즈:
+# 같은 내용을 다른 파일명으로 둔 경우 hash 로 같음을 보여주기 위해 경로는 무시한다.
+IGNORE_CONFIG_KEYS = {"script", "experiment_id", "team_manifest"}
 
 # 이 도구들 자신이 dirty_files 에 들어가면 노이즈 — 경고용
 TOOL_PATH_PREFIXES = ("scripts/exp/", "scripts/battles/_experiment_meta.py")
 
 
-def find_baseline_json(baseline: str) -> Path | None:
-    bdir = EXPERIMENTS / "baselines" / BASELINE_DIR[baseline] / "battle_log"
+def find_baseline_json(baseline: str, zone: str = "baselines") -> Path | None:
+    bdir = EXPERIMENTS / zone / BASELINE_DIR[baseline] / "battle_log"
     if not bdir.is_dir():
         return None
     cand = sorted(bdir.glob("experiment_*.json"), key=lambda p: p.stat().st_mtime)
@@ -87,12 +89,18 @@ def main() -> int:
         required=True,
         help="비교 기준 baseline",
     )
+    ap.add_argument(
+        "--zone",
+        choices=["baselines", "fixed-baselines"],
+        default="baselines",
+        help="baseline 영역 (고정 팀 모드 ablation 은 fixed-baselines)",
+    )
     args = ap.parse_args()
 
-    base_json = find_baseline_json(args.baseline)
+    base_json = find_baseline_json(args.baseline, args.zone)
     if base_json is None:
         print(
-            f"오류: baseline JSON 없음 — baselines/{BASELINE_DIR[args.baseline]}/",
+            f"오류: baseline JSON 없음 — {args.zone}/{BASELINE_DIR[args.baseline]}/",
             file=sys.stderr,
         )
         return 2
@@ -143,6 +151,24 @@ def main() -> int:
     if not cfg_changes:
         print("  (없음)")
     print()
+
+    # Fixed-team mode context (안내만 — 판정은 위 config_diff 로직이 결정).
+    # team_manifest_hash 는 IGNORE 에 없으므로, 같은 manifest 는 변경 0(팀=통제조건),
+    # 다른 manifest 는 값 diff 로 잡혀 변경 1(manifest 자체가 ablation 변수)이 된다.
+    if exp_cfg.get("team_mode") == "fixed":
+        exp_hash = exp_cfg.get("team_manifest_hash") or "?"
+        if base_cfg.get("team_mode") == "fixed":
+            base_hash = base_cfg.get("team_manifest_hash") or "?"
+            if exp_hash == base_hash:
+                print("팀 모드: fixed (manifest 동일 → 팀은 통제 조건, 변경 0이 정상)")
+            else:
+                print("팀 모드: fixed (manifest 상이 → manifest 자체가 ablation 변수)")
+        else:
+            print(
+                "팀 모드: fixed (baseline=random → team_* 키는 스키마 차이로 total 제외)"
+            )
+        print(f"  manifest hash: {str(exp_hash)[:24]}...\n")
+
     if base_only or exp_only:
         print("스키마 차이 (다른 스크립트/기록 — total 제외):")
         if base_only:

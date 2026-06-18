@@ -27,6 +27,7 @@ from common import *
 from poke_env.player.team_util import (
     get_llm_player,
     get_metamon_teams,
+    load_fixed_manifest,
     load_random_team,
 )
 
@@ -235,6 +236,23 @@ parser.add_argument(
     help="Enable LLM-based lead Pokemon selection during team preview",
 )
 
+# Team composition mode. "fixed" isolates matchups across ablations so a metric
+# delta reflects the code change, not team composition noise (see
+# docs/architecture/fixed-team-mode.md). Default "random" preserves the existing
+# --seed baseline workflow unchanged.
+parser.add_argument(
+    "--team_mode",
+    choices=["random", "fixed"],
+    default="random",
+    help="random (default, existing baseline) | fixed (manifest-driven deterministic teams)",
+)
+parser.add_argument(
+    "--team_manifest",
+    type=str,
+    default=None,
+    help="Path to fixed-team manifest JSON (required when --team_mode fixed)",
+)
+
 args = parser.parse_args()
 
 # Set random seed if provided
@@ -289,22 +307,35 @@ async def main():
     # Try to use metamon teams, fallback to static teams if not available
     player_teamloader = None
     opponent_teamloader = None
+    fixed_combo = None  # Fixed-team mode: deterministic matchups (experiment isolation)
 
-    try:
-        player_teamloader = get_metamon_teams(args.battle_format, "competitive")
-        opponent_teamloader = get_metamon_teams(args.battle_format, "modern_replays")
-    except (ValueError, Exception) as e:
-        if VISUAL_EFFECTS:
-            print_status(
-                f"Metamon teams not available for {args.battle_format}: {e}", "warning"
-            )
-            print_status("Falling back to static teams...", "info")
-        else:
-            print(f"Metamon teams not available for {args.battle_format}: {e}")
-            print(f"Falling back to static teams...")
+    if args.team_mode == "fixed":
+        if not args.team_manifest:
+            raise SystemExit("--team_mode fixed requires --team_manifest PATH")
+        fixed_combo = load_fixed_manifest(args.team_manifest)
+        print(
+            f"Fixed-team mode: manifest={args.team_manifest} "
+            f"hash={fixed_combo.manifest_hash[:24]}..."
+        )
+    else:
+        try:
+            player_teamloader = get_metamon_teams(args.battle_format, "competitive")
+            opponent_teamloader = get_metamon_teams(args.battle_format, "modern_replays")
+        except (ValueError, Exception) as e:
+            if VISUAL_EFFECTS:
+                print_status(
+                    f"Metamon teams not available for {args.battle_format}: {e}", "warning"
+                )
+                print_status("Falling back to static teams...", "info")
+            else:
+                print(f"Metamon teams not available for {args.battle_format}: {e}")
+                print(f"Falling back to static teams...")
 
     if not "random" in args.battle_format:
-        if player_teamloader is None or opponent_teamloader is None:
+        if fixed_combo is not None:
+            player.update_team(fixed_combo.player_at(0))
+            opponent.update_team(fixed_combo.opponent_at(0))
+        elif player_teamloader is None or opponent_teamloader is None:
             # Fallback to static teams when metamon teams not available
             player.update_team(load_random_team(id=None, vgc=False))
             opponent.update_team(load_random_team(id=None, vgc=False))
@@ -366,11 +397,22 @@ async def main():
                 "prompt_tokens": prompt_tokens_delta,
                 "completion_tokens": completion_tokens_delta,
                 "llm_calls": llm_calls,
+                "player_team_idx": (
+                    fixed_combo.player_index(i) if fixed_combo is not None else None
+                ),
+                "opponent_team_idx": (
+                    fixed_combo.opponent_index(i) if fixed_combo is not None else None
+                ),
             }
         )
 
         if not "random" in args.battle_format:
-            if "vgc" in args.battle_format:
+            if fixed_combo is not None:
+                # Fixed team: deterministic next-battle team (no global RNG use).
+                # Battle 0 was staged before the loop; here we stage battle i+1.
+                player.update_team(fixed_combo.player_at(i + 1))
+                opponent.update_team(fixed_combo.opponent_at(i + 1))
+            elif "vgc" in args.battle_format:
                 player.update_team(load_random_team(id=None, vgc=True))
                 opponent.update_team(load_random_team(id=None, vgc=True))
             elif player_teamloader is None or opponent_teamloader is None:
@@ -450,6 +492,12 @@ async def main():
             "enable_dynamic_calcs": args.enable_dynamic_calcs,
             "enable_showdown_oracle": args.enable_showdown_oracle,
             "enable_llm_lead_selection": args.enable_llm_lead_selection,
+            "team_mode": args.team_mode,
+            "team_manifest": args.team_manifest,
+            "team_manifest_hash": (
+                fixed_combo.manifest_hash if fixed_combo is not None else None
+            ),
+            "teams": fixed_combo.describe() if fixed_combo is not None else None,
         },
         "summary": {
             "win_rate": round(win_rate, 1),

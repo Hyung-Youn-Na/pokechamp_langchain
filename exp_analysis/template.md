@@ -9,12 +9,30 @@
 
 > 분석 일시: {YYYY-MM-DD}
 > {EXP-ID}: {날짜}, {model}, {algorithm}, {N}전 vs {opponent}
+> 팀 모드: {random | fixed} <!-- fixed면 다음 줄 유지, random이면 삭제 -->
+> manifest: {경로} (sha256:{앞8자리}) — player {set} × opponent {set}, {N} 매치업
 > <!-- 비교 대상 EXP가 있으면 아래 라인 추가. 복수 가능. -->
 > 비교: EXP-{NNN} ({algorithm}, {model}) — {변경점 한 줄}
 
 <!-- 진행 중 실험(n_battles < 30)일 때만 아래 경고 박스 유지. N≥30 이면 삭제.
 > ⚠️ N={N} < 30 통계 유의성 낮음. 완료(N=30) 후 재분석 필요.
 -->
+
+---
+
+## 0. 실험 조건 (팀 구성 — 매치업 격리 여부)
+
+<!-- 출처: experiment JSON config.team_mode / team_manifest_hash / teams.
+     fixed 모드: player/opponent 매치업이 고정 → 승률 변화 = 코드 변경 효과 (팀 노이즈 제거, §9).
+     random 모드: 매 배틀 팀이 달라 ablation 간 매치업 불일치 (과거 baseline 체계).
+     fixed 실험은 fixed-baselines/{algo}-glm51 과, random 실험은 baselines/{algo}-glm51 과 비교. -->
+
+| 항목 | 값 |
+|------|-----|
+| team_mode | {random \| fixed} |
+| manifest | {경로} (sha256:{hash 앞 8자리}) — fixed인 경우만 |
+| 매치업 | player {set}({count}) × opponent {set}({count}), {N}판 |
+| 비교 기준 | {baselines \| fixed-baselines}/{algo}-glm51 |
 
 ---
 

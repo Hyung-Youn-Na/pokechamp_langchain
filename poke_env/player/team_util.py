@@ -6,10 +6,13 @@ from poke_env.ps_client.account_configuration import AccountConfiguration
 from poke_env.ps_client.server_configuration import ShowdownServerConfiguration
 from poke_env.teambuilder import Teambuilder
 from numpy.random import randint
+import hashlib
 import importlib
 import inspect
+import json
 import os
 import random
+import re
 
 BANNED_MOVES_BY_FORMAT = {
     "gen9ou": {"Tera Blast", "Last Respects", "Shed Tail", "Baton Pass"},
@@ -200,6 +203,189 @@ def get_metamon_teams(battle_format: str, set_name: str) -> TeamSet:
         )
 
     return team_set
+
+
+# Allowed metamon set names — kept in sync with the inline set validated above.
+METAMON_SET_NAMES = {
+    "competitive",
+    "paper_replays",
+    "paper_variety",
+    "modern_replays",
+    "pokeagent_modern_replays",
+}
+
+
+def _numeric_team_sort(paths):
+    """Re-sort metamon team files by their numeric index.
+
+    ``TeamSet._find_team_files`` returns ``sorted(team_files)`` which is
+    lexicographic, so ``team_10`` precedes ``team_2``. Manifest indices are
+    meant to map to the numeric order, so we restore numeric ordering here.
+    """
+    def key(p):
+        m = re.search(r"team_(\d+)\.", os.path.basename(p))
+        return (int(m.group(1)) if m else 0, p)
+
+    return sorted(paths, key=key)
+
+
+class FixedTeamProvider:
+    """Deterministic team provider that does NOT consume the global RNG.
+
+    ``TeamSet.yield_team`` picks a team via ``random.choice``, consuming the
+    global RNG state. Because ``--seed`` initializes the global RNG only once at
+    process start, the second battle onward diverges depending on how many
+    random draws the previous battle consumed (turn count, LLM nondeterminism)
+    — so the same seed reproduces only the first battle. See the fixed-team
+    mode design doc for the full diagnosis.
+
+    This provider loads the metamon pool once, then selects teams by manifest
+    index directly (no ``random.choice``), so the global RNG is unaffected.
+    Returns packed Showdown teamstrings that ``Player.update_team`` wraps into
+    ``ConstantTeambuilder`` automatically.
+    """
+
+    def __init__(self, battle_format, set_name, indices):
+        if not indices:
+            raise ValueError("FixedTeamProvider requires a non-empty indices list")
+        self.battle_format = battle_format
+        self.set_name = set_name
+        self.indices = list(indices)
+        team_set = get_metamon_teams(battle_format, set_name)
+        self._team_set = team_set
+        self._files = _numeric_team_sort(team_set.team_files)
+        if not self._files:
+            raise ValueError(
+                f"No team files for format {battle_format}, set {set_name!r}"
+            )
+        for idx in self.indices:
+            if not (0 <= idx < len(self._files)):
+                raise ValueError(
+                    f"team index {idx} out of range for set {set_name!r} "
+                    f"(pool size={len(self._files)})"
+                )
+        # Pre-parse and cache packed teamstrings — minimizes loop I/O and
+        # guarantees identical output across instantiations.
+        self._teams = [self._load_packed(i) for i in self.indices]
+
+    def _load_packed(self, idx):
+        with open(self._files[idx], "r") as f:
+            team_data = f.read()
+        team = self._team_set.parse_showdown_team(team_data)
+        for mon in team:
+            if mon.species is not None:
+                mon.nickname = mon.species
+        return self._team_set.join_team(team)
+
+    def at(self, position):
+        """Packed teamstring for the ``position``-th (0-based) battle.
+
+        Indices shorter than the battle count wrap around with modulo.
+        """
+        return self._teams[position % len(self._teams)]
+
+    def index_at(self, position):
+        return self.indices[position % len(self.indices)]
+
+    def describe(self):
+        return {
+            "set": self.set_name,
+            "pool_size": len(self._files),
+            "matchup_count": len(self.indices),
+            "indices": list(self.indices),
+        }
+
+
+class FixedTeamCombo:
+    """Container pairing a fixed player team provider with a fixed opponent one.
+
+    Battle scripts hold a single combo object and call ``player_at`` /
+    ``opponent_at`` each iteration.
+    """
+
+    def __init__(self, player, opponent, manifest_hash, manifest_meta):
+        self.player = player
+        self.opponent = opponent
+        self.manifest_hash = manifest_hash
+        self.manifest_meta = manifest_meta
+
+    def player_at(self, position):
+        return self.player.at(position)
+
+    def opponent_at(self, position):
+        return self.opponent.at(position)
+
+    def player_index(self, position):
+        return self.player.index_at(position)
+
+    def opponent_index(self, position):
+        return self.opponent.index_at(position)
+
+    def describe(self):
+        return {
+            "player": self.player.describe(),
+            "opponent": self.opponent.describe(),
+        }
+
+
+def load_fixed_manifest(manifest_path):
+    """Load a fixed-team manifest JSON and return a ``FixedTeamCombo``.
+
+    Schema (fixed-team-manifest-v1)::
+
+        {
+          "version": 1, "mode": "fixed", "battle_format": "gen9ou",
+          "player":   {"set": "competitive",    "indices": [...]},
+          "opponent": {"set": "modern_replays", "indices": [...]},
+          "n_battles": 30
+        }
+    """
+    with open(manifest_path, "rb") as f:
+        raw = f.read()
+    manifest = json.loads(raw)
+    manifest_hash = "sha256:" + hashlib.sha256(raw).hexdigest()
+
+    version = manifest.get("version")
+    mode = manifest.get("mode")
+    battle_format = manifest.get("battle_format")
+    if version != 1:
+        raise ValueError(f"Unsupported manifest version: {version!r} (expected 1)")
+    if mode != "fixed":
+        raise ValueError(f"manifest mode must be 'fixed', got {mode!r}")
+    if not battle_format:
+        raise ValueError("manifest missing 'battle_format'")
+
+    player_cfg = manifest.get("player") or {}
+    opponent_cfg = manifest.get("opponent") or {}
+    for label, cfg in (("player", player_cfg), ("opponent", opponent_cfg)):
+        set_name = cfg.get("set")
+        if set_name not in METAMON_SET_NAMES:
+            raise ValueError(
+                f"{label}.set {set_name!r} invalid; must be one of "
+                f"{sorted(METAMON_SET_NAMES)}"
+            )
+        if not cfg.get("indices"):
+            raise ValueError(f"{label}.indices missing or empty")
+
+    player_provider = FixedTeamProvider(
+        battle_format, player_cfg["set"], player_cfg["indices"]
+    )
+    opponent_provider = FixedTeamProvider(
+        battle_format, opponent_cfg["set"], opponent_cfg["indices"]
+    )
+    return FixedTeamCombo(
+        player_provider,
+        opponent_provider,
+        manifest_hash,
+        {
+            "version": version,
+            "mode": mode,
+            "battle_format": battle_format,
+            "n_battles": manifest.get("n_battles"),
+            "description": manifest.get("description"),
+            "custom_purpose": manifest.get("custom_purpose"),
+        },
+    )
 
 
 def load_random_team(id=None, vgc=False):
