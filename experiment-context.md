@@ -186,6 +186,18 @@ uv run python scripts/battles/local_1v1.py \
 
 > ablation은 위 3종 중 하나를 기준으로 변수 1개만 변경. **다음 EXP 번호**는 `scripts/exp/new_experiment.py` 가 자동 할당한다 (§8.3).
 
+### 고정 팀 dynamic-resolve baseline (★ 동일 dynamic-v1 매치업 공정 비교)
+
+> 조건: 위와 동일하되 `--team_mode fixed --team_manifest fixed-baselines/manifests/dynamic-v1.json`(dynamic score 상위 팀, player rank1-30 × opponent rank31-60, disjoint). 경로: `.temp/experiments/fixed-baselines/`. 랜덤 baseline(`baselines/`)은 평균 성능 비교용, **dynamic baseline은 EXP-035~038(sim dynamic resolve fix) 재검증의 비교 기준**(같은 매치업이어야 fix 효과가 팀 노이즈 없이 드러남, §9).
+
+| Baseline (dynamic) | algo | 승률 | 평균 턴 | LLM/판 | prompt tok | comp tok | vs random |
+|--------------------|------|------|---------|--------|------------|----------|-----------|
+| io-glm51-dynamic | io | 46.7% (14/30) | 17.6 | 21.6 | 40,097 | 1,855 | −6.6pp |
+| react-glm51-dynamic | react | 66.7% (20/30) | 15.5 | 47.6 | 131,713 | 4,889 | −10.0pp |
+| minimax-glm51-dynamic | minimax | 53.3% (16/30) | 15.6 | 52.2 | 88,862 | 7,711 | **−26.7pp** |
+
+**핵심 (★)**: dynamic 매치업(동적 무브 밀집 강팀)에서 모든 알고리즘 승률 하락 + 턴 대폭 단축(동적 위력 무브의 빠른 KO). **minimax −26.7pp가 최대** → minimax가 sim dynamic resolve 정확도에 가장 크게 의존함이 입증됨(react/io는 LLM 직접 추론으로 완충). 이 dynamic 매치업 + minimax 조합이 EXP-035~038 fix1/2/3(시뮬레이터 정확도) 효과를 승률로 측정하기에 가장 민감한 지점. 분석 [`docs/analysis/fixed-baselines-dynamic-baseline-analysis.md`](docs/analysis/fixed-baselines-dynamic-baseline-analysis.md).
+
 > **opponent 필드 기록 안내 (abyssal).** `--opponent_name abyssal`일 때 config의 `opponent_backend`/`opponent_algorithm`은 argparse 원값(기본 `gemini-2.5-pro`/`io`)의 직렬화일 뿐, abyssal 동작과 무관한 **노이즈 필드**. `AbyssalPlayer`(`poke_env/player/baselines.py:559`)은 LLM 미사용 순수 휴리스틱(`Player` 서브클래스)이며, `get_llm_player`(`poke_env/player/team_util.py:307-314`)의 abyssal 분기가 `backend`/`algo` 인자를 무시한다. ablation 공정성을 위해 baseline/EXP 모두 동일값(`abyssal`/`gemini-2.5-pro`/`io`) 유지 — `verify_single_change.py`가 값 변경을 §0-4 위반(FAIL)으로 잡는다.
 
 ### 전체 실험 이력
