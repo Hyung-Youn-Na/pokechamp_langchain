@@ -459,3 +459,15 @@ uv run python scripts/exp/verify_single_change.py EXP-NNN --baseline minimax --z
   archive 비교 기준, `fixed-baselines/`(고정)는 신규 비교 기준 — 두 체계 병존.
   중요 결론은 고정 팀 모드로 재검증(신규 EXP 번호) 가능.
 - manifest(`fixed-baselines/manifests/`)는 git 추적 권장 — 재현성은 hash 로 검증.
+
+### 9.6 EXP-035~038 재검증 ablation (dynamic-resolve 매치업)
+
+시리즈 종합("fix1만 전이, fix2 역효과, fix3 무효")은 랜덤풀 dynamic resolve 빈도 부족(tera 0.7%)으로 fix2/fix3 효과가 애초에 측정 불가했기 때문이다. 고정 팀 dynamic baseline(§9.2 `dynamic-v1`, 동적 무브 밀집)에서 **leave-one-out 제거 ablation**으로 각 fix의 한계 효과를 재검증한다. 상세 절차·revert 지침: [`docs/analysis/ablation-guide-exp035-038-revalidation.md`](docs/analysis/ablation-guide-exp035-038-revalidation.md).
+
+| 예정 EXP | 제거 fix | 기대 |
+|----------|----------|------|
+| EXP-039 | −fix3 (tera/ivycudgel) | 시리즈 처음 fix3 유의 효과 측정 (minimax에서 양수 기대) |
+| EXP-040 | −fix2 (protect/item) | 역효과(−13.3pp) dynamic 재평가 |
+| EXP-041 | −fix1 (priority/protosynthesis) | 최대 전이 예상 (매 턴 영향) |
+
+3종 알고리즘(io/react/minimax) 각각 측정, 같은 `dynamic-v1` manifest. baseline(fix1+2+3) 대비 델타 = fix 한계 기여(양수=도움, 음수=해). 각 EXP 후 **반드시 `git checkout HEAD -- poke_env/player/local_simulation.py` 원복**(다음 케이스 오염 방지).
