@@ -21,8 +21,9 @@ import json
 import logging
 import os
 import subprocess
+import threading
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 logger = logging.getLogger("showdown_oracle")
 
@@ -257,3 +258,135 @@ class ShowdownOracle:
             buf.extend(chunk)
             if chunk == b"\n":
                 return buf.decode("utf-8").strip()
+
+
+# ----------------------------------------------------------------------
+# Process-wide shared singleton
+# ----------------------------------------------------------------------
+#
+# ``LangChainPlayer._run_langgraph_agent`` creates a fresh ``LocalSim`` every
+# turn, so attaching an oracle to each sim would spawn a new Node worker per
+# turn (hundreds of ms + npm load each).  Instead, all sims / battle tools
+# share a single long-running worker via ``get_shared_oracle()``.
+
+_shared_oracle: Optional[ShowdownOracle] = None
+_shared_oracle_lock = threading.Lock()
+
+
+def get_shared_oracle() -> Optional[ShowdownOracle]:
+    """Return the process-wide singleton :class:`ShowdownOracle`.
+
+    Lazily spawns one Node worker on first call; subsequent calls reuse it.
+    Returns ``None`` (and logs) if the oracle cannot be initialized (e.g. the
+    Showdown dist build is missing).  Callers must treat ``None`` as
+    "oracle unavailable" and fall back to the default code path.
+    """
+    global _shared_oracle
+    if _shared_oracle is not None and not _shared_oracle._closed:
+        return _shared_oracle
+    with _shared_oracle_lock:
+        if _shared_oracle is not None and not _shared_oracle._closed:
+            return _shared_oracle
+        try:
+            _shared_oracle = ShowdownOracle()
+        except Exception as exc:  # noqa: BLE001 — never raise to callers
+            logger.error("Failed to initialize shared oracle: %s", exc)
+            _shared_oracle = None
+        return _shared_oracle
+
+
+# ----------------------------------------------------------------------
+# Result cache for resolved move type (dynamic moves only)
+# ----------------------------------------------------------------------
+#
+# Caches oracle ``resolved.type`` lookups so a repeated query for the same
+# (battle state, move, attacker, defender) is served without re-running the
+# Showdown simulation.  25% LRU eviction pattern reused from
+# ``minimax_optimizer.MinimaxCache``.
+
+_CACHE_MISS = object()
+
+
+class OracleResultCache:
+    """Dict-backed LRU cache mapping a state key to a resolved type.
+
+    The key is ``(active_state_hash, move_id, attacker_species,
+    defender_species)``.  ``active_state_hash`` is a stable hash of the
+    oracle payload's ``active_state`` (species/hp/status/tera/item/weather/
+    terrain — everything that affects a dynamic move's resolved type).  Both
+    successful type strings and ``None`` (oracle returned no type) are cached
+    so transient/structural misses are not re-queried every turn.
+    """
+
+    def __init__(self, max_size: int = 4096) -> None:
+        self._data: Dict[Tuple[Any, str, str, str], Optional[str]] = {}
+        self._max_size = max_size
+        self.hits = 0
+        self.misses = 0
+        self._lock = threading.Lock()
+
+    @staticmethod
+    def _make_key(
+        active_state_hash: Any,
+        move_id: str,
+        attacker_species: Optional[str],
+        defender_species: Optional[str],
+    ) -> Tuple[Any, str, str, str]:
+        return (
+            active_state_hash,
+            str(move_id).lower(),
+            str(attacker_species or "").lower(),
+            str(defender_species or "").lower(),
+        )
+
+    def get(
+        self,
+        active_state_hash: Any,
+        move_id: str,
+        attacker_species: Optional[str],
+        defender_species: Optional[str],
+    ) -> Any:
+        key = self._make_key(active_state_hash, move_id, attacker_species, defender_species)
+        with self._lock:
+            val = self._data.get(key, _CACHE_MISS)
+            if val is _CACHE_MISS:
+                self.misses += 1
+                return _CACHE_MISS
+            self.hits += 1
+            return val
+
+    def set(
+        self,
+        active_state_hash: Any,
+        move_id: str,
+        attacker_species: Optional[str],
+        defender_species: Optional[str],
+        value: Optional[str],
+    ) -> None:
+        key = self._make_key(active_state_hash, move_id, attacker_species, defender_species)
+        with self._lock:
+            if len(self._data) >= self._max_size:
+                # Evict the oldest 25% (dict preserves insertion order).
+                evict = max(1, self._max_size // 4)
+                for stale in list(self._data.keys())[:evict]:
+                    del self._data[stale]
+            self._data[key] = value
+
+    def stats(self) -> Dict[str, int]:
+        with self._lock:
+            return {"hits": self.hits, "misses": self.misses, "size": len(self._data)}
+
+
+_shared_cache: Optional[OracleResultCache] = None
+_shared_cache_lock = threading.Lock()
+
+
+def get_oracle_cache() -> OracleResultCache:
+    """Return the process-wide :class:`OracleResultCache` singleton."""
+    global _shared_cache
+    if _shared_cache is not None:
+        return _shared_cache
+    with _shared_cache_lock:
+        if _shared_cache is None:
+            _shared_cache = OracleResultCache()
+        return _shared_cache

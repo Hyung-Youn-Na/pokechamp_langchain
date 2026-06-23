@@ -264,10 +264,19 @@ def _pack_pokemon(pokemon: Any) -> str:
     return "|".join(parts)
 
 
-def _pack_team(team: Any) -> str:
+def _pack_team(team: Any, lead: Any = None) -> str:
     """Pack a team (Dict[str, Pokemon]) into a Showdown packed-team string.
 
     Each Pokémon is separated by ``]``.
+
+    When ``lead`` is given, that Pokémon (matched by species id) is placed
+    first. The oracle worker treats ``sides[*].active[0]`` — the *first*
+    packed Pokémon — as the active attacker/target, so the real active must
+    come first or a switch-in whose active is not the insertion-order leader
+    is mis-identified, the queried move is not in that Pokémon's moveset, and
+    Showdown emits ``|cant|nopp|`` → damage 0 (EXP-045 root cause). Other
+    members keep their relative order (stable sort). ``lead=None`` or a
+    non-matching species preserves the previous insertion-order behavior.
     """
     if not team:
         return ""
@@ -277,6 +286,13 @@ def _pack_team(team: Any) -> str:
         mons = list(team)
     else:
         return ""
+    if lead is not None:
+        lead_species = _normalize_id(getattr(lead, "species", ""))
+        if lead_species:
+            # Stable sort: matched species first, the rest in original order.
+            mons.sort(
+                key=lambda p: _normalize_id(getattr(p, "species", "")) != lead_species
+            )
     return "]".join(_pack_pokemon(p) for p in mons)
 
 
@@ -400,12 +416,20 @@ def battle_to_oracle_payload(
     player_team = getattr(battle, "team", {})
     opp_team = getattr(battle, "opponent_team", {})
 
+    # Pack the actor (move user) first in its side's team and the target first
+    # in the other side, so the worker's active[0] resolves to the real
+    # attacker/defender regardless of which side the actor is on. This
+    # generalizes the player-active assumption to opponent moves (simulate_turn
+    # queries opp_m with user=opponent active). actor_side comes from
+    # _determine_sides above. Mis-identification resolves to |cant|nopp| → 0.
     if player_role == "p1":
-        team_p1 = _pack_team(player_team)
-        team_p2 = _pack_team(opp_team)
+        p1_team, p2_team = player_team, opp_team
     else:
-        team_p1 = _pack_team(opp_team)
-        team_p2 = _pack_team(player_team)
+        p1_team, p2_team = opp_team, player_team
+    p1_lead = user if actor_side == "p1" else target
+    p2_lead = user if actor_side == "p2" else target
+    team_p1 = _pack_team(p1_team, lead=p1_lead)
+    team_p2 = _pack_team(p2_team, lead=p2_lead)
 
     # Active state
     if player_role == "p1":
@@ -444,7 +468,7 @@ def battle_to_oracle_payload(
     # Build the payload
     payload = {
         "id": request_id,
-        "format": "gen9ou",
+        "format": "gen9customgame",
         "seed": [random.randint(0, 0xFFFFFFFF) for _ in range(4)],
         "actor_side": actor_side,
         "actor_slot": actor_slot,

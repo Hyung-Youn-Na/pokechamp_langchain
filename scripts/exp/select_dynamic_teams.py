@@ -124,11 +124,18 @@ def _score_one(team_set, idx_path):
     return idx, score, detail
 
 
-def select_indices(team_set, files, player_n, opponent_n, workers):
-    """풀 전수 score → player/opponent disjoint 상위 indices.
+def select_indices(team_set, files, player_n, opponent_n, workers, seed=42):
+    """풀 전수 score → player(dynamic 상위) + opponent(neutral) indices.
 
-    정렬: score 내림차순, 동점 시 numeric idx 오름차순(결정성).
-    player = rank[0:player_n], opponent = rank[player_n:player_n+opponent_n].
+    §9 manifest 원칙: player 풀만 dynamic-resolve 기준으로 선별(실험변수),
+    opponent 풀은 neutral 통제(dynamic 기준 미반영). 기존 dynamic-v1 은
+    player/opponent 를 같은 dynamic score 상위에서 disjoint 로 뽑아 원칙 2를
+    위반했다 — opponent 도 큐레이션되면 공격 신호가 섞여 fix 한계 효과의 인과
+    해석이 불가능하다.
+
+    - player = dynamic score 내림차순 상위 player_n (동점 시 idx 오름차순).
+    - opponent = player 와 disjoint 한 풀에서 seed 고정 균등 랜덤 추출
+      (dynamic 기준이 아닌 neutral 통제).
     """
     pairs = list(enumerate(files))
     with ThreadPoolExecutor(max_workers=workers) as ex:
@@ -136,7 +143,17 @@ def select_indices(team_set, files, player_n, opponent_n, workers):
     # score desc, idx asc tie-break
     ranked = sorted(results, key=lambda r: (-r[1], r[0]))
     player = [r[0] for r in ranked[:player_n]]
-    opponent = [r[0] for r in ranked[player_n:player_n + opponent_n]]
+
+    # opponent: neutral — player 와 disjoint 한 풀에서 균등 랜덤 (dynamic 미반영).
+    import random
+
+    player_set = set(player)
+    remaining = [i for i in range(len(files)) if i not in player_set]
+    rng = random.Random(seed)
+    if len(remaining) >= opponent_n:
+        opponent = rng.sample(remaining, opponent_n)
+    else:
+        opponent = list(remaining)
     return player, opponent, ranked
 
 
@@ -148,6 +165,12 @@ def main():
     ap.add_argument("--player_n", type=int, default=30)
     ap.add_argument("--opponent_n", type=int, default=30)
     ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="opponent neutral 균등 추출 seed (player는 score 기준 고정)",
+    )
     ap.add_argument("--out", required=True, help="출력 manifest JSON 경로")
     args = ap.parse_args()
 
@@ -156,37 +179,49 @@ def main():
     print(f"pool: {args.set}/{args.battle_format} = {len(files)} teams")
 
     player, opponent, ranked = select_indices(
-        team_set, files, args.player_n, args.opponent_n, args.workers
+        team_set, files, args.player_n, args.opponent_n, args.workers, args.seed
     )
     assert not (set(player) & set(opponent)), "player/opponent overlap!"
 
     manifest = {
-        "version": 1,
+        "version": 2,
         "mode": "fixed",
         "battle_format": args.battle_format,
         "description": (
-            "Dynamic-resolve baseline 세트 — EXP-035~038(sim dynamic resolve fix 시리즈) "
-            "재검증용. modern_replays 풀에서 dynamic score(Tera 다양성 + 동적 타입/위력/"
-            "priority/어빌리티/아이템 균형) 상위 팀. 랜덤 풀 대비 tera/ivycudgel/동적 무브가 "
-            "빈발해 fix1/2/3 진짜 효과 측정 가능. player=rank1-30, opponent=rank31-60 (disjoint)."
+            "Dynamic-resolve ablation 세트 (§9 원칙 준수, v2). player 풀만 dynamic-resolve "
+            "score(Tera 다양성 + 동적 타입/위력/priority/어빌리티/아이템) 상위 팀(실험변수), "
+            "opponent 풀은 player와 disjoint한 풀에서 seed 고정 균등 랜덤(neutral 통제, dynamic "
+            "기준 미반영). v1은 player/opponent를 같은 dynamic 기준으로 선별해 §9 원칙 2를 "
+            "위반 → 아카이빙. oracle 동적 타입/위력 통합(react 데미지 도구) 효과 측정용."
         ),
-        "player": {"set": args.set, "indices": player},
-        "opponent": {"set": args.set, "indices": opponent},
+        "player": {
+            "set": args.set,
+            "indices": player,
+            "selection": "dynamic_score_top",
+        },
+        "opponent": {
+            "set": args.set,
+            "indices": opponent,
+            "selection": "neutral_random",
+            "seed": args.seed,
+        },
         "n_battles": args.player_n,
-        "custom_purpose": "dynamic-resolve-baseline",
+        "custom_purpose": "dynamic-resolve-ablation-v2",
     }
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"wrote manifest: {out}")
 
-    # 상위 dynamic 팀 샘플 출력 (검증용)
+    # 상위 dynamic 팀(player) + neutral opponent 샘플 출력 (검증용)
     print(f"\nplayer rank 1 (idx={ranked[0][0]}, score={ranked[0][1]}): {ranked[0][2]}")
     print(f"player rank 2 (idx={ranked[1][0]}, score={ranked[1][1]}): {ranked[1][2]}")
-    opp_top = ranked[args.player_n]
-    print(f"opponent rank 1 (idx={opp_top[0]}, score={opp_top[1]}): {opp_top[2]}")
     print(f"\nplayer indices[:10]:  {player[:10]}")
     print(f"opponent indices[:10]: {opponent[:10]}")
+    print(
+        f"\nopponent = neutral random (dynamic 기준 아님); "
+        f"player/opponent disjoint: {len(set(player) & set(opponent)) == 0}"
+    )
 
 
 if __name__ == "__main__":

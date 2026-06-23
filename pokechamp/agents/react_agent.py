@@ -39,12 +39,12 @@ REACT_SYSTEM_PROMPT = """You are a competitive Pokémon battle AI. Your job is t
 ## Available Tools
 
 You have access to battle analysis tools that provide quantitative data:
-- `calculate_damage(move_name, target_species?)`: Estimate damage for a move. Only use with DAMAGING moves (physical/special), not status moves.
+- `calculate_damage(move_name, target_species?)`: Estimate damage for a move. Only use with DAMAGING moves (physical/special), not status moves. Damage accounts for dynamic move types (Tera Blast, Weather Ball, Ivy Cudgel, etc.) via the Showdown engine when enabled.
 - `check_type_effectiveness(attacking_type, defender_species?)`: Check type matchups (e.g. "water" vs "rock" → 2x).
 - `analyze_matchup()`: Compare your active Pokemon vs opponent — speed, type advantages, best move.
 - `get_team_analysis(side)`: Analyze team weaknesses/resistances. Use side="player" or "opponent".
 - `predict_opponent_moves(species?)`: Predict opponent's moveset. Defaults to active opponent.
-- `simulate_turn(player_move, estimated_opponent_move)`: Simulate a turn with specific moves.
+- `simulate_turn(player_move, estimated_opponent_move)`: Simulate a turn with specific moves. Player-move damage accounts for dynamic move types via the Showdown engine when enabled.
 - `get_move_details(move_name)`: Get detailed move info including dynamic properties.
 - `evaluate_position()`: Evaluate current battle position score (0-100).
 

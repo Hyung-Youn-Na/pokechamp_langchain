@@ -348,8 +348,13 @@ def load_fixed_manifest(manifest_path):
     version = manifest.get("version")
     mode = manifest.get("mode")
     battle_format = manifest.get("battle_format")
-    if version != 1:
-        raise ValueError(f"Unsupported manifest version: {version!r} (expected 1)")
+    # v1 = baseline fixed-team; v2 = same schema + player/opponent selection
+    # metadata (selection/seed), which this loader ignores. Both share the
+    # player/opponent {set, indices} contract.
+    if version not in (1, 2):
+        raise ValueError(
+            f"Unsupported manifest version: {version!r} (expected 1 or 2)"
+        )
     if mode != "fixed":
         raise ValueError(f"manifest mode must be 'fixed', got {mode!r}")
     if not battle_format:

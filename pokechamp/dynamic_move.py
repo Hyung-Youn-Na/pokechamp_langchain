@@ -274,6 +274,66 @@ def resolve_dynamic_type(
     return None
 
 
+#: Move ids whose type is resolved dynamically. Mirrors the dispatch in
+#: :func:`resolve_dynamic_type` (single source of truth) so callers can
+#: short-circuit — static moves never need an oracle query.
+DYNAMIC_TYPE_MOVE_IDS = frozenset(
+    {
+        "weatherball",
+        "terablast",
+        "aurawheel",
+        "hiddenpower",
+        "ivycudgel",
+        "ragingbull",
+        "terastarstorm",
+        "revelationdance",
+        "terrainpulse",
+        "judgment",
+        "multiattack",
+        "technoblast",
+        "naturalgift",
+    }
+)
+
+
+def is_dynamic_type_move(move_id: Any) -> bool:
+    """Return True if ``move_id`` has a dynamically-resolved type.
+
+    Uses :func:`_normalize_move_id` so it accepts any move identifier form
+    (str, Move, hyphenated, etc.) consistent with :func:`resolve_dynamic_type`.
+    """
+    return _normalize_move_id(move_id) in DYNAMIC_TYPE_MOVE_IDS
+
+
+#: Move ids whose base power is resolved dynamically. Mirrors the dispatch in
+#: :func:`resolve_dynamic_power` (single source of truth).
+DYNAMIC_POWER_MOVE_IDS = frozenset(
+    {
+        "acrobatics",
+        "facade",
+        "knockoff",
+        "weatherball",
+        "lowkick",
+        "grassknot",
+        "heavyslam",
+        "heatcrash",
+        "hex",
+        "naturalgift",
+    }
+)
+
+
+def is_dynamic_power_move(move_id: Any) -> bool:
+    """Return True if ``move_id`` has a dynamically-resolved base power."""
+    return _normalize_move_id(move_id) in DYNAMIC_POWER_MOVE_IDS
+
+
+def is_dynamic_move(move_id: Any) -> bool:
+    """Return True if ``move_id`` has a dynamic type OR base power."""
+    mid = _normalize_move_id(move_id)
+    return mid in DYNAMIC_TYPE_MOVE_IDS or mid in DYNAMIC_POWER_MOVE_IDS
+
+
 def _weatherball_type(weather: Any) -> str:
     w = _normalize_weather(weather)
     if w is None:

@@ -301,6 +301,40 @@ class TestBattleStateMapper:
         assert _pack_team(None) == ""
         assert _pack_team({}) == ""
 
+    def test_pack_team_lead_first(self) -> None:
+        """lead species is packed first (it becomes worker active[0])."""
+        mons = {
+            "a": _make_pokemon(species="tyranitar"),
+            "b": _make_pokemon(species="quaquaval"),
+            "c": _make_pokemon(species="kingdra"),
+        }
+        result = _pack_team(mons, lead=_make_pokemon(species="quaquaval"))
+        first = result.split("|")[0]
+        assert first == "quaquaval"
+        # Remaining members keep their insertion order (stable sort).
+        order = [seg.split("|")[0] for seg in result.split("]") if seg.split("|")[0]]
+        assert order == ["quaquaval", "tyranitar", "kingdra"]
+
+    def test_pack_team_lead_none_preserves_order(self) -> None:
+        """No lead argument keeps insertion order (regression)."""
+        mons = {
+            "a": _make_pokemon(species="tyranitar"),
+            "b": _make_pokemon(species="quaquaval"),
+        }
+        result = _pack_team(mons)
+        order = [seg.split("|")[0] for seg in result.split("]") if seg.split("|")[0]]
+        assert order == ["tyranitar", "quaquaval"]
+
+    def test_pack_team_lead_missing_falls_back(self) -> None:
+        """A lead species not in the team keeps insertion order."""
+        mons = {
+            "a": _make_pokemon(species="tyranitar"),
+            "b": _make_pokemon(species="quaquaval"),
+        }
+        result = _pack_team(mons, lead=_make_pokemon(species="pikachu"))
+        order = [seg.split("|")[0] for seg in result.split("]") if seg.split("|")[0]]
+        assert order == ["tyranitar", "quaquaval"]
+
     # -- build_active_state -----------------------------------------------
 
     def test_build_active_state_basic(self) -> None:
@@ -850,6 +884,7 @@ def _make_oracle_payload(
     seed: Optional[list] = None,
     p1_active: Optional[Dict[str, Any]] = None,
     p2_active: Optional[Dict[str, Any]] = None,
+    side_conditions: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Build a minimal oracle payload for integration testing."""
     if seed is None:
@@ -858,6 +893,8 @@ def _make_oracle_payload(
         "p1": [p1_active or {}],
         "p2": [p2_active or {}],
     }
+    if side_conditions is None:
+        side_conditions = {"p1": {}, "p2": {}}
     return {
         "id": f"it-{move_id}-{time.monotonic_ns()}",
         "format": "gen9customgame",
@@ -873,7 +910,7 @@ def _make_oracle_payload(
         "team_p1": team_p1,
         "team_p2": team_p2,
         "active_state": active_state,
-        "side_conditions": {"p1": {}, "p2": {}},
+        "side_conditions": side_conditions,
     }
 
 
@@ -1214,3 +1251,86 @@ def test_oracle_disabled_identical_output() -> None:
     # The only oracle-worker processes should be from the real_oracle fixture,
     # which was already running before this test.
     assert post_existing == pre_existing or post_existing == ""
+
+
+# -----------------------------------------------------------------------
+# resolved.type — dynamic move type resolution (react-agent damage tools)
+# -----------------------------------------------------------------------
+
+
+@pytest.mark.oracle
+def test_weatherball_type_resolves_with_weather(real_oracle: Any) -> None:
+    """Weather Ball type tracks the active weather."""
+    payload = _make_oracle_payload("weatherball")
+    payload["weather"] = "raindance"
+    result = real_oracle.query(payload)
+    assert result["ok"] is True
+    assert result["resolved"]["type"] == "water"
+
+    payload = _make_oracle_payload("weatherball")
+    payload["weather"] = "sunnyday"
+    result = real_oracle.query(payload)
+    assert result["ok"] is True
+    assert result["resolved"]["type"] == "fire"
+
+
+@pytest.mark.oracle
+def test_terablast_type_resolves_with_tera(real_oracle: Any) -> None:
+    """Tera Blast type becomes the user's Tera type when terastallized."""
+    payload = _make_oracle_payload(
+        "terablast",
+        p1_active={
+            "species_id": "heracross",
+            "is_terastallized": True,
+            "tera_type": "fire",
+        },
+    )
+    result = real_oracle.query(payload)
+    assert result["ok"] is True
+    assert result["resolved"]["type"] == "fire"
+
+
+@pytest.mark.oracle
+def test_static_move_type_is_base(real_oracle: Any) -> None:
+    """Non-dynamic moves report their base type."""
+    payload = _make_oracle_payload("facade", p1_active={"species_id": "heracross"})
+    result = real_oracle.query(payload)
+    assert result["ok"] is True
+    assert result["resolved"]["type"] == "normal"
+
+
+@pytest.mark.oracle
+def test_lightscreen_halves_special_damage(real_oracle: Any) -> None:
+    """Light Screen on the target side halves special-move damage.
+
+    The Showdown side-condition event doesn't fire in the hand-built Battle,
+    so the worker applies the screen multiplier directly (oracle-worker.js).
+    """
+    base = _make_oracle_payload(
+        "surf", team_p1=_SQUIRTLE_TEAM, team_p2=_BLASTOISE_TEAM
+    )
+    screened = _make_oracle_payload(
+        "surf",
+        team_p1=_SQUIRTLE_TEAM,
+        team_p2=_BLASTOISE_TEAM,
+        side_conditions={"p1": {}, "p2": {"lightscreen": 1}},
+    )
+    r_base = real_oracle.query(base)
+    r_screened = real_oracle.query(screened)
+    assert r_base["ok"] and r_screened["ok"]
+    d_base = r_base["damage"]["max_pct"]
+    d_screened = r_screened["damage"]["max_pct"]
+    assert d_screened <= d_base * 0.55, (
+        f"lightscreen did not halve special damage: {d_screened} vs {d_base}"
+    )
+
+
+@pytest.mark.oracle
+def test_generic_move_returns_damage(real_oracle: Any) -> None:
+    """A generic (non-dynamic) move returns positive damage via the unified
+    oracle path (the dynamic-only gate was removed for fair cross-move
+    comparison)."""
+    payload = _make_oracle_payload("earthquake")  # Heracross vs Blastoise
+    result = real_oracle.query(payload)
+    assert result["ok"] is True
+    assert result["damage"]["max_pct"] > 0

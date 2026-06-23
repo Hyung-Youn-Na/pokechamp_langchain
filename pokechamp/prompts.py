@@ -108,55 +108,6 @@ def _is_user_grounded(user):
     return True
 
 
-def _format_oracle_info(result: dict) -> str:
-    """Format an oracle response dict into a compact prompt annotation.
-
-    Produces strings like ``'Oracle:Dmg=142-168(78-92% HP),2HKO=100%'``.
-    Returns an empty string if the result lacks useful fields.
-    """
-    parts: list = ["Oracle:"]
-
-    damage = result.get("damage")
-    if damage and isinstance(damage, dict):
-        min_dmg = damage.get("min")
-        max_dmg = damage.get("max")
-        min_pct = damage.get("min_pct")
-        max_pct = damage.get("max_pct")
-        if min_dmg is not None and max_dmg is not None:
-            parts.append(f"Dmg={min_dmg}-{max_dmg}")
-            if min_pct is not None and max_pct is not None:
-                parts.append(f"({round(min_pct)}-{round(max_pct)}% HP)")
-
-    ko = result.get("ko_estimate")
-    if ko and isinstance(ko, dict):
-        ohko = ko.get("ohko_chance")
-        twohko = ko.get("twohko_chance")
-        if twohko is not None:
-            parts.append(f"2HKO={round(twohko * 100)}%")
-        elif ohko is not None:
-            parts.append(f"OHKO={round(ohko * 100)}%")
-
-    resolved = result.get("resolved")
-    if resolved and isinstance(resolved, dict):
-        if resolved.get("is_ohko"):
-            parts.append("OHKO")
-        stat_override = resolved.get("override_offensive_stat")
-        if stat_override:
-            parts.append(f"AtkStat={stat_override}")
-        eff = resolved.get("effectiveness_multiplier")
-        if eff is not None and eff != 1.0:
-            parts.append(f"Eff={eff}x")
-        if resolved.get("base_power_changed"):
-            parts.append(f"BP={resolved.get('base_power', '?')}")
-
-    # Must have at least one data field beyond the "Oracle:" prefix
-    if len(parts) <= 1:
-        return ""
-
-    # Join: "Oracle:" + comma-separated fields
-    return parts[0] + ",".join(parts[1:])
-
-
 def _apply_dynamic_calcs_to_move(
     move: Move,
     battle: Battle,
@@ -235,27 +186,11 @@ def _apply_dynamic_calcs_to_move(
     if dtype:
         dtype = dtype.capitalize()
 
-    # --- Oracle augmentation (guarded by flag, never breaks main flow) ---
-    if getattr(sim, "enable_showdown_oracle", False):
-        try:
-            if sim.oracle is None:
-                from pokechamp.showdown_oracle import ShowdownOracle
-
-                sim.oracle = ShowdownOracle()
-            from pokechamp.battle_state_mapper import battle_to_oracle_payload
-
-            payload = battle_to_oracle_payload(battle, user, target, move)
-            result = sim.oracle.query(payload)
-            if result and result.get("ok"):
-                oracle_info = _format_oracle_info(result)
-                if oracle_info:
-                    dynamic_info = (
-                        f"{dynamic_info} | {oracle_info}"
-                        if dynamic_info
-                        else oracle_info
-                    )
-        except Exception:
-            pass  # Oracle failure silently skipped
+    # NOTE: oracle dynamic-type/power augmentation now lives in the react
+    # battle tools (``battle_tools._resolve_move_outcome_via_oracle``), not in
+    # the prompt. Prompt-side oracle injection was an EXP-005/035 noise path
+    # (it never reached the sim core / tool layer); ``enable_showdown_oracle``
+    # now gates only that single, accurate tool-layer path.
 
     return dtype, dpower, dynamic_info
 

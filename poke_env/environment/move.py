@@ -205,6 +205,7 @@ class Move:
         "_is_empty",
         "_moves_dict",
         "_request_target",
+        "_type_override",
     )
 
     def __init__(self, move_id: str, gen: int, raw_id: Optional[str] = None):
@@ -229,6 +230,9 @@ class Move:
 
         self._dynamaxed_move = None
         self._request_target = None
+        # Per-instance override for the move type (dynamic moves whose type
+        # depends on weather/tera/form etc.). None → use the base entry type.
+        self._type_override: Optional[PokemonType] = None
 
     def __repr__(self) -> str:
         return f"{self._id} (Move object)"
@@ -812,10 +816,32 @@ class Move:
     @property
     def type(self) -> PokemonType:
         """
-        :return: Move type.
+        :return: Move type (overridable via the setter for dynamic moves).
         :rtype: PokemonType
         """
+        if self._type_override is not None:
+            return self._type_override
         return PokemonType.from_name(self.entry["type"])
+
+    @type.setter
+    def type(self, value) -> None:
+        """Override the move type for dynamic moves (weather ball, tera blast).
+
+        Accepts a ``PokemonType`` or a name string (``"water"``, ``"WATER"``).
+        Pass ``None`` to clear the override and fall back to the base type.
+        Invalid names are silently ignored (override cleared) so callers can
+        treat the type as best-effort.
+        """
+        if value is None:
+            self._type_override = None
+            return
+        if isinstance(value, PokemonType):
+            self._type_override = value
+            return
+        try:
+            self._type_override = PokemonType.from_name(str(value))
+        except Exception:
+            self._type_override = None
 
     @property
     def use_target_offensive(self) -> bool:

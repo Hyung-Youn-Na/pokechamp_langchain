@@ -14,7 +14,9 @@ and return human-readable strings that an LLM agent can reason over.
 
 from __future__ import annotations
 
+import hashlib
 import json
+import logging
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -32,6 +34,8 @@ from pokechamp.dynamic_move import (
     resolve_dynamic_priority,
     resolve_dynamic_type,
 )
+
+_logger = logging.getLogger("battle_tools")
 
 # ---------------------------------------------------------------------------
 # Battle context — injected into tools at call time
@@ -209,6 +213,111 @@ def _pokemon_to_dict(pokemon: Pokemon) -> dict:
     }
 
 
+def _active_state_hash(payload: dict) -> str:
+    """Stable hash of the type-affecting fields in an oracle payload."""
+    key_data = json.dumps(
+        {
+            "weather": payload.get("weather"),
+            "terrain": payload.get("terrain"),
+            "active_p1": payload.get("active_state", {}).get("p1"),
+            "active_p2": payload.get("active_state", {}).get("p2"),
+        },
+        sort_keys=True,
+        default=str,
+    )
+    return hashlib.md5(key_data.encode("utf-8")).hexdigest()
+
+
+def _clone_move_with_type(move: Move, resolved_type: str) -> Move:
+    """Return a copy of ``move`` with its type overridden.
+
+    The original Move (shared via ``active_pokemon.moves`` / move caches) is
+    left untouched. Uses the per-instance ``type`` setter so the shared
+    ``GenData.moves`` entry is never mutated.
+    """
+    gen = getattr(move, "_gen", None) or 9
+    clone = Move(str(move.id), gen=gen)
+    clone.type = resolved_type
+    return clone
+
+
+def _resolve_move_outcome_via_oracle(
+    ctx: BattleContext,
+    move: Move,
+    mon: Optional[Pokemon],
+    mon_opp: Optional[Pokemon],
+) -> Optional[dict]:
+    """Resolve a damaging move's type + power + damage via the Showdown oracle.
+
+    **All** damaging moves are queried (not just dynamic ones) so the agent
+    compares every move on the same Showdown-accurate yardstick. The previous
+    dynamic-only gate left generic moves on the LocalSim path, whose category
+    bias (special moves under-stated, physical over-stated) distorted
+    cross-move comparisons (EXP-046). Every failure path returns ``None``
+    (never raises) so callers fall back to the base move + LocalSim.
+
+    Returns a dict ``{"type", "base_power", "damage_pct_max", "ko"}`` where
+    ``type`` is a lowercase name or None, ``base_power``/``damage_pct_max``
+    are numbers or None, and ``ko`` is
+    ``{"ohko_chance", "twohko_chance"}`` or None. Returns ``None`` if the
+    oracle is disabled / unavailable / fails.
+    """
+    try:
+        if not getattr(ctx.sim, "enable_showdown_oracle", False):
+            return None
+        if mon is None or mon_opp is None:
+            return None
+        from pokechamp.battle_state_mapper import battle_to_oracle_payload
+        from pokechamp.showdown_oracle import (
+            _CACHE_MISS,
+            get_oracle_cache,
+            get_shared_oracle,
+        )
+
+        payload = battle_to_oracle_payload(ctx.battle, mon, mon_opp, move)
+        if not payload:
+            return None
+
+        move_id = str(payload.get("move_id") or move.id).lower()
+        atk = str(getattr(mon, "species", "")).lower()
+        defn = str(getattr(mon_opp, "species", "")).lower()
+        ash = _active_state_hash(payload)
+
+        cache = get_oracle_cache()
+        cached = cache.get(ash, move_id, atk, defn)
+        if cached is not _CACHE_MISS:
+            return cached  # outcome dict or None — both cached
+
+        oracle = get_shared_oracle()
+        if oracle is None:
+            cache.set(ash, move_id, atk, defn, None)
+            return None
+
+        result = oracle.query(payload)
+        outcome: Optional[dict] = None
+        if result and result.get("ok"):
+            resolved = result.get("resolved", {}) or {}
+            damage = result.get("damage", {}) or {}
+            ko = result.get("ko_estimate", {}) or {}
+            rtype = resolved.get("type")
+            rtype = rtype.lower() if isinstance(rtype, str) and rtype else None
+            outcome = {
+                "type": rtype,
+                "base_power": resolved.get("base_power"),
+                "damage_pct_max": damage.get("max_pct"),
+                "ko": {
+                    "ohko_chance": ko.get("ohko_chance"),
+                    "twohko_chance": ko.get("twohko_chance"),
+                },
+            }
+        cache.set(ash, move_id, atk, defn, outcome)
+        _logger.debug("oracle outcome move=%s outcome=%s", move_id, outcome)
+        return outcome
+    except Exception as exc:  # noqa: BLE001 — never raise to tool callers
+        _logger.debug("oracle outcome resolve failed: %s", exc)
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Tools
 # ---------------------------------------------------------------------------
@@ -248,6 +357,17 @@ def calculate_damage(
     except Exception:
         return json.dumps({"error": f"Move '{move_name}' not found"})
 
+    # Dynamic moves (weather ball / tera blast / ivy cudgel / facade /
+    # knockoff / hex etc.): resolve the real type AND power via the Showdown
+    # oracle. The type is overridden on the move so the sim's effectiveness /
+    # STAB calc is accurate; the power is NOT overridden on the move (that
+    # would double-correct with sim.modify_base_power — the EXP-035 trap),
+    # instead the oracle's accurate damage reflects the power directly below.
+    outcome = _resolve_move_outcome_via_oracle(ctx, move, mon, mon_opp)
+    resolved_type = outcome["type"] if outcome else None
+    if resolved_type:
+        move = _clone_move_with_type(move, resolved_type)
+
     # Reject status / non-damaging moves — they don't produce meaningful
     # damage numbers and would return absurd turns_to_ko values.
     move_cat = str(move.category).upper() if move.category else ""
@@ -275,6 +395,27 @@ def calculate_damage(
             mon, move, mon_opp, ctx.sim, return_hp=True
         )
 
+        # Oracle damage correction: replace the LocalSim HP/turns estimate with
+        # the oracle's Showdown-accurate damage. Every damaging move is now
+        # resolved by the oracle (not just dynamic ones) so all moves share one
+        # yardstick — the LocalSim path's category bias (special under-stated,
+        # physical over-stated) used to distort cross-move comparisons (EXP-046).
+        # The power is NOT overridden on the move — the damage observation
+        # (hp_lost) already reflects the resolved power, avoiding both the
+        # EXP-035 double-correction with sim.modify_base_power and the need for
+        # a separate base_power provenance field.
+        # Only overwrite the sim estimate when the oracle produced a real
+        # damage number. A zero (|cant|nopp| / invalid matchup) must NOT
+        # replace the sim value — it would report hp_lost 0% while leaving the
+        # sim-derived turns_to_ko, yielding a self-contradictory observation.
+        if outcome and (outcome.get("damage_pct_max") or 0) > 0:
+            hp2 = max(0, round(100 - outcome["damage_pct_max"]))
+            ko = outcome.get("ko") or {}
+            if ko.get("ohko_chance") is not None and ko["ohko_chance"] >= 0.5:
+                turns = 1
+            elif ko.get("twohko_chance") is not None and ko["twohko_chance"] >= 0.5:
+                turns = 2
+
         result = {
             "move": move_name,
             "attacker": str(mon.species),
@@ -284,6 +425,9 @@ def calculate_damage(
             "turns_to_ko": turns,
             "estimated_remaining_hp": round(remaining_hp, 3) if remaining_hp else None,
         }
+        if resolved_type:
+            result["effective_type"] = resolved_type.capitalize()
+            result["type_source"] = "showdown_oracle"
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
         return json.dumps({"error": str(e)})
@@ -571,6 +715,26 @@ def simulate_turn(player_move: str, estimated_opponent_move: str) -> str:
         player_m = _find_move(player_move, ctx)
         opp_m = _find_move(estimated_opponent_move, ctx)
 
+        # Resolve BOTH moves via the oracle on the same Showdown-accurate
+        # yardstick (player and opponent). Each move's power is reflected via
+        # the hp_lost correction below (not overridden on the move — EXP-035
+        # double-correction guard). Falls back to the base move on any failure.
+        player_outcome = _resolve_move_outcome_via_oracle(
+            ctx, player_m, mon, mon_opp
+        )
+        player_resolved_type = player_outcome["type"] if player_outcome else None
+        if player_resolved_type:
+            player_m = _clone_move_with_type(player_m, player_resolved_type)
+
+        # Opponent's estimated move — attacker is the opponent active, target
+        # is the player active (argument order drives payload actor mapping).
+        opp_outcome = _resolve_move_outcome_via_oracle(
+            ctx, opp_m, mon_opp, mon
+        )
+        opp_resolved_type = opp_outcome["type"] if opp_outcome else None
+        if opp_resolved_type:
+            opp_m = _clone_move_with_type(opp_m, opp_resolved_type)
+
         # Save current HP for comparison
         hp_before_player = mon.current_hp_fraction
         hp_before_opp = mon_opp.current_hp_fraction
@@ -579,6 +743,15 @@ def simulate_turn(player_move: str, estimated_opponent_move: str) -> str:
         hp1, hp2, m1_ok, m2_ok = ctx.sim.calculate_remaining_hp(
             p1=mon, p2=mon_opp, m1=player_m, m2=opp_m
         )
+
+        # Oracle damage correction: player's damage → opponent HP (hp2);
+        # opponent's damage → player HP (hp1). Guard: only apply a real (>0)
+        # oracle damage; a zero (|cant|nopp| / invalid matchup) keeps the sim
+        # value.
+        if player_outcome and (player_outcome.get("damage_pct_max") or 0) > 0:
+            hp2 = max(0, round(100 - player_outcome["damage_pct_max"]))
+        if opp_outcome and (opp_outcome.get("damage_pct_max") or 0) > 0:
+            hp1 = max(0, round(100 - opp_outcome["damage_pct_max"]))
 
         result = {
             "player_move": player_move,
@@ -590,6 +763,12 @@ def simulate_turn(player_move: str, estimated_opponent_move: str) -> str:
             "player_move_success": m1_ok,
             "opponent_move_success": m2_ok,
         }
+        if player_resolved_type:
+            result["player_effective_type"] = player_resolved_type.capitalize()
+            result["player_type_source"] = "showdown_oracle"
+        if opp_resolved_type:
+            result["opponent_effective_type"] = opp_resolved_type.capitalize()
+            result["opponent_type_source"] = "showdown_oracle"
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
         return json.dumps({"error": str(e)})
