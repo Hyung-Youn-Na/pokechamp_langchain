@@ -4,11 +4,12 @@
 
 ## 역할
 
-`oracle-worker.js`는 react 데미지 도구(`calculate_damage`/`simulate_turn`)가 **Showdown 엔진**으로 단일 무브의 정확한 damage/type/KO를 계산하기 위한 stdin/stdout JSON-line 워커다. `pokechamp/showdown_oracle.py`(`get_shared_oracle()`)가 이 worker를 subprocess로 띄워 payload를 보낸다.
+`oracle-worker.js`는 react 데미지 도구(`calculate_damage`/`simulate_turn`)가 **Showdown 엔진**으로 단일 무브의 정확한 damage/type/KO를 계산하기 위한 stdin/stdout JSON-line 워커다. `pokechamp/showdown_oracle.py`(`get_shared_oracle()`)가 subprocess로 띄워 payload를 보낸다.
 
-- 동적 타입 무브(weatherball/terablast/ivycudgel 등): `onModifyType` 콜백 실행 → resolved type.
+- 동적 타입 무브(weatherball/terablast/ivycudgel 등): `onModifyType` 콜백 → resolved type.
 - 동적 위력 무브(facade/knockoff/hex 등): `runMove`로 정확 damage.
 - side_conditions(Reflect/Light Screen/Aurora Veil): wall 보정.
+- **N-roll 난수 분산**: 동일 상태에서 `roll_count`(기본 8)개 seed로 데미지의 0.85–1.0 난수를 샘플링 → damage `min`/`max`/`median` + KO 확률(비율).
 
 ## 전제
 
@@ -48,18 +49,18 @@ node tools/build        # → dist/sim/index.js 생성 (worker가 require)
  * Payload (pokechamp/battle_state_mapper.py: battle_to_oracle_payload):
  *   id, format, seed[4], actor_side, actor_slot, target_side, target_slot,
  *   move_id, weather, terrain, pseudoweather, team_p1, team_p2 (packed),
- *   active_state{p1:[...], p2:[...]}, side_conditions{p1:{}, p2:{}}
+ *   active_state{p1:[...], p2:[...]}, side_conditions{p1:{}, p2:{}}, roll_count
  *
  * Response:
  *   { ok, move_id,
  *     resolved{base_power, base_power_changed, base_power_reason, is_ohko,
  *              override_offensive_stat, effectiveness_multiplier, type},
- *     damage{min, max, min_pct, max_pct},
- *     ko_estimate{ohko_chance, twohko_chance} }
+ *     damage{min, max, min_pct, max_pct, median, median_pct},
+ *     ko_estimate{ohko_chance, twohko_chance} }   (N-roll: damage는 분산, KO는 비율)
  *
  * 계약: tests/test_showdown_oracle.py (@pytest.mark.oracle)
  *   facade+burn→140, knockoff+item→97, fissure→OHKO, bodypress→def,
- *   freezedry/water→≥2.0
+ *   freezedry/water→≥2.0, N-roll range, roll_count=1 호환
  */
 const path = require("path");
 const readline = require("readline");
@@ -137,7 +138,7 @@ function buildBattle(payload) {
 	return battle;
 }
 
-function resolve(battle, payload) {
+function singleResolve(battle, payload) {
 	const actorIdx = sideIdx(payload.actor_side);
 	const targetIdx = sideIdx(payload.target_side);
 	const source = battle.sides[actorIdx].active[0];
@@ -221,6 +222,54 @@ function resolve(battle, payload) {
 			ohko_chance: is_ohko ? 1.0 : 0.0,
 			twohko_chance: is_ohko ? 1.0 : ((2 * damage >= maxhp) ? 1.0 : 0.0),
 		},
+		_maxhp: maxhp,
+	};
+}
+
+// N-roll wrapper: 동일 (상태·무브·매치업)에서 seed만 변형해 데미지의 난수
+// 분포(0.85–1.0 ×)를 샘플링 → min/max/median + KO 확률(비율). 타입/BP/상성은
+// roll 무관(날씨/tera 고정)이므로 첫 결과를 사용. roll_count 기본 8(미지정/1=단일).
+function resolve(payload) {
+	const N = Math.max(1, Math.min(64, (((payload && payload.roll_count) || 8)) | 0));
+	const baseSeed = (payload && payload.seed && payload.seed.length === 4)
+		? payload.seed.slice() : [42, 1337, 256, 999];
+	const rolls = [];
+	for (let i = 0; i < N; i++) {
+		// roll index로 seed 전체를 섞어 매 roll 다른 난수 시퀀스(0.85–1.0 roll) 유도.
+		const off = [0x9E3779B9, 0x85EBCA77, 0xC2B2AE3D, 0x27D4EB2F];
+		const seed = baseSeed.map((s, j) => (s + i * off[j]) >>> 0);
+		let battle;
+		try { battle = buildBattle(Object.assign({}, payload, { seed })); } catch (e) { continue; }
+		try { rolls.push(singleResolve(battle, payload)); } catch (e) {}
+	}
+	if (!rolls.length) return { ok: false, move_id: payload && payload.move_id, error: "all rolls failed" };
+	const ok = rolls.filter(r => r && r.ok);
+	if (!ok.length) return rolls[0];
+	const base = ok[0];
+	const maxhp = base._maxhp || 1;
+	const dmgs = ok.map(r => r.damage.max).sort((a, b) => a - b);
+	const min = dmgs[0];
+	const max = dmgs[dmgs.length - 1];
+	const median = dmgs[Math.floor(dmgs.length / 2)];
+	const ohko = ok.filter(r => r.ko_estimate && r.ko_estimate.ohko_chance >= 0.5).length;
+	const twohko = ok.filter(r => r.ko_estimate && r.ko_estimate.twohko_chance >= 0.5).length;
+	const pct = (d) => +(d / maxhp * 100).toFixed(1);
+	return {
+		ok: true,
+		move_id: payload.move_id,
+		resolved: base.resolved,
+		damage: {
+			min: min,
+			max: max,
+			min_pct: pct(min),
+			max_pct: pct(max),
+			median: median,
+			median_pct: pct(median),
+		},
+		ko_estimate: {
+			ohko_chance: +(ohko / ok.length).toFixed(3),
+			twohko_chance: +(twohko / ok.length).toFixed(3),
+		},
 	};
 }
 
@@ -234,8 +283,7 @@ rl.on("line", (line) => {
 		return;
 	}
 	try {
-		const battle = buildBattle(payload);
-		send(resolve(battle, payload));
+		send(resolve(payload));
 	} catch (e) {
 		send({ ok: false, move_id: payload && payload.move_id, error: e.message });
 	}
@@ -255,8 +303,9 @@ ls pokemon-showdown/dist/sim/index.js                     # 빌드产物 존재
 
 ```sh
 uv run python -m pytest tests/test_showdown_oracle.py -m oracle -v
-# 기대: 17 passed (facade→140, knockoff→97, fissure→OHKO, bodypress→def,
-#                  freezedry→2x, weatherball/terablast type, lightscreen 절반, 일반 무브 damage 등)
+# 기대: 18 passed (facade→140, knockoff→97, fissure→OHKO, bodypress→def,
+#                  freezedry→2x, weatherball/terablast type, lightscreen 절반,
+#                  일반 무브 damage, N-roll range/roll_count=1 호환)
 ```
 
 전부 PASS면 worker + 빌드 + payload 매핑이 정상. 실패 시:
@@ -268,22 +317,26 @@ uv run python -m pytest tests/test_showdown_oracle.py -m oracle -v
 
 아래 항목이 누락되면 oracle이 틀린 결과를 낸다. 전체 소스에 이미 포함됨.
 
-1. **resolved type (ModifyType, runMove 전)** — `resolve()` L132-139. weatherball/terablast/ivycudgel 등의 `onModifyType`을 `runMove` **전**에 `singleEvent`+`runEvent("ModifyType")`으로 실행. `typeMove`는 `let`(재할당). runMove 후엔 source/field 변형으로 콜백이 안 먹음.
+1. **resolved type (ModifyType, runMove 전)** — `singleResolve()` L132-139. weatherball/terablast/ivycudgel 등의 `onModifyType`을 `runMove` **전**에 `singleEvent`+`runEvent("ModifyType")`으로 실행. `typeMove`는 `let`. runMove 후엔 source/field 변형으로 콜백이 안 먹음.
 2. **teraType 주입** — `applyActiveState()` L71-77. terablast가 `pokemon.teraType`를 읽으므로 `st.tera_type` 주입.
 3. **weather/terrain source** — `buildBattle()` L92-94. `setWeather(weather, fieldSource)`에 source 전달(durationCallback 요구).
 4. **active HP/status/boost 주입** — `applyActiveState()`. packed team엔 HP/boost/tera가 없으므로 payload `active_state`에서 주입.
-5. **Wall 직접 보정** — `resolve()` L148-160. Showdown의 side-condition `ModifyDamage` 이벤트가 hand-built Battle(start 없음)에서 **발화하지 않으므로**, Reflect/Light Screen/Aurora Veil damage × 0.5를 runMove 결과에 직접 적용. (crit 무시는 미모델링 — 드물고 runMove의 crit가 delta에 이미 반영됨.)
-6. **damage = runMove 전후 HP 차이** — L142-146. `runMove`가 `|cant|nopp|`로 조용히 return하면 0이 되며, 이 경우 `battle_tools.py`의 `damage_pct_max > 0` 가드가 sim fallback을 보존한다.
+5. **Wall 직접 보정** — `singleResolve()` L148-160. Showdown의 side-condition `ModifyDamage` 이벤트가 hand-built Battle(start 없음)에서 **발화하지 않으므로**, Reflect/Light Screen/Aurora Veil damage × 0.5를 runMove 결과에 직접 적용.
+6. **damage = runMove 전후 HP 차이** — L142-146. `runMove`가 `|cant|nopp|`로 조용히 return하면 0이 되며, 이 경우 `battle_tools.py`의 `damage_pct_median > 0` 가드가 sim fallback을 보존한다.
+7. **N-roll 난수 분산** — `resolve(payload)` L196-238. `roll_count`(기본 8)개 seed로 `singleResolve`를 반복(각 seed 전체 변형)해 데미지 난수(0.85–1.0) 샘플링 → `damage.min/max/median` + `ko_estimate`를 **비율**(ohko 발생 횟수/N)로. 타입/BP/상성은 roll 무관(날씨/tera 고정)이라 첫 결과 사용. `roll_count=1`이면 단일 roll(min==max)로 현행 호환.
 
 ## 실험 검증 이력
 
 - **EXP-045**: attacker 식별 버그(worker `active[0]`=team 첫째 + mapper active 정렬 누락) → damage 0%. mapper(`battle_state_mapper.py:_pack_team` lead)에서 해결(worker 수정 아님).
 - **EXP-046**: 동적 무브 damage 정확화 후 sim/oracle 혼합 척도 편향.
-- **EXP-047**: 전무브 oracle 통일 + 위 wall 직접 보정 → 승률 63.3% (+6.6pp vs baseline). 상세: `docs/analysis/exp-047-react-glm51-analysis.md`.
+- **EXP-047**: 전무브 oracle 통일 + wall 직접 보정 → 승률 63.3% (+6.6pp vs baseline).
+- **EXP-048(예정)**: N-roll 난수 분산(min/max/median) → 샘플 노이즈 감소 효과 측정.
+
+상세: `docs/analysis/exp-045~047-*-analysis.md`.
 
 ## 참조
 
 - Python 호출부: `pokechamp/showdown_oracle.py`(`ShowdownOracle`, `get_shared_oracle`, `OracleResultCache`).
 - payload 생성: `pokechamp/battle_state_mapper.py:battle_to_oracle_payload`(actor/target lead 정렬 포함).
-- 도구 통합: `pokechamp/battle_tools.py`(`_resolve_move_outcome_via_oracle`, 게이트 제거·opp_m 통일).
+- 도구 통합: `pokechamp/battle_tools.py`(`_resolve_move_outcome_via_oracle`, N-roll median/min/max 관측).
 - 테스트: `tests/test_showdown_oracle.py`(`@pytest.mark.oracle`).

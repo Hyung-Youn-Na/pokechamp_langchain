@@ -287,7 +287,7 @@ class TestResolveMoveOutcomeViaOracle:
             oracle.query.return_value = {
                 "ok": True,
                 "resolved": {"type": "water", "base_power": 50},
-                "damage": {"max_pct": 35.0},
+                "damage": {"min_pct": 33.0, "median_pct": 35.0, "max_pct": 37.0},
                 "ko_estimate": {"ohko_chance": 0.0, "twohko_chance": 1.0},
             }
             gso.return_value = oracle
@@ -300,7 +300,9 @@ class TestResolveMoveOutcomeViaOracle:
         assert outcome == {
             "type": "water",
             "base_power": 50,
-            "damage_pct_max": 35.0,
+            "damage_pct_median": 35.0,
+            "damage_pct_min": 33.0,
+            "damage_pct_max": 37.0,
             "ko": {"ohko_chance": 0.0, "twohko_chance": 1.0},
         }
         oracle.query.assert_called_once()

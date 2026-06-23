@@ -304,6 +304,10 @@ def _resolve_move_outcome_via_oracle(
             outcome = {
                 "type": rtype,
                 "base_power": resolved.get("base_power"),
+                "damage_pct_median": damage.get("median_pct")
+                if damage.get("median_pct") is not None
+                else damage.get("max_pct"),
+                "damage_pct_min": damage.get("min_pct"),
                 "damage_pct_max": damage.get("max_pct"),
                 "ko": {
                     "ohko_chance": ko.get("ohko_chance"),
@@ -408,8 +412,9 @@ def calculate_damage(
         # damage number. A zero (|cant|nopp| / invalid matchup) must NOT
         # replace the sim value — it would report hp_lost 0% while leaving the
         # sim-derived turns_to_ko, yielding a self-contradictory observation.
-        if outcome and (outcome.get("damage_pct_max") or 0) > 0:
-            hp2 = max(0, round(100 - outcome["damage_pct_max"]))
+        dmg_median = outcome.get("damage_pct_median") if outcome else None
+        if outcome and (dmg_median or 0) > 0:
+            hp2 = max(0, round(100 - dmg_median))
             ko = outcome.get("ko") or {}
             if ko.get("ohko_chance") is not None and ko["ohko_chance"] >= 0.5:
                 turns = 1
@@ -425,6 +430,17 @@ def calculate_damage(
             "turns_to_ko": turns,
             "estimated_remaining_hp": round(remaining_hp, 3) if remaining_hp else None,
         }
+        # N-roll damage range (난수 분산 반영). median 단일 값에 min/max 부가.
+        if outcome:
+            dmin = outcome.get("damage_pct_min")
+            dmax = outcome.get("damage_pct_max")
+            if (
+                dmin is not None
+                and dmax is not None
+                and not (dmin == dmax == dmg_median)
+            ):
+                result["hp_lost_min"] = f"{round(dmin)}%"
+                result["hp_lost_max"] = f"{round(dmax)}%"
         if resolved_type:
             result["effective_type"] = resolved_type.capitalize()
             result["type_source"] = "showdown_oracle"
@@ -744,14 +760,15 @@ def simulate_turn(player_move: str, estimated_opponent_move: str) -> str:
             p1=mon, p2=mon_opp, m1=player_m, m2=opp_m
         )
 
-        # Oracle damage correction: player's damage → opponent HP (hp2);
-        # opponent's damage → player HP (hp1). Guard: only apply a real (>0)
-        # oracle damage; a zero (|cant|nopp| / invalid matchup) keeps the sim
-        # value.
-        if player_outcome and (player_outcome.get("damage_pct_max") or 0) > 0:
-            hp2 = max(0, round(100 - player_outcome["damage_pct_max"]))
-        if opp_outcome and (opp_outcome.get("damage_pct_max") or 0) > 0:
-            hp1 = max(0, round(100 - opp_outcome["damage_pct_max"]))
+        # Oracle damage correction (median 기반; N-roll 난수 분산 반영):
+        # player's damage → opponent HP (hp2); opponent's → player HP (hp1).
+        # Guard: only apply a real (>0) median; zero keeps the sim value.
+        pmed = player_outcome.get("damage_pct_median") if player_outcome else None
+        omed = opp_outcome.get("damage_pct_median") if opp_outcome else None
+        if player_outcome and (pmed or 0) > 0:
+            hp2 = max(0, round(100 - pmed))
+        if opp_outcome and (omed or 0) > 0:
+            hp1 = max(0, round(100 - omed))
 
         result = {
             "player_move": player_move,
@@ -763,6 +780,19 @@ def simulate_turn(player_move: str, estimated_opponent_move: str) -> str:
             "player_move_success": m1_ok,
             "opponent_move_success": m2_ok,
         }
+        # N-roll damage range (난수 분산). player가 가한 damage는 opponent HP,
+        # opp가 가한 damage는 player HP 쪽에 부가.
+        for outcome, med, hpkey in (
+            (player_outcome, pmed, "opponent_hp_lost"),
+            (opp_outcome, omed, "player_hp_lost"),
+        ):
+            if not outcome:
+                continue
+            dmin = outcome.get("damage_pct_min")
+            dmax = outcome.get("damage_pct_max")
+            if dmin is not None and dmax is not None and not (dmin == dmax == med):
+                result[f"{hpkey}_min"] = f"{round(dmin)}%"
+                result[f"{hpkey}_max"] = f"{round(dmax)}%"
         if player_resolved_type:
             result["player_effective_type"] = player_resolved_type.capitalize()
             result["player_type_source"] = "showdown_oracle"

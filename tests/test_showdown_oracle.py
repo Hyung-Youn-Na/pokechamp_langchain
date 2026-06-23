@@ -1334,3 +1334,25 @@ def test_generic_move_returns_damage(real_oracle: Any) -> None:
     result = real_oracle.query(payload)
     assert result["ok"] is True
     assert result["damage"]["max_pct"] > 0
+
+
+@pytest.mark.oracle
+def test_nroll_damage_range(real_oracle: Any) -> None:
+    """roll_count=N samples the 0.85–1.0 damage spread → min ≤ median ≤ max.
+    roll_count=1 collapses to a single sample (min == max, legacy compat)."""
+    base = _make_oracle_payload(
+        "surf", team_p1=_SQUIRTLE_TEAM, team_p2=_BLASTOISE_TEAM
+    )
+    payload_n = dict(base)
+    payload_n["roll_count"] = 8
+    r_n = real_oracle.query(payload_n)
+    assert r_n["ok"] is True
+    d = r_n["damage"]
+    assert d["min_pct"] <= d["median_pct"] <= d["max_pct"]
+    assert "median_pct" in d  # N-roll 응답 필드
+
+    payload_1 = dict(base)
+    payload_1["roll_count"] = 1
+    r_1 = real_oracle.query(payload_1)
+    assert r_1["ok"] is True
+    assert r_1["damage"]["min_pct"] == r_1["damage"]["max_pct"]  # 단일 roll
