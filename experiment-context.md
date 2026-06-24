@@ -112,15 +112,11 @@ uv run python scripts/battles/local_1v1.py \
 │   ├── io-glm51/              #   ← EXP-032 (io, 53.3%)
 │   ├── react-glm51/           #   ← EXP-031 (react, 76.7%)
 │   └── minimax-glm51/         #   ← EXP-033 (minimax, 80.0%)
-├── fixed-baselines/           # ★ 고정 팀 baseline (신규) — ablation 격리 비교 기준 (§9)
-│   ├── manifests/v1.json      #   공통 고정 팀 manifest (player competitive × opponent modern_replays)
-│   ├── io-glm51/              #   고정 팀 io baseline (측정 후)
-│   ├── react-glm51/           #   고정 팀 react baseline (측정 후)
-│   └── minimax-glm51/         #   고정 팀 minimax baseline (측정 후)
 ├── active/                    # 현재/다음 실험 (번호는 new_experiment.py 가 자동 할당)
 │   └── EXP-NNN-name/
-├── archive/                   # 종료된 실험 (EXP-001~030, EXP-TEST)
-│   └── EXP-NNN-name/
+├── archive/                   # 종료된 실험 (EXP-001~030, EXP-TEST, + 2026-06-19-fix123-prefix-reset)
+│   ├── EXP-NNN-name/
+│   └── 2026-06-19-fix123-prefix-reset/  # 구 fixed-baselines + EXP-042/043 (pre-fix 리셋·§9 원칙 위반으로 무효)
 └── model-timing/              # 모델별 응답속도 벤치마크
 ```
 
@@ -135,7 +131,7 @@ uv run python scripts/battles/local_1v1.py \
 
 - `baselines/` 3종(io/react/minimax)은 **동일 조건**(glm-5.1, temp 0.3, seed 42, N=30, 상대 abyssal)으로 공정 비교 가능한 공식 baseline.
 - **임의 수정·재실행 금지**. ablation의 "변경 1개 원칙"(섹션 0-4) 비교 기준이므로 고정.
-- `fixed-baselines/` 3종도 동일 보존 규칙 적용 — 고정 팀 manifest(`manifests/v1.json`)와 함께 **ablation 격리 비교**의 기준(§9). 랜덤 팀 `baselines/`와는 별개 체계.
+- (구) `fixed-baselines/` 3종 + manifest(`v1.json`/`dynamic-v1.json`)은 pre-fix 리셋·§9 manifest 원칙 위반으로 `archive/2026-06-19-fix123-prefix-reset/` 으로 이동됨. 새 고정 팀 baseline은 §9 원칙(player=실험변수 / opponent=통제) 기반 manifest 재설계 후 측정.
 - 재측정 필요 시 `active/EXP-0NN` 신규 번호로 새 실험 생성, baseline은 그대로 유지.
 
 ### README.md 템플릿
@@ -186,9 +182,9 @@ uv run python scripts/battles/local_1v1.py \
 
 > ablation은 위 3종 중 하나를 기준으로 변수 1개만 변경. **다음 EXP 번호**는 `scripts/exp/new_experiment.py` 가 자동 할당한다 (§8.3).
 
-### 고정 팀 dynamic-resolve baseline (★ 동일 dynamic-v1 매치업 공정 비교)
+### 고정 팀 dynamic-resolve baseline (⚠️ deprecated · 아카이빙됨 — §9 원칙 위반)
 
-> 조건: 위와 동일하되 `--team_mode fixed --team_manifest fixed-baselines/manifests/dynamic-v1.json`(dynamic score 상위 팀, player rank1-30 × opponent rank31-60, disjoint). 경로: `.temp/experiments/fixed-baselines/`. 랜덤 baseline(`baselines/`)은 평균 성능 비교용, **dynamic baseline은 EXP-035~038(sim dynamic resolve fix) 재검증의 비교 기준**(같은 매치업이어야 fix 효과가 팀 노이즈 없이 드러남, §9).
+> **상태**: pre-fix 리셋 + manifest 구성 원칙(§9) 재정비로 **무효화 → 아카이빙**(`archive/2026-06-19-fix123-prefix-reset/`). 원래 조건은 `--team_manifest .../dynamic-v1.json`(player rank1-30 × opponent rank31-60, *같은 dynamic 기준* disjoint)이었으나, 이는 **opponent도 변경점에 큐레이션된 원칙 2 위반**. 아래 수치는 역사 참고용.
 
 | Baseline (dynamic) | algo | 승률 | 평균 턴 | LLM/판 | prompt tok | comp tok | vs random |
 |--------------------|------|------|---------|--------|------------|----------|-----------|
@@ -199,6 +195,20 @@ uv run python scripts/battles/local_1v1.py \
 **핵심 (★)**: dynamic 매치업(동적 무브 밀집 강팀)에서 모든 알고리즘 승률 하락 + 턴 대폭 단축(동적 위력 무브의 빠른 KO). **minimax −26.7pp가 최대** → minimax가 sim dynamic resolve 정확도에 가장 크게 의존함이 입증됨(react/io는 LLM 직접 추론으로 완충). 이 dynamic 매치업 + minimax 조합이 EXP-035~038 fix1/2/3(시뮬레이터 정확도) 효과를 승률로 측정하기에 가장 민감한 지점. 분석 [`docs/analysis/fixed-baselines-dynamic-baseline-analysis.md`](docs/analysis/fixed-baselines-dynamic-baseline-analysis.md).
 
 > **opponent 필드 기록 안내 (abyssal).** `--opponent_name abyssal`일 때 config의 `opponent_backend`/`opponent_algorithm`은 argparse 원값(기본 `gemini-2.5-pro`/`io`)의 직렬화일 뿐, abyssal 동작과 무관한 **노이즈 필드**. `AbyssalPlayer`(`poke_env/player/baselines.py:559`)은 LLM 미사용 순수 휴리스틱(`Player` 서브클래스)이며, `get_llm_player`(`poke_env/player/team_util.py:307-314`)의 abyssal 분기가 `backend`/`algo` 인자를 무시한다. ablation 공정성을 위해 baseline/EXP 모두 동일값(`abyssal`/`gemini-2.5-pro`/`io`) 유지 — `verify_single_change.py`가 값 변경을 §0-4 위반(FAIL)으로 잡는다.
+
+### 고정 팀 oracle 시리즈 (dynamic-v2)
+
+> **조건**: 고정 팀 모드, manifest `.temp/experiments/fixed-baselines/manifests/dynamic-v2.json` (player·opponent 모두 `modern_replays`(25,192) 풀에서 30 매치업, sha256:`564353a6`), glm-5.1, react, temp 0.3, seed 42, N=30. 동일 30 매치업으로 **paired 비교** 가능. 랜덤팀 baseline(위)보다 dynamic 무브 밀집 매치업이라 승률이 낮은 구간.
+
+| EXP | 변경점 (baseline=EXP-044) | 승률 | 평균턴 | 비고 |
+|-----|---------------------------|------|--------|------|
+| EXP-044 | oracle **off** (baseline) | 56.7% (17/30) | 16.8 | dynamic-v2 기반 react baseline. 분석 보고서 없음(045~048이 인용) |
+| EXP-045 | oracle on (pre-fix) | 53.3% (16/30) | 17.7 | 동적 위력 무브 damage=0 버그(attacker 식별 결함). `docs/analysis/exp-045-react-glm51-analysis.md` |
+| EXP-046 | oracle attacker 식별 fix | 43.3% (13/30) | 16.6 | damage 정확화→단기 damage 맹신으로 −13.4pp. `docs/analysis/exp-046-react-glm51-analysis.md` |
+| EXP-047 | oracle **전무브 통일** | **63.3% (19/30)** | 16.8 | 혼합 척도 편향 해소, +6.6pp vs 044. `docs/analysis/exp-047-react-glm51-analysis.md` |
+| EXP-048 | oracle N-roll 난수 분산 | 53.3% (16/30) | 16.4 | 정확도 한계 도달 → react/langGraph 구조 병목 확인. `docs/analysis/exp-048-react-glm51-analysis.md` |
+
+**핵심 (★)**: "정확성≠승률" — oracle damage 정확도 향상은 한계 도달. 병목은 **react/langGraph 구조**(damage observation → 전략 변환). → **EXP-048 이후 연구 방향 전환**: 정확도 영역(oracle/sim fix) → **구조 영역(react/langGraph)**. EXP-049a(턴 간 메모리) 🔵 진행 중, EXP-049b(다단계 노드)/049c(Smogon 메타 도구) 로드맵 — [`docs/architecture/react-architecture-redesign.md`](docs/architecture/react-architecture-redesign.md).
 
 ### 전체 실험 이력
 
@@ -233,6 +243,14 @@ uv run python scripts/battles/local_1v1.py \
 | EXP-036 | sim 행동순서 정확도(fix1) | 2026-06-17 | ✅ 완료 | 80.0% (24/30) | **+3.3pp vs react baseline**(비유의 z≈0.31 p≈0.75, 하락 아닌 상승). 시뮬레이터 코어 버그 시리즈 1/3. `local_simulation.py calculate_remaining_hp` priority 전 범위 정렬(기존 `==1`만 → protect/Extreme Speed/Sucker Punch 등 전 범위 + p2 priority) + protosynthesis p2 인자 복붙 fix. 비용 213k/76.5 LLM 유지. 단위 테스트 5/5 PASS. 패배 808(111턴)은 ivycudgel 거짓 OHKO 매몰(EXP-038 영역). 분석 `docs/analysis/exp-036-react-glm51-analysis.md`. →EXP-037(protect/item), EXP-038(ivycudgel/tera) |
 | EXP-037 | sim protect/item(fix2) | 2026-06-17 | ⚠️ 보류 | 66.7% (20/30) | −13.3pp vs EXP-036(80%)(비유의 z≈−1.17 p≈0.24, 인과 불명). protect 계열 0데미지(early return, 최소1데미지규칙 우회) + LifeOrb명 정규화(`"LifeOrb"`→`"lifeorb"`). fix1 누적. fix2는 **올바른 동작**(단위테스트 3/3, showdown 스펙)이라 기각 아닌 **보류**. LifeOrb는 metamon 팀 빈도 낮아 효과 미미; protect tool_result 71→15·LLM언급 161→100 감소, ohko언급 323→371 증가, 보수화 지표(setup/heal)는 변화 없음. long구간 62.5%→45.5%. 분석 `docs/analysis/exp-037-react-glm51-analysis.md`. EXP-038(fix3) 누적 후 fix2 순효과 재평가 |
 | EXP-038 | sim tera/ivycudgel(fix3) | 2026-06-18 | ⚠️ 무효(시리즈 완결) | 66.7% (20/30) | 승률·거짓OHKO(16.7%) 변화 없음. **z(037 vs 038)=0.00** → fix3 단독 효과 이론상 0 확인. tera 언급 **0.7%**(16/2254턴)·ivycudgel/ogerpon 등장 3배틀로 fix3 영향 범위 0(abyssal 휴리스틱이라 tera·Ogerpon 극히 드묾). **시리즈 종합**: fix1(80%) > fix1+2(66.7%)=fix1+2+3(66.7%). fix2가 시리즈 하락 원인(037=038 일관, 비유의 z≈−1.17), fix3 무효. 단위테스트 12/12 PASS. **핵심 교훈: "sim 정확도≠승률"** — fix1(매턴 영향)만 전이, fix2/3(조건부/희귀 기믹)는 비전이·역효과. 근본 병목은 agent 맹신(EXP-034 P0-1) → 다음 레버는 sim이 아닌 **agent self-verification + 팀분석**. 분석 `docs/analysis/exp-038-react-glm51-analysis.md`. 시리즈 권고: fix1 단독 채택(80%), fix2 기각/재검토, fix3는 코드 유지(tera 빈번 매칭서 재검증) |
+| EXP-039~041 | — | — | ⏭️ SKIP | — | 번호 미사용 |
+| EXP-042/043 | fixed-baseline dynamic-v1 재검증 | 2026-06-19 | ❌ 무효화 | — | §9.2 원칙 위반 → `archive/2026-06-19-fix123-prefix-reset/` 이동. dynamic-v2 기반으로 재설계 |
+| EXP-044 | react oracle baseline (oracle off) | 2026-06-22 | ✅ 완료 | 56.7% (17/30) | 고정팀 dynamic-v2 oracle ablation baseline. 분석 보고서 없음(045~048이 인용) |
+| EXP-045 | react oracle on (pre-fix) | 2026-06-22 | ✅ 완료 | 53.3% (16/30) | 동적 위력 무브 damage=0 버그(attacker 식별 결함) |
+| EXP-046 | react oracle attacker fix | 2026-06-22 | ✅ 완료 | 43.3% (13/30) | damage 정확화→단기 damage 맹신으로 −13.4pp |
+| EXP-047 | react oracle 전무브 통일 | 2026-06-23 | ✅ 완료 | 63.3% (19/30) | 혼합 척도 편향 해소, +6.6pp vs 044 |
+| EXP-048 | react oracle N-roll 난수 분산 | 2026-06-23 | ✅ 완료 | 53.3% (16/30) | 정확도 한계 도달 → react/langGraph 구조 병목 확인 |
+| EXP-049a | react-memory-d (턴 간 메모리) | 2026-06-24 | 🔵 진행 | — | baseline=EXP-048(53.3%). 설계 `docs/architecture/react-architecture-redesign.md` |
 
 ---
 
@@ -395,11 +413,37 @@ manifest(`fixed-baselines/manifests/v1.json`, 공통 세트):
 
 맞춤 세트(stall matchup 등 검증 목적)는 동일 스키마 + `custom_purpose` 로 별도 manifest 작성 가능.
 
-> **첫 맞춤 세트: `manifests/dynamic-v1.json`** (dynamic-resolve baseline, EXP-035~038 재검증용).
-> [`scripts/exp/select_dynamic_teams.py`](scripts/exp/select_dynamic_teams.py) 가 modern_replays(25192팀)에서
-> dynamic score(Tera 다양성 + 동적 타입/위력/priority/어빌리티/아이템 균형) 상위 팀을 선별해 player rank1-30 ·
-> opponent rank31-60 (disjoint)로 구성. 랜덤 풀 대비 tera/ivycudgel/동적 무브가 빈발(EXP-038 문제점 해소)해
-> sim dynamic resolve fix 들의 진짜 효과 측정 가능.
+**manifest 구성 원칙 — player=실험변수, opponent=통제 ★**
+
+고정 팀 manifest의 player/opponent 풀 선별 원칙. **실험 변경점(fix 대상 메커니즘)은
+player 풀에만 반영하고, opponent 풀은 neutral 통제로 둔다.**
+
+1. **player 풀 = 실험 변수 (변경점 반영).** 측정 대상 fix의 메커니즘을 player가
+   *보유 + 실사용 가능*한 팀으로 큐레이션. 단 **보유≠실사용**: 팀이 메커니즘을
+   가져도 LLM이 의사결정에 안 쓰면 신호 0 (tera는 react/io에서 발동 0%, minimax에서만
+   30%). 대상 algo의 유효 채널을 고려해 설계하고, 배틀 로그(`|-terastallize` 등)로
+   실사용 빈도를 사후 검증.
+2. **opponent 풀 = neutral 통제 (변경점 미반영) ★핵심.** opponent는 fix 대상 기준으로
+   선별하지 않는다. 일관된 neutral 메타 풀(표준 상위 또는 균등 랜덤). opponent
+   (abyssal, 휴리스틱) 자체의 dynamic은 player agent의 sim dynamic resolve를 직접
+   촉발하지 않고, opponent 공격의 dynamic 처리가 player 수비 의사결정에 노이즈만 더한다.
+   player/opponent를 같은 기준으로 선별하면 공격 신호가 섞여 fix 한계 효과의 인과
+   해석이 불가능하다. → **opponent 풀은 player와 다른(neutral) 기준이어야 한다.**
+3. **그룹 내 ablation은 동일 manifest.** 한 fix 그룹의 baseline(처리 포함) vs
+   ablation(제거)은 같은 player 풀 + 같은 opponent 풀 + 같은 seed, 코드만 변경 →
+   순수 fix 한계 효과(`baseline − ablation = fix 기여`). 단, fix 그룹마다 player 풀은
+   달라도 되나(동적 타입 그룹 ≠ tera 그룹), **opponent 풀은 모든 그룹에서 동일 neutral
+   풀** 권장.
+4. **재현성 + disjoint.** `FixedTeamProvider`(전역 RNG 비소비) 결정론적 로드,
+   player/opponent 풀 중복 방지.
+
+> **⚠️ 위반 사례(deprecated, 아카이빙됨): `manifests/dynamic-v1.json`.** 기존
+> [`select_dynamic_teams.py`](scripts/exp/select_dynamic_teams.py) 는 player=rank1-30 ·
+> opponent=rank31-60 으로 *같은 dynamic score 기준* disjoint 선별 → **원칙 2 위반**
+> (opponent도 fix 대상 메커니즘으로 큐레이션됨). 게다가 react/io는 tera 발동 0%라
+> fix3 tera 신호가 무의미했음. 이 manifest와 fix1/2/3 기반 fixed-baseline·EXP-042·043은
+> `archive/2026-06-19-fix123-prefix-reset/` 으로 이동됨. 스크립트는 player 풀만 fix 대상
+> 기준으로 선별하고 opponent는 neutral 풀에서 추출하도록 재설계 필요(후속).
 
 ### 9.3 워크플로우
 
@@ -464,10 +508,12 @@ uv run python scripts/exp/verify_single_change.py EXP-NNN --baseline minimax --z
 
 시리즈 종합("fix1만 전이, fix2 역효과, fix3 무효")은 랜덤풀 dynamic resolve 빈도 부족(tera 0.7%)으로 fix2/fix3 효과가 애초에 측정 불가했기 때문이다. 고정 팀 dynamic baseline(§9.2 `dynamic-v1`, 동적 무브 밀집)에서 **leave-one-out 제거 ablation**으로 각 fix의 한계 효과를 재검증한다. 상세 절차·revert 지침: [`docs/analysis/ablation-guide-exp035-038-revalidation.md`](docs/analysis/ablation-guide-exp035-038-revalidation.md).
 
-| 예정 EXP | 제거 fix | 기대 |
-|----------|----------|------|
-| EXP-039 | −fix3 (tera/ivycudgel) | 시리즈 처음 fix3 유의 효과 측정 (minimax에서 양수 기대) |
-| EXP-040 | −fix2 (protect/item) | 역효과(−13.3pp) dynamic 재평가 |
-| EXP-041 | −fix1 (priority/protosynthesis) | 최대 전이 예상 (매 턴 영향) |
+| 상태 | 제거 fix | EXP | 기대 |
+|------|----------|-----|------|
+| ❌ 무효화 | −fix3 (tera/ivycudgel) | EXP-042 | §9.2 원칙 위반(dynamic-v1 manifest) → `archive/2026-06-19-fix123-prefix-reset/` 이동. dynamic-v2 기반으로 재설계 필요 |
+| 예정 | −fix2 (protect/item) | (순번 자동 할당) | 역효과(−13.3pp) dynamic 재평가 |
+| 예정 | −fix1 (priority/protosynthesis) | (순번 자동 할당) | 최대 전이 예상 (매 턴 영향) |
+
+> EXP 번호는 `new_experiment.py` 가 자동 할당(§0-2). 위 표의 예정 번호를 고정 문자로 적으면 scan 이 선점하므로, 예정 행은 번호 없이 표기한다.
 
 3종 알고리즘(io/react/minimax) 각각 측정, 같은 `dynamic-v1` manifest. baseline(fix1+2+3) 대비 델타 = fix 한계 기여(양수=도움, 음수=해). 각 EXP 후 **반드시 `git checkout HEAD -- poke_env/player/local_simulation.py` 원복**(다음 케이스 오염 방지).
