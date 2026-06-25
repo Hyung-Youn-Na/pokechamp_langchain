@@ -58,6 +58,16 @@ class BattleAgentState(TypedDict):
     reasoning: str
     evaluation_scores: Dict[str, float]
 
+    # -- Battle memory (EXP-049a, design D) --
+    # Observation-driven (set once per turn from BattleMemory):
+    opp_role_balance: Dict[str, int]
+    opp_team_roles: Dict[str, List[Dict[str, Any]]]
+    opp_revealed: Dict[str, Dict[str, Any]]
+    # LLM-driven (written from agent JSON output, read next turn):
+    opp_win_condition: str
+    my_plan: str
+    plan_turn: int
+
     # -- Tool call tracking (accumulated via reducer) --
     tool_call_count: Annotated[int, _add_int]
 

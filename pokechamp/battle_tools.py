@@ -987,6 +987,78 @@ def evaluate_position() -> str:
         return json.dumps({"error": str(e)})
 
 
+@tool(parse_docstring=True)
+def get_strategy_insight(species: str, aspect: str = "overview") -> str:
+    """Get Smogon community strategy insight for a Pokemon species.
+
+    Returns qualitative strategy text — the Pokemon's role, what it checks,
+    and its weaknesses — distilled from Smogon Competitive-Combats guides.
+    Use this to understand a species' strategic role and long-term win
+    paths (EXP-049c, Smogon method 1).
+
+    Args:
+        species: Pokemon species name (e.g. "gholdengo", "Ting-Lu",
+            "Ogerpon-Wellspring"). Case/punctuation-insensitive.
+        aspect: "overview" (default — general role/strategy/checks) or
+            "moveset" (first recommended build + its description).
+
+    Returns:
+        JSON string with overview/build text (capped to keep prompts lean),
+        or a not-found note when no Smogon guide exists.
+    """
+    # Lazy imports avoid a module-load circular dependency.
+    from pokechamp.battle_memory import to_species_key
+    from pokechamp.data_cache import get_cached_smogon_strategies
+
+    try:
+        key = to_species_key(species)
+        strategies = get_cached_smogon_strategies()
+        entry = strategies.get(key)
+        if not entry:
+            return json.dumps({
+                "species": species,
+                "no_data": True,
+                "note": (
+                    f"No Smogon strategy data for '{species}' — this Pokemon has no Smogon "
+                    "C&C analysis (비경쟁/하위 티어/사전진화/폼으로 공식 전략 가이드가 없음). "
+                    "This is a data limitation, not a tool error. Use calculate_damage or "
+                    "check_type_effectiveness instead."
+                ),
+            }, ensure_ascii=False)
+
+        result = {
+            "species": entry.get("display_name", species),
+            "home_tier": entry.get("home_tier"),
+        }
+
+        overview = (entry.get("overview") or "").strip()
+        if aspect != "moveset" or not entry.get("movesets"):
+            # Cap to keep the prompt lean (bloat guard — EXP-002~004 lesson).
+            if overview:
+                result["overview"] = overview[:2000]
+            else:
+                # overview 빈: LLM이 도구를 오판(쓸모없다/고장)하지 않도록 이유 설명.
+                # no_data 플래그로 tool-call 예산에서 제외 (대안 도구용 예산 확보).
+                result["overview"] = ""
+                result["no_data"] = True
+                result["note"] = (
+                    f"No Smogon C&C overview for '{species}' — this entry lacks an overview "
+                    "(비경쟁/하위 티어이거나 분석이 미작성됨). Data limitation, not a tool error. "
+                    "Use calculate_damage or check_type_effectiveness for this matchup."
+                )
+            return json.dumps(result, ensure_ascii=False)
+
+        movesets = entry.get("movesets") or []
+        if movesets:
+            ms = movesets[0]
+            result["moveset_name"] = ms.get("name")
+            result["moveset_description"] = (ms.get("description") or "")[:2000]
+            result["moveslots"] = ms.get("moves_flat") or ms.get("moveslots")
+        return json.dumps(result, ensure_ascii=False)
+    except Exception as e:
+        return json.dumps({"error": str(e)[:120]})
+
+
 # ---------------------------------------------------------------------------
 # Tool list export for easy agent configuration
 # ---------------------------------------------------------------------------
@@ -1000,5 +1072,6 @@ ALL_BATTLE_TOOLS = [
     simulate_turn,
     get_move_details,
     evaluate_position,
+    get_strategy_insight,
 ]
 """All battle tools as a list for passing to LangGraph agents."""

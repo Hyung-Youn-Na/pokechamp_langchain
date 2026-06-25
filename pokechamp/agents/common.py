@@ -18,6 +18,7 @@ from poke_env.player.battle_order import BattleOrder
 from poke_env.player.local_simulation import LocalSim
 
 from pokechamp.agents.state import BattleAgentState
+from pokechamp.battle_memory import BattleMemory
 
 # ---------------------------------------------------------------------------
 # State construction
@@ -28,11 +29,14 @@ def build_battle_state(
     battle: AbstractBattle,
     sim: LocalSim,
     constraint_prompt: str = "",
+    memory: Optional[BattleMemory] = None,
 ) -> BattleAgentState:
     """Construct a ``BattleAgentState`` from live battle objects.
 
     Reuses ``sim.state_translate()`` to get prompt text, then populates
-    the structured fields from the battle object.
+    the structured fields from the battle object. When ``memory`` is given,
+    the battle-scoped memory slices (design D) are injected into the state
+    so graph nodes can reason over them.
     """
     system_prompt, state_prompt, state_action_prompt = sim.state_translate(battle)
 
@@ -103,6 +107,12 @@ def build_battle_state(
         constraint_prompt=constraint_prompt,
         reasoning="",
         evaluation_scores={},
+        opp_role_balance=(memory.opp_role_balance if memory else {}),
+        opp_team_roles=(memory.opp_team_roles if memory else {}),
+        opp_revealed=(memory.opp_revealed if memory else {}),
+        opp_win_condition=(memory.opp_win_condition if memory else ""),
+        my_plan=(memory.my_plan if memory else ""),
+        plan_turn=(memory.plan_turn if memory else 0),
         tool_call_count=0,
         total_prompt_tokens=0,
         total_completion_tokens=0,
@@ -297,6 +307,15 @@ def parse_action_json(
 
     if "thought" in action:
         result["thought"] = action["thought"]
+
+    # Pass through strategy-memory keys (design D, EXP-049a): map the LLM
+    # JSON keys to state field names so the player persists them across turns.
+    win_cond = action.get("win_condition_opponent")
+    if isinstance(win_cond, str) and win_cond.strip():
+        result["opp_win_condition"] = win_cond.strip()
+    plan = action.get("my_plan")
+    if isinstance(plan, str) and plan.strip():
+        result["my_plan"] = plan.strip()
 
     # Must have at least one valid action key
     if "move" not in result and "switch" not in result:

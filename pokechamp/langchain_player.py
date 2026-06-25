@@ -23,6 +23,8 @@ Usage::
 
 from __future__ import annotations
 
+import json
+import re
 import traceback
 from typing import Optional
 
@@ -39,6 +41,12 @@ from pokechamp.agents.cot_agent import create_cot_agent
 from pokechamp.agents.io_agent import create_io_agent
 from pokechamp.agents.llm_logging import LLMLoggingCallback
 from pokechamp.agents.react_agent import create_react_agent
+from pokechamp.battle_memory import (
+    BattleMemory,
+    refresh_own_team_roles,
+    refresh_team_roles,
+    update_opp_revealed,
+)
 from pokechamp.battle_tools import BattleContext, set_battle_context
 from pokechamp.llm_player import LLMPlayer
 
@@ -71,6 +79,10 @@ class LangChainPlayer(LLMPlayer):
         # multiple times in the same turn.
         self._decision_counts: dict[str, int] = {}
         self._last_decision_turn: dict[str, int] = {}
+        # Battle-scoped memory (design D, EXP-049a): one BattleMemory per
+        # battle_tag, persisted across turns so the agent accumulates
+        # opponent team roles, revealed moves/items/tera, and its own plan.
+        self._battle_memory: dict[str, BattleMemory] = {}
 
     def _get_chat_model(self) -> BaseChatModel:
         """Get or create the LangChain chat model from the backend."""
@@ -124,6 +136,180 @@ class LangChainPlayer(LLMPlayer):
         self._agent_graphs[algo] = graph
         return graph
 
+    # ------------------------------------------------------------------
+    # Team preview: strategic lead + win-plan seed (EXP-050a, human-thought point 1)
+    # ------------------------------------------------------------------
+
+    # Reuses the parent ``_LEAD_SELECTION_SYSTEM_PROMPT``'s 6 lead-selection
+    # considerations verbatim (no new instructional prose — EXP-002~004 / 049a
+    # bloat guard), then extends the OUTPUT to also produce a battle-long win
+    # plan. my_plan definition mirrors STRATEGY_SYSTEM_PROMPT (react_agent) so
+    # the first turn's strategy node follows an already-formed long-term plan
+    # instead of restating this turn's action (the 049a failure mode).
+    _PREVIEW_SYSTEM_PROMPT = (
+        "You are an expert competitive Pokemon gen9ou (OverUsed singles 6v6) "
+        "team analyst. Your task is to choose the optimal lead Pokemon and "
+        "team order, AND to formulate the win plan for the WHOLE battle.\n\n"
+        "Key considerations for lead selection in gen9ou singles:\n"
+        "1. Type matchup advantage against the opponent's likely leads\n"
+        "2. Speed tier - outspeeding the opponent's likely lead is critical\n"
+        "3. Entry hazard setting (Stealth Rock, Spikes) vs anti-lead "
+        "(Defog, Rapid Spin, Taunt)\n"
+        "4. Lead momentum - can your lead force a favorable switch or get "
+        "an early KO?\n"
+        "5. Team order after the lead - order remaining Pokemon by how soon "
+        "you might need them as switch-ins\n"
+        "6. Synergy - your lead should set up the rest of your team for success\n\n"
+        "Opponent data is limited during team preview: you can see their "
+        "species, types, base stats, and possible abilities, but NOT their "
+        "exact moves, items, or abilities.\n\n"
+        "my_plan must describe how you win the WHOLE battle, NOT the first "
+        "turn. GOOD: \"Set Stealth Rock with Ting-Lu early, then sweep with "
+        "Gholdengo once the opponent's special wall is removed.\" "
+        "BAD (this is one turn, not a plan): \"Lead with Ting-Lu and use "
+        "Stealth Rock.\"\n\n"
+        "Respond with ONLY a JSON object, no prose, no code fences:\n"
+        '{"team_order": "<6-digit order, FIRST digit is your lead>", '
+        '"my_plan": "<your long-term win path>", '
+        '"opp_win_condition": "<their long-term win path>"}'
+    )
+
+    def teampreview(self, battle: AbstractBattle) -> str:
+        """Team preview: LLM oneshot -> /team order + BattleMemory win-plan seed.
+
+        EXP-050a (human-thought point 1). Seeds ``my_plan`` /
+        ``opp_win_condition`` so the first turn's strategy node follows an
+        already-formed plan instead of formulating one from scratch (the
+        EXP-049a short-term-restatement failure mode). Falls back to
+        ``random_teampreview`` on any error or when disabled.
+        """
+        if not self.enable_llm_lead_selection:
+            return self.random_teampreview(battle)
+
+        try:
+            own_team = list(battle.team.values())
+            opp_team = list(battle._teampreview_opponent_team)
+            if not own_team:
+                return self.random_teampreview(battle)
+
+            # teampreview() runs before the first choose_move(), so create +
+            # seed the memory here. choose_move() keeps an existing memory
+            # for this battle_tag (see the guard there), so the seed survives.
+            memory = self._battle_memory.get(battle.battle_tag)
+            if memory is None:
+                memory = BattleMemory()
+                self._battle_memory[battle.battle_tag] = memory
+            refresh_own_team_roles(memory, battle)
+            refresh_team_roles(memory, battle)
+
+            team_data = self._format_lead_selection_data(own_team, opp_team)
+            user_prompt = self._create_lead_selection_prompt(team_data)
+            # Replace the parent prompt's trailing "Respond with ONLY a
+            # 6-digit number" instruction (it conflicts with JSON output)
+            # and append the role-balance brief + JSON instruction.
+            marker = "Respond with ONLY a 6-digit number"
+            idx = user_prompt.find(marker)
+            if idx > 0:
+                user_prompt = user_prompt[:idx].rstrip()
+            user_prompt += "\n\n" + self._render_role_balance_brief(memory)
+            user_prompt += (
+                "\n\nRespond with ONLY a JSON object (no prose, no code "
+                'fences): {"team_order":"<6-digit, first is lead>",'
+                '"my_plan":"<long-term win path>",'
+                '"opp_win_condition":"<their long-term win path>"}'
+            )
+
+            response = self.get_LLM_action(
+                system_prompt=self._PREVIEW_SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+                model=self.backend,
+                temperature=0.3,
+                max_tokens=400,
+            )
+
+            order, seed = self._parse_preview_response(response, len(own_team))
+            if order:
+                if seed.get("my_plan"):
+                    memory.my_plan = seed["my_plan"]
+                if seed.get("opp_win_condition"):
+                    memory.opp_win_condition = seed["opp_win_condition"]
+                memory.preview_seed_turn = 0
+                print(
+                    f"[teampreview 050a] order={order} "
+                    f"plan_seed={bool(seed.get('my_plan'))}"
+                )
+                return f"/team {order}"
+        except Exception as e:
+            print(f"[teampreview 050a] Error: {e}")
+
+        return self.random_teampreview(battle)
+
+    @staticmethod
+    def _render_role_balance_brief(memory: BattleMemory) -> str:
+        """One-line role balance for both teams (EXP-050a).
+
+        Aggregates only (category counts) — per-role listing would bloat the
+        prompt (EXP-049a lesson). Used at team preview to ground the win-plan.
+        """
+
+        def _fmt(bal: dict) -> str:
+            if not bal:
+                return "unknown"
+            items = sorted(bal.items(), key=lambda kv: (-kv[1], kv[0]))
+            return ", ".join(f"{cat} x{n}" for cat, n in items)
+
+        return (
+            f"Your team roles: {_fmt(memory.my_role_balance)}\n"
+            f"Opponent team roles: {_fmt(memory.opp_role_balance)}"
+        )
+
+    @staticmethod
+    def _parse_preview_response(text: str, team_size: int) -> tuple:
+        """Parse the preview LLM JSON into ``(team_order, seed)``.
+
+        ``team_order`` is validated as a permutation of 1..team_size (reuses
+        the parent's digit-extraction fallback for robustness). ``seed``
+        holds ``my_plan`` / ``opp_win_condition`` (may be empty). Returns
+        ``(None, {})`` on parse failure so the caller falls back to
+        ``random_teampreview``.
+        """
+        if not text:
+            return None, {}
+        raw = text.strip()
+        # Strip markdown code fences if present.
+        if raw.startswith("```"):
+            raw = raw.strip("`")
+            if raw[:4].lower() == "json":
+                raw = raw[4:]
+
+        plan = ""
+        win = ""
+        order = None
+        try:
+            obj = json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            obj = None
+
+        if isinstance(obj, dict):
+            order_val = obj.get("team_order") or obj.get("order")
+            if isinstance(order_val, str):
+                digits = "".join(ch for ch in order_val if ch.isdigit())
+                if LangChainPlayer._is_valid_team_order(digits, team_size):
+                    order = digits
+            plan = str(obj.get("my_plan") or "").strip()
+            win = str(obj.get("opp_win_condition") or "").strip()
+
+        # Fallback: JSON failed — try a plain N-digit permutation scan for
+        # the order only (mirrors the parent _parse_teampreview_response).
+        if order is None:
+            match = re.search(r"\b(\d{" + str(team_size) + r"})\b", raw)
+            if match and LangChainPlayer._is_valid_team_order(
+                match.group(1), team_size
+            ):
+                order = match.group(1)
+
+        return order, {"my_plan": plan, "opp_win_condition": win}
+
     def choose_move(self, battle: AbstractBattle):
         """Route to LangGraph agent or fall back to existing logic."""
         # Reset LLM call counter at the start of each new battle
@@ -131,6 +317,12 @@ class LangChainPlayer(LLMPlayer):
             self.llm_call_count = 0
             self.json_parse_failures = 0
             self._last_battle_tag = battle.battle_tag
+            # New battle → fresh memory (design D, EXP-049a). teampreview()
+            # (EXP-050a) may have already created + seeded memory for this
+            # battle with a win plan; keep it if present so the preview plan
+            # carries into turn 1 instead of being overwritten.
+            if battle.battle_tag not in self._battle_memory:
+                self._battle_memory[battle.battle_tag] = BattleMemory()
 
         algo = self.prompt_algo
 
@@ -219,8 +411,18 @@ class LangChainPlayer(LLMPlayer):
         )
         set_battle_context(ctx)
 
+        # Battle-scoped memory (design D, EXP-049a): refresh role analysis
+        # and revealed observations each turn, then inject into state so
+        # graph nodes (build_context) can reason over them.
+        memory = self._battle_memory.get(battle.battle_tag)
+        if memory is None:
+            memory = BattleMemory()
+            self._battle_memory[battle.battle_tag] = memory
+        refresh_team_roles(memory, battle)
+        update_opp_revealed(memory, battle)
+
         # Build state
-        state = build_battle_state(battle, sim, constraint)
+        state = build_battle_state(battle, sim, constraint, memory=memory)
 
         # Set up LLM logging callback if log_dir is configured
         callbacks = []
@@ -272,6 +474,17 @@ class LangChainPlayer(LLMPlayer):
             self.llm.prompt_tokens += graph_prompt_tokens
         if hasattr(self.llm, "completion_tokens"):
             self.llm.completion_tokens += graph_completion_tokens
+
+        # Persist LLM-authored strategy state to battle memory (design D).
+        # parse_action writes these from the agent JSON output; keep the
+        # latest non-empty value so it carries across turns.
+        new_win_condition = result.get("opp_win_condition")
+        new_plan = result.get("my_plan")
+        if new_win_condition:
+            memory.opp_win_condition = new_win_condition
+        if new_plan:
+            memory.my_plan = new_plan
+            memory.plan_turn = battle.turn
 
         # Parse result
         action = result.get("chosen_action")
