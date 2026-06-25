@@ -162,3 +162,61 @@ def test_battle_memory_seed_fields_writable():
     m.preview_seed_turn = 0
     assert m.my_plan == "preview plan"
     assert m.preview_seed_turn == 0
+
+
+# ---------------------------------------------------------------------------
+# _log_preview (teampreview decision logging, EXP-050a)
+# ---------------------------------------------------------------------------
+
+
+def test_log_preview_writes_jsonl(tmp_path):
+    import json as _json
+
+    from types import SimpleNamespace
+
+    fake_self = SimpleNamespace(log_dir=str(tmp_path))
+    battle = SimpleNamespace(battle_tag="battle-gen9ou-1")
+    LangChainPlayer._log_preview(
+        fake_self,
+        battle,
+        status="llm_ok",
+        order="421365",
+        seed={"my_plan": "sweep late", "opp_win_condition": "DD sweep"},
+        response='{"team_order":"421365","my_plan":"sweep late"}',
+        user_prompt="team data...",
+    )
+    out = tmp_path / "preview_llm_log.jsonl"
+    assert out.exists()
+    lines = out.read_text(encoding="utf-8").strip().split("\n")
+    assert len(lines) == 1
+    rec = _json.loads(lines[0])
+    assert rec["status"] == "llm_ok"
+    assert rec["order"] == "421365"
+    assert rec["battle_tag"] == "battle-gen9ou-1"
+    assert rec["seed"]["my_plan"] == "sweep late"
+    assert "timestamp" in rec
+
+
+def test_log_preview_appends_multiple_records(tmp_path):
+    import json as _json
+
+    from types import SimpleNamespace
+
+    fake_self = SimpleNamespace(log_dir=str(tmp_path))
+    battle = SimpleNamespace(battle_tag="battle-gen9ou-1")
+    LangChainPlayer._log_preview(fake_self, battle, status="llm_ok", order="123456")
+    LangChainPlayer._log_preview(fake_self, battle, status="parse_fail_fallback")
+    lines = (tmp_path / "preview_llm_log.jsonl").read_text().strip().split("\n")
+    assert len(lines) == 2
+    assert _json.loads(lines[1])["status"] == "parse_fail_fallback"
+
+
+def test_log_preview_noop_without_log_dir(tmp_path):
+    from types import SimpleNamespace
+
+    # log_dir unset → no-op, must not raise or write.
+    fake_self = SimpleNamespace(log_dir=None)
+    LangChainPlayer._log_preview(
+        fake_self, SimpleNamespace(battle_tag="b1"), status="llm_ok", order="1"
+    )
+    assert not (tmp_path / "preview_llm_log.jsonl").exists()

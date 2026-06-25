@@ -228,6 +228,14 @@ class LangChainPlayer(LLMPlayer):
             )
 
             order, seed = self._parse_preview_response(response, len(own_team))
+            self._log_preview(
+                battle,
+                status="llm_ok" if order else "parse_fail_fallback",
+                order=order,
+                seed=seed,
+                response=response,
+                user_prompt=user_prompt,
+            )
             if order:
                 if seed.get("my_plan"):
                     memory.my_plan = seed["my_plan"]
@@ -241,8 +249,57 @@ class LangChainPlayer(LLMPlayer):
                 return f"/team {order}"
         except Exception as e:
             print(f"[teampreview 050a] Error: {e}")
+            self._log_preview(battle, status="exception_fallback", error=str(e))
 
         return self.random_teampreview(battle)
+
+    def _log_preview(
+        self,
+        battle: AbstractBattle,
+        status: str,
+        order: Optional[str] = None,
+        seed: Optional[dict] = None,
+        response: Optional[str] = None,
+        user_prompt: Optional[str] = None,
+        error: Optional[str] = None,
+    ) -> None:
+        """Append a team-preview decision record to ``preview_llm_log.jsonl``.
+
+        teampreview() runs OUTSIDE the LangGraph (it is a player method), so
+        its oneshot LLM call is not captured by ``LLMLoggingCallback`` /
+        ``langgraph_llm_log.jsonl``. This writes a separate per-battle record so
+        the lead-selection + win-plan reasoning is inspectable (EXP-050a).
+        No-op when ``log_dir`` is unset or writing fails — logging must never
+        break a battle. ``status`` is one of: ``llm_ok`` (order parsed),
+        ``parse_fail_fallback`` (LLM ran but order unparseable → random),
+        ``exception_fallback`` (error → random).
+        """
+        log_dir = getattr(self, "log_dir", None)
+        if not log_dir:
+            return
+        import os
+        from datetime import datetime
+
+        entry = {
+            "timestamp": datetime.now().isoformat(),
+            "battle_tag": getattr(battle, "battle_tag", None),
+            "status": status,
+            "order": order,
+        }
+        if seed is not None:
+            entry["seed"] = seed
+        if response is not None:
+            entry["response"] = (response or "")[:2000]
+        if user_prompt is not None:
+            entry["user_prompt"] = (user_prompt or "")[:4000]
+        if error:
+            entry["error"] = error[:300]
+        try:
+            path = os.path.join(log_dir, "preview_llm_log.jsonl")
+            with open(path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        except Exception:
+            pass
 
     @staticmethod
     def _render_role_balance_brief(memory: BattleMemory) -> str:
