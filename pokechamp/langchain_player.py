@@ -43,6 +43,8 @@ from pokechamp.agents.llm_logging import LLMLoggingCallback
 from pokechamp.agents.react_agent import create_react_agent
 from pokechamp.battle_memory import (
     BattleMemory,
+    gather_preview_strategy,
+    predict_opp_leads,
     refresh_own_team_roles,
     refresh_team_roles,
     update_opp_revealed,
@@ -202,6 +204,17 @@ class LangChainPlayer(LLMPlayer):
             refresh_own_team_roles(memory, battle)
             refresh_team_roles(memory, battle)
 
+            # EXP-050a v2: full-info analysis (bloat limit lifted per user
+            # policy) — opponent likely-lead prediction, Smogon strategy
+            # overviews for all 12 mons, per-pokemon role labels. Surfaced as
+            # structured context so the LLM grounds a rich long-term win plan.
+            opp_leads = predict_opp_leads(battle, memory, top_n=6)
+            own_species = [getattr(m, "species", "") or "" for m in own_team]
+            opp_species = [getattr(m, "species", "") or "" for m in opp_team]
+            strategy = gather_preview_strategy(
+                [s for s in own_species + opp_species if s], cap=0
+            )
+
             team_data = self._format_lead_selection_data(own_team, opp_team)
             user_prompt = self._create_lead_selection_prompt(team_data)
             # Replace the parent prompt's trailing "Respond with ONLY a
@@ -212,6 +225,9 @@ class LangChainPlayer(LLMPlayer):
             if idx > 0:
                 user_prompt = user_prompt[:idx].rstrip()
             user_prompt += "\n\n" + self._render_role_balance_brief(memory)
+            user_prompt += "\n\n" + self._render_preview_analysis(
+                memory, opp_leads, strategy
+            )
             user_prompt += (
                 "\n\nRespond with ONLY a JSON object (no prose, no code "
                 'fences): {"team_order":"<6-digit, first is lead>",'
@@ -224,7 +240,7 @@ class LangChainPlayer(LLMPlayer):
                 user_prompt=user_prompt,
                 model=self.backend,
                 temperature=0.3,
-                max_tokens=400,
+                max_tokens=min(self._max_tokens, 8192),
             )
 
             order, seed = self._parse_preview_response(response, len(own_team))
@@ -319,6 +335,56 @@ class LangChainPlayer(LLMPlayer):
             f"Your team roles: {_fmt(memory.my_role_balance)}\n"
             f"Opponent team roles: {_fmt(memory.opp_role_balance)}"
         )
+
+    @staticmethod
+    def _render_preview_analysis(
+        memory: BattleMemory,
+        opp_leads: list,
+        strategy: dict,
+    ) -> str:
+        """Structured preview analysis for the full-info win-plan prompt (EXP-050a v2).
+
+        Bloat limit lifted per user policy: surfaces likely opponent leads,
+        per-pokemon role labels (own + opp), and Smogon strategy overviews for
+        all species so the LLM grounds a rich long-term win plan.
+        """
+        lines = ["## Preview Analysis (structured — ground your win plan here)"]
+
+        if opp_leads:
+            lines.append(
+                "\nLikely opponent leads (speed tier + role + type threat):"
+            )
+            for d in opp_leads:
+                roles = ", ".join(d.get("roles") or []) or "n/a"
+                lines.append(
+                    f"  - {d['species']} (Spe {d['speed']}, roles: {roles}, "
+                    f"type-threat {d['type_threat']})"
+                )
+
+        def _role_line(key: str, rlist: list) -> str:
+            labels = ", ".join(
+                f"{r.get('category', '')}/{r.get('role', '')}" for r in rlist
+            )
+            return f"  - {key}: {labels or 'n/a'}"
+
+        if memory.my_team_roles:
+            lines.append("\nYour team roles (per species):")
+            for key, rlist in memory.my_team_roles.items():
+                lines.append(_role_line(key, rlist))
+
+        if memory.opp_team_roles:
+            lines.append("\nOpponent team roles (per species):")
+            for key, rlist in memory.opp_team_roles.items():
+                lines.append(_role_line(key, rlist))
+
+        if strategy:
+            lines.append(
+                "\nSmogon strategy overviews (checks / weaknesses / win paths):"
+            )
+            for key, ov in strategy.items():
+                lines.append(f"  [{key}]\n  {ov}")
+
+        return "\n".join(lines)
 
     @staticmethod
     def _parse_preview_response(text: str, team_size: int) -> tuple:

@@ -62,6 +62,8 @@ class BattleMemory:
     # own-team role balance (symmetric to opp_role_balance) and a flag
     # showing whether ``teampreview()`` already seeded a win plan.
     my_role_balance: Dict[str, int] = field(default_factory=dict)
+    # ⑤b per-pokemon own role labels (EXP-050a v2, full info injection).
+    my_team_roles: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
     preview_seed_turn: int = -1  # -1 = no preview seed (fallback); 0 = seeded at preview
 
 
@@ -127,6 +129,7 @@ def refresh_own_team_roles(memory: BattleMemory, battle: Any) -> None:
     own_team = getattr(battle, "team", None) or {}
 
     balance: Dict[str, int] = {}
+    team_roles: Dict[str, List[Dict[str, Any]]] = {}
     for mon in own_team.values():
         key = to_species_key(getattr(mon, "species", "") or "")
         if not key:
@@ -134,12 +137,124 @@ def refresh_own_team_roles(memory: BattleMemory, battle: Any) -> None:
         rlist = roles_by_pokemon.get(key)
         if not rlist:
             continue
+        team_roles[key] = rlist
         for role in rlist:
             category = role.get("category")
             if category:
                 balance[category] = balance.get(category, 0) + 1
 
     memory.my_role_balance = balance
+    memory.my_team_roles = team_roles
+
+
+# Lead-prediction role weights: categories that commonly open the game.
+_LEAD_ROLE_CATEGORIES = ("Entry Hazards", "Pivots", "Setup Sweepers")
+
+
+def _avg_type_threat(opp_mon: Any, own_team: dict) -> float:
+    """How hard ``opp_mon``'s STAB types hit the own team on average (EXP-050a v2).
+
+    ``own_mon.damage_multiplier(attacking_type)`` returns the multiplier when
+    the own mon is attacked by ``attacking_type`` (``pokemon.py:543``). Averaged
+    over own team × opp's two types. Falls back to 1.0 (neutral) on any error
+    so lead prediction never breaks team preview.
+    """
+    types = [
+        t for t in (getattr(opp_mon, "type_1", None), getattr(opp_mon, "type_2", None))
+        if t is not None
+    ]
+    own = list(own_team.values()) if own_team else []
+    if not types or not own:
+        return 1.0
+    total = 0.0
+    n = 0
+    for own_mon in own:
+        for t in types:
+            try:
+                total += float(own_mon.damage_multiplier(t))
+                n += 1
+            except Exception:
+                pass
+    return (total / n) if n else 1.0
+
+
+def predict_opp_leads(
+    battle: Any, memory: BattleMemory, top_n: int = 6
+) -> List[Dict[str, Any]]:
+    """Rank likely opponent leads from speed tier + role + type threat (EXP-050a v2).
+
+    Deterministic code precompute (no LLM). Each opponent mon is scored:
+    ``base spe + LEAD_ROLE_CATEGORIES bonus + type-threat bonus``. Returns the
+    ranked list (capped at ``top_n``) with the score breakdown so it can be
+    surfaced in the preview prompt as structured reasoning. Considers every
+    known opponent mon; at preview time this is the preview roster.
+    """
+    opp_team = getattr(battle, "opponent_team", None) or {}
+    if not opp_team:
+        preview = getattr(battle, "_teampreview_opponent_team", None)
+        if preview:
+            opp_team = list(preview)
+    own_team = getattr(battle, "team", None) or {}
+
+    # Lazy import to avoid the module-load circular dependency.
+    from pokechamp.data_cache import get_cached_smogon_roles
+
+    roles_by_pokemon = get_cached_smogon_roles().get("by_pokemon", {}) or {}
+
+    mons = opp_team.values() if isinstance(opp_team, dict) else opp_team
+    scored: List[Dict[str, Any]] = []
+    for mon in mons:
+        species = getattr(mon, "species", "") or ""
+        key = to_species_key(species)
+        if not key:
+            continue
+        base_stats = getattr(mon, "base_stats", None) or {}
+        spe = base_stats.get("spe", 0) if isinstance(base_stats, dict) else 0
+        roles = roles_by_pokemon.get(key, [])
+        cats = sorted({r.get("category", "") for r in roles if r.get("category")})
+        cat_bonus = sum(1 for c in cats if c in _LEAD_ROLE_CATEGORIES)
+        threat = _avg_type_threat(mon, own_team)
+        score = float(spe) + cat_bonus * 50.0 + threat * 30.0
+        scored.append(
+            {
+                "species": species,
+                "key": key,
+                "speed": spe,
+                "roles": cats,
+                "lead_role_bonus": cat_bonus,
+                "type_threat": round(threat, 2),
+                "score": round(score, 1),
+            }
+        )
+    scored.sort(key=lambda d: -d["score"])
+    return scored[:top_n] if top_n > 0 else scored
+
+
+def gather_preview_strategy(
+    species_list: List[str], cap: int = 0
+) -> Dict[str, str]:
+    """Prefetch Smogon overview text for a list of species (EXP-050a v2).
+
+    Used at team preview to inject community strategy (checks / weaknesses /
+    win paths) into the win-plan prompt. ``cap`` > 0 truncates each overview
+    (``cap=0`` = no truncation). Missing species / empty overview map to a
+    placeholder so the LLM sees the data limitation explicitly. Cached via
+    ``get_cached_smogon_strategies`` (lru_cache) — repeated lookups are cheap.
+    """
+    from pokechamp.data_cache import get_cached_smogon_strategies
+
+    strats = get_cached_smogon_strategies()
+    out: Dict[str, str] = {}
+    for name in species_list:
+        key = to_species_key(name or "")
+        if not key:
+            continue
+        entry = strats.get(key) or {}
+        ov = (entry.get("overview") or "").strip()
+        if cap > 0:
+            ov = ov[:cap]
+        out[key] = ov if ov else "(no overview available)"
+    return out
 
 
 def update_opp_revealed(memory: BattleMemory, battle: Any) -> None:

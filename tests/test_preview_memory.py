@@ -11,6 +11,8 @@ from types import SimpleNamespace
 
 from pokechamp.battle_memory import (
     BattleMemory,
+    gather_preview_strategy,
+    predict_opp_leads,
     refresh_own_team_roles,
 )
 from pokechamp.langchain_player import LangChainPlayer
@@ -220,3 +222,103 @@ def test_log_preview_noop_without_log_dir(tmp_path):
         fake_self, SimpleNamespace(battle_tag="b1"), status="llm_ok", order="1"
     )
     assert not (tmp_path / "preview_llm_log.jsonl").exists()
+
+
+# ---------------------------------------------------------------------------
+# predict_opp_leads / gather_preview_strategy (EXP-050a v2)
+# ---------------------------------------------------------------------------
+
+
+class _MockMon:
+    """Minimal stand-in for poke_env Pokemon for lead-prediction tests."""
+
+    def __init__(self, species, spe):
+        self.species = species
+        self.type_1 = None
+        self.type_2 = None
+        self.base_stats = {"spe": spe}
+
+    def damage_multiplier(self, t):  # neutral → threat falls back cleanly
+        return 1.0
+
+
+def test_predict_opp_leads_ranks_by_speed_and_role():
+    from types import SimpleNamespace
+
+    battle = SimpleNamespace(
+        team={"a": _MockMon("Kingdra", 85)},
+        opponent_team={
+            "o1": _MockMon("Gholdengo", 84),
+            "o2": _MockMon("Ting-Lu", 85),
+        },
+    )
+    leads = predict_opp_leads(battle, BattleMemory(), top_n=6)
+    assert len(leads) == 2
+    # Descending score; both have lead-role bonus (real Smogon roles), so the
+    # higher-Speed Ting-Lu (85) ranks above Gholdengo (84).
+    assert leads[0]["species"] == "Ting-Lu"
+    assert leads == sorted(leads, key=lambda d: -d["score"])
+    # Each entry carries the structured breakdown.
+    for d in leads:
+        assert {"species", "speed", "roles", "score", "type_threat"} <= set(d)
+
+
+def test_predict_opp_leads_uses_preview_roster_when_opp_team_empty():
+    from types import SimpleNamespace
+
+    battle = SimpleNamespace(
+        team={"a": _MockMon("Kingdra", 85)},
+        opponent_team={},
+        _teampreview_opponent_team=[_MockMon("Gholdengo", 84)],
+    )
+    leads = predict_opp_leads(battle, BattleMemory(), top_n=6)
+    assert len(leads) == 1
+    assert leads[0]["species"] == "Gholdengo"
+
+
+def test_gather_preview_strategy_cap_and_missing():
+    g = gather_preview_strategy(["Gholdengo", "Ting-Lu", "NotAPokemon"], cap=100)
+    assert "gholdengo" in g and len(g["gholdengo"]) <= 100
+    assert "tinglu" in g
+    # Unknown species → explicit placeholder (LLM sees the data limitation).
+    assert g.get("notapokemon") == "(no overview available)"
+
+
+def test_gather_preview_strategy_no_cap_keeps_full():
+    g = gather_preview_strategy(["Gholdengo"], cap=0)
+    # Full overview (median ~734 chars) exceeds the cap=100 slice.
+    assert len(g["gholdengo"]) > 100
+
+
+def test_render_preview_analysis_sections():
+    m = BattleMemory()
+    m.my_team_roles = {
+        "kingdra": [{"category": "Setup Sweepers", "role": "Rain Sweeper", "tier": "main"}]
+    }
+    m.opp_team_roles = {
+        "gholdengo": [
+            {"category": "Setup Sweepers", "role": "Nasty Plot", "tier": "main"}
+        ]
+    }
+    opp_leads = [
+        {
+            "species": "Gholdengo",
+            "key": "gholdengo",
+            "speed": 84,
+            "roles": ["Setup Sweepers"],
+            "lead_role_bonus": 1,
+            "type_threat": 1.0,
+            "score": 134.0,
+        }
+    ]
+    strategy = {"gholdengo": "Checks Iron Valiant and Zamazenta."}
+    out = LangChainPlayer._render_preview_analysis(m, opp_leads, strategy)
+    assert "Likely opponent leads" in out
+    assert "Gholdengo" in out and "Spe 84" in out
+    assert "kingdra" in out and "Rain Sweeper" in out  # species_key is lowercase
+    assert "Smogon strategy" in out and "Iron Valiant" in out
+
+
+def test_render_preview_analysis_empty_is_safe():
+    out = LangChainPlayer._render_preview_analysis(BattleMemory(), [], {})
+    assert "Preview Analysis" in out  # header always present, no crash
