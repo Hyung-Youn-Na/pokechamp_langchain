@@ -71,10 +71,7 @@ yarn-debug.log*
 yarn-error.log*
 
 CLAUDE.md
-pokemon-showdown/*
-!pokemon-showdown/scripts/
-pokemon-showdown/scripts/*
-!pokemon-showdown/scripts/oracle-worker.js
+pokemon-showdown/
 
 .venv/
 

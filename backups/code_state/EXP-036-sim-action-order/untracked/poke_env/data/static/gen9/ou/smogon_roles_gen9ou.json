@@ -1,0 +1,4185 @@
+{
+  "by_role": {
+    "Entry Hazards": {
+      "Spikes": {
+        "main": [
+          "clodsire",
+          "deoxysspeed",
+          "glimmora",
+          "garchomp",
+          "gliscor",
+          "meowscarada",
+          "ogerpon",
+          "ogerponcornerstone",
+          "ogerponwellspring",
+          "samurotthisui",
+          "skarmory",
+          "tinglu"
+        ],
+        "niche": [
+          "chesnaught",
+          "overqwil"
+        ]
+      },
+      "Stealth Rock": {
+        "main": [
+          "blissey",
+          "clefable",
+          "clodsire",
+          "deoxysspeed",
+          "excadrill",
+          "garganacl",
+          "glimmora",
+          "garchomp",
+          "gliscor",
+          "greattusk",
+          "heatran",
+          "irontreads",
+          "landorustherian",
+          "skarmory",
+          "tinglu",
+          "tinkaton",
+          "torkoal",
+          "tyranitar"
+        ],
+        "niche": [
+          "chansey",
+          "mamoswine",
+          "quagsire",
+          "sandyshocks"
+        ]
+      },
+      "Sticky Web": {
+        "main": [
+          "ribombee"
+        ],
+        "niche": [
+          "araquanid"
+        ]
+      },
+      "Toxic Spikes": {
+        "main": [
+          "glimmora",
+          "ironmoth",
+          "slowkinggalar",
+          "toxapex",
+          "weezinggalar"
+        ],
+        "niche": []
+      }
+    },
+    "Hazard Control": {
+      "Defog": {
+        "main": [
+          "corviknight",
+          "scizor",
+          "weezinggalar"
+        ],
+        "niche": [
+          "mandibuzz",
+          "talonflame"
+        ]
+      },
+      "Magic Bounce": {
+        "main": [
+          "hatterene"
+        ],
+        "niche": []
+      },
+      "Court Change": {
+        "main": [
+          "cinderace"
+        ],
+        "niche": []
+      },
+      "Rapid Spin / Mortal Spin": {
+        "main": [
+          "excadrill",
+          "glimmora",
+          "greattusk",
+          "irontreads",
+          "torkoal"
+        ],
+        "niche": [
+          "regieleki"
+        ]
+      }
+    },
+    "Support": {
+      "Healing Wish / Lunar Dance": {
+        "main": [
+          "cresselia",
+          "enamorus",
+          "hatterene",
+          "latias",
+          "ninetales"
+        ],
+        "niche": [
+          "alomomola",
+          "indeedee"
+        ]
+      },
+      "Wish": {
+        "main": [
+          "alomomola",
+          "clefable"
+        ],
+        "niche": [
+          "umbreon"
+        ]
+      },
+      "Screens Setters": {
+        "main": [
+          "deoxysspeed",
+          "dragapult",
+          "ninetalesalola",
+          "zamazenta"
+        ],
+        "niche": [
+          "grimmsnarl",
+          "regieleki"
+        ]
+      }
+    },
+    "Other Utility": {
+      "Knock Off (Offensive)": {
+        "main": [
+          "blaziken",
+          "darkrai",
+          "deoxysspeed",
+          "greattusk",
+          "gliscor",
+          "hoopaunbound",
+          "ironvaliant",
+          "lokix",
+          "meowscarada",
+          "ogerpon",
+          "ogerponcornerstone",
+          "ogerponwellspring",
+          "okidogi",
+          "rillaboom",
+          "samurotthisui",
+          "serperior",
+          "scizor",
+          "tyranitar",
+          "weavile",
+          "zarude"
+        ],
+        "niche": [
+          "ironjugulis",
+          "mamoswine"
+        ]
+      },
+      "Knock Off (Defensive)": {
+        "main": [
+          "clefable",
+          "greattusk",
+          "gliscor",
+          "irontreads",
+          "pelipper",
+          "tinkaton",
+          "tornadustherian"
+        ],
+        "niche": [
+          "goodrahisui",
+          "mandibuzz",
+          "reuniclus"
+        ]
+      },
+      "Encore": {
+        "main": [
+          "clefable",
+          "dragonite",
+          "ironvaliant",
+          "ninetales",
+          "ninetalesalola",
+          "ogerpon",
+          "ogerponcornerstone",
+          "ogerponwellspring",
+          "samurotthisui",
+          "tinkaton"
+        ],
+        "niche": [
+          "hawlucha",
+          "toxicroak",
+          "zarude"
+        ]
+      },
+      "Taunt": {
+        "main": [
+          "corviknight",
+          "ceruledge",
+          "darkrai",
+          "deoxysspeed",
+          "enamorus",
+          "heatran",
+          "ironvaliant",
+          "landorustherian",
+          "ogerponcornerstone",
+          "ogerponwellspring",
+          "ragingbolt",
+          "samurotthisui",
+          "tinglu",
+          "tornadustherian",
+          "volcanion"
+        ],
+        "niche": [
+          "gliscor",
+          "grimmsnarl",
+          "ironjugulis",
+          "mandibuzz",
+          "ogerpon",
+          "overqwil"
+        ]
+      },
+      "Trick / Switcheroo": {
+        "main": [
+          "clefable",
+          "darkrai",
+          "deoxysspeed",
+          "gholdengo",
+          "hoopaunbound",
+          "ironvaliant",
+          "latias",
+          "latios",
+          "meowscarada",
+          "rotomwash",
+          "slowkinggalar"
+        ],
+        "niche": [
+          "greninja",
+          "indeedee"
+        ]
+      }
+    },
+    "Phazers": {
+      "Whirlwind / Roar": {
+        "main": [
+          "moltres",
+          "skarmory",
+          "tinglu",
+          "tyranitar",
+          "zamazenta"
+        ],
+        "niche": []
+      },
+      "Dragon Tail": {
+        "main": [
+          "dragonite",
+          "garchomp"
+        ],
+        "niche": [
+          "goodrahisui"
+        ]
+      }
+    },
+    "Wallbreakers": {
+      "Physical": {
+        "main": [
+          "blaziken",
+          "cinderace",
+          "ceruledge",
+          "dragapult",
+          "dragonite",
+          "excadrill",
+          "garchomp",
+          "greattusk",
+          "hoopaunbound",
+          "ironboulder",
+          "ironhands",
+          "ironvaliant",
+          "kingambit",
+          "kommoo",
+          "landorustherian",
+          "lokix",
+          "meowscarada",
+          "ogerpon",
+          "ogerponcornerstone",
+          "ogerponwellspring",
+          "okidogi",
+          "rillaboom",
+          "samurotthisui",
+          "scizor",
+          "slitherwing",
+          "tyranitar",
+          "ursaluna",
+          "weavile",
+          "zamazenta",
+          "zarude"
+        ],
+        "niche": [
+          "arcaninehisui",
+          "barraskewda",
+          "hawlucha",
+          "lilliganthisui",
+          "mamoswine",
+          "overqwil"
+        ]
+      },
+      "Special": {
+        "main": [
+          "darkrai",
+          "deoxysspeed",
+          "dragapult",
+          "enamorus",
+          "gholdengo",
+          "glimmora",
+          "hydrapple",
+          "ironcrown",
+          "ironmoth",
+          "ironvaliant",
+          "keldeo",
+          "kommoo",
+          "kyurem",
+          "latios",
+          "manaphy",
+          "pecharunt",
+          "primarina",
+          "ragingbolt",
+          "sinistcha",
+          "thundurustherian",
+          "tornadustherian",
+          "venusaur",
+          "volcanion",
+          "walkingwake"
+        ],
+        "niche": [
+          "goodrahisui",
+          "greninja",
+          "hydreigon",
+          "ironjugulis",
+          "magnezone",
+          "sandyshocks",
+          "polteageist"
+        ]
+      },
+      "Mixed": {
+        "main": [
+          "deoxysspeed",
+          "dragapult",
+          "enamorus",
+          "garchomp",
+          "hoopaunbound",
+          "ironvaliant",
+          "kommoo",
+          "kyurem",
+          "landorustherian",
+          "samurotthisui"
+        ],
+        "niche": []
+      }
+    },
+    "Choice Item Users": {
+      "Choice Band": {
+        "main": [
+          "dragapult",
+          "dragonite",
+          "hoopaunbound",
+          "lokix",
+          "meowscarada",
+          "ogerpon",
+          "rillaboom",
+          "scizor",
+          "slitherwing",
+          "tyranitar",
+          "weavile",
+          "zamazenta"
+        ],
+        "niche": [
+          "arcaninehisui",
+          "barraskewda",
+          "ironvaliant",
+          "mamoswine"
+        ]
+      },
+      "Choice Specs": {
+        "main": [
+          "darkrai",
+          "dragapult",
+          "enamorus",
+          "hoopaunbound",
+          "hydreigon",
+          "ironcrown",
+          "ironmoth",
+          "ironvaliant",
+          "keldeo",
+          "kyurem",
+          "latios",
+          "ragingbolt",
+          "volcanion",
+          "walkingwake"
+        ],
+        "niche": [
+          "magnezone",
+          "primarina",
+          "tornadustherian"
+        ]
+      },
+      "Choice Scarf": {
+        "main": [
+          "darkrai",
+          "enamorus",
+          "glimmora",
+          "gholdengo",
+          "ironvaliant",
+          "landorustherian",
+          "latios",
+          "meowscarada",
+          "rotomwash",
+          "samurotthisui",
+          "serperior"
+        ],
+        "niche": [
+          "ditto",
+          "sandyshocks"
+        ]
+      }
+    },
+    "Setup Sweepers": {
+      "Agility": {
+        "main": [
+          "enamorus",
+          "gliscor",
+          "ironcrown",
+          "ironmoth",
+          "latias",
+          "walkingwake"
+        ],
+        "niche": [
+          "moltresgalar"
+        ]
+      },
+      "Belly Drum": {
+        "main": [],
+        "niche": [
+          "kommoo"
+        ]
+      },
+      "Bulk Up": {
+        "main": [
+          "ceruledge",
+          "greattusk",
+          "okidogi",
+          "zarude"
+        ],
+        "niche": []
+      },
+      "Calm Mind": {
+        "main": [
+          "blissey",
+          "clefable",
+          "cresselia",
+          "hatterene",
+          "ironcrown",
+          "ironvaliant",
+          "keldeo",
+          "latias",
+          "latios",
+          "primarina",
+          "ragingbolt",
+          "sinistcha"
+        ],
+        "niche": [
+          "comfey",
+          "enamorus",
+          "enamorustherian"
+        ]
+      },
+      "Clangorous Soul": {
+        "main": [
+          "kommoo"
+        ],
+        "niche": []
+      },
+      "Curse": {
+        "main": [
+          "dondozo",
+          "garganacl"
+        ],
+        "niche": []
+      },
+      "Dragon Dance": {
+        "main": [
+          "dragapult",
+          "dragonite",
+          "kyurem"
+        ],
+        "niche": []
+      },
+      "Growth": {
+        "main": [
+          "venusaur"
+        ],
+        "niche": []
+      },
+      "Iron Defense / Acid Armor": {
+        "main": [
+          "corviknight",
+          "garganacl",
+          "skarmory",
+          "zamazenta",
+          "manaphy"
+        ],
+        "niche": [
+          "enamorustherian"
+        ]
+      },
+      "Nasty Plot": {
+        "main": [
+          "darkrai",
+          "deoxysspeed",
+          "gholdengo",
+          "hydrapple",
+          "moltresgalar",
+          "pecharunt",
+          "rotomwash",
+          "thundurustherian",
+          "tornadustherian"
+        ],
+        "niche": [
+          "hydreigon"
+        ]
+      },
+      "Shell Smash": {
+        "main": [
+          "polteageist"
+        ],
+        "niche": []
+      },
+      "Swords Dance": {
+        "main": [
+          "blaziken",
+          "ceruledge",
+          "excadrill",
+          "garchomp",
+          "gliscor",
+          "ironboulder",
+          "ironhands",
+          "ironvaliant",
+          "kingambit",
+          "landorustherian",
+          "lokix",
+          "ogerpon",
+          "ogerponcornerstone",
+          "ogerponwellspring",
+          "rillaboom",
+          "samurotthisui",
+          "scizor",
+          "ursaluna",
+          "weavile",
+          "zarude"
+        ],
+        "niche": [
+          "hawlucha",
+          "mimikyu",
+          "overqwil",
+          "quaquavel"
+        ]
+      },
+      "Tail Glow": {
+        "main": [
+          "manaphy"
+        ],
+        "niche": []
+      },
+      "Take Heart": {
+        "main": [
+          "manaphy"
+        ],
+        "niche": []
+      },
+      "Victory Dance": {
+        "main": [
+          "lilliganthisui"
+        ],
+        "niche": []
+      }
+    },
+    "Priority": {
+      "Aqua Jet": {
+        "main": [
+          "samurotthisui"
+        ],
+        "niche": [
+          "barraskewda"
+        ]
+      },
+      "Bullet Punch": {
+        "main": [
+          "scizor"
+        ],
+        "niche": []
+      },
+      "Extreme Speed": {
+        "main": [
+          "dragonite"
+        ],
+        "niche": [
+          "arcaninehisui"
+        ]
+      },
+      "First Impression": {
+        "main": [
+          "lokix",
+          "slitherwing"
+        ],
+        "niche": []
+      },
+      "Grassy Glide": {
+        "main": [
+          "rillaboom"
+        ],
+        "niche": []
+      },
+      "Ice Shard": {
+        "main": [
+          "weavile"
+        ],
+        "niche": [
+          "mamoswine"
+        ]
+      },
+      "Quick Attack": {
+        "main": [
+          "dragapult",
+          "scizor"
+        ],
+        "niche": []
+      },
+      "Shadow Sneak": {
+        "main": [
+          "ceruledge",
+          "ironvaliant"
+        ],
+        "niche": [
+          "mimikyu"
+        ]
+      },
+      "Sucker Punch": {
+        "main": [
+          "cinderace",
+          "darkrai",
+          "dragapult",
+          "kingambit",
+          "lokix",
+          "meowscarada",
+          "samurotthisui"
+        ],
+        "niche": []
+      },
+      "Prankster": {
+        "main": [
+          "grimmsnarl"
+        ],
+        "niche": []
+      },
+      "Thunderclap": {
+        "main": [
+          "ragingbolt"
+        ],
+        "niche": []
+      },
+      "Triage": {
+        "main": [
+          "comfey"
+        ],
+        "niche": []
+      },
+      "Vacuum Wave": {
+        "main": [
+          "ironvaliant",
+          "keldeo"
+        ],
+        "niche": [
+          "kommoo"
+        ]
+      },
+      "Water Shuriken": {
+        "main": [],
+        "niche": [
+          "greninja"
+        ]
+      }
+    },
+    "Walls": {
+      "Physically Defensive": {
+        "main": [
+          "alomomola",
+          "clefable",
+          "cresselia",
+          "corviknight",
+          "dondozo",
+          "garganacl",
+          "gliscor",
+          "greattusk",
+          "hatterene",
+          "hydrapple",
+          "landorustherian",
+          "moltres",
+          "pecharunt",
+          "pelipper",
+          "rotomwash",
+          "skarmory",
+          "slitherwing",
+          "torkoal",
+          "toxapex",
+          "weezinggalar",
+          "zapdos",
+          "zamazenta"
+        ],
+        "niche": [
+          "chesnaught",
+          "enamorustherian",
+          "quagsire",
+          "reuniclus",
+          "talonflame"
+        ]
+      },
+      "Specially Defensive": {
+        "main": [
+          "blissey",
+          "clodsire",
+          "cresselia",
+          "garganacl",
+          "gliscor",
+          "heatran",
+          "moltres",
+          "slitherwing",
+          "slowkinggalar",
+          "tinglu",
+          "toxapex",
+          "tornadustherian",
+          "tyranitar"
+        ],
+        "niche": [
+          "chansey",
+          "fezandipiti",
+          "reuniclus",
+          "slowking"
+        ]
+      },
+      "Mixed Defensive": {
+        "main": [
+          "clefable",
+          "corviknight",
+          "garganacl",
+          "gliscor",
+          "moltres",
+          "okidogi",
+          "skeledirge",
+          "slowkinggalar",
+          "tinglu",
+          "toxapex"
+        ],
+        "niche": [
+          "amoonguss",
+          "mandibuzz",
+          "umbreon"
+        ]
+      }
+    },
+    "Pivots": {
+      "Offensive": {
+        "main": [
+          "blaziken",
+          "ceruledge",
+          "cinderace",
+          "deoxysspeed",
+          "dragapult",
+          "dragonite",
+          "gholdengo",
+          "garchomp",
+          "greattusk",
+          "ironhands",
+          "irontreads",
+          "keldeo",
+          "kingambit",
+          "kyurem",
+          "landorustherian",
+          "lokix",
+          "meowscarada",
+          "ogerponwellspring",
+          "okidogi",
+          "primarina",
+          "ragingbolt",
+          "rillaboom",
+          "scizor",
+          "tornadustherian",
+          "ursaluna",
+          "volcanion",
+          "walkingwake",
+          "zamazenta",
+          "zapdos"
+        ],
+        "niche": [
+          "greninja",
+          "quaquavel",
+          "sandyshocks",
+          "thundurustherian"
+        ]
+      },
+      "Defensive": {
+        "main": [
+          "alomomola",
+          "clefable",
+          "clodsire",
+          "corviknight",
+          "garganacl",
+          "gliscor",
+          "greattusk",
+          "hatterene",
+          "heatran",
+          "hydrapple",
+          "landorustherian",
+          "moltres",
+          "pecharunt",
+          "pelipper",
+          "rotomwash",
+          "scizor",
+          "skeledirge",
+          "slowkinggalar",
+          "slitherwing",
+          "tinglu",
+          "tinkaton",
+          "torkoal",
+          "tornadustherian",
+          "toxapex",
+          "weezinggalar",
+          "zapdos"
+        ],
+        "niche": [
+          "amoonguss",
+          "chansey",
+          "chesnaught",
+          "cresselia",
+          "goodrahisui",
+          "grimmsnarl",
+          "mandibuzz",
+          "quagsire",
+          "reuniclus",
+          "slowking"
+        ]
+      }
+    }
+  },
+  "by_pokemon": {
+    "clodsire": [
+      {
+        "category": "Entry Hazards",
+        "role": "Spikes",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Specially Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "deoxysspeed": [
+      {
+        "category": "Entry Hazards",
+        "role": "Spikes",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Support",
+        "role": "Screens Setters",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Trick / Switcheroo",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Mixed",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Nasty Plot",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "glimmora": [
+      {
+        "category": "Entry Hazards",
+        "role": "Spikes",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Entry Hazards",
+        "role": "Toxic Spikes",
+        "tier": "main",
+        "note": "Toxic Debris"
+      },
+      {
+        "category": "Hazard Control",
+        "role": "Rapid Spin / Mortal Spin",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Scarf",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "garchomp": [
+      {
+        "category": "Entry Hazards",
+        "role": "Spikes",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Phazers",
+        "role": "Dragon Tail",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Mixed",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "gliscor": [
+      {
+        "category": "Entry Hazards",
+        "role": "Spikes",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Defensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Agility",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Specially Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Mixed Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "meowscarada": [
+      {
+        "category": "Entry Hazards",
+        "role": "Spikes",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Trick / Switcheroo",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Band",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Scarf",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Sucker Punch",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "ogerpon": [
+      {
+        "category": "Entry Hazards",
+        "role": "Spikes",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Encore",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Band",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "ogerponcornerstone": [
+      {
+        "category": "Entry Hazards",
+        "role": "Spikes",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Encore",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "ogerponwellspring": [
+      {
+        "category": "Entry Hazards",
+        "role": "Spikes",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Encore",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "samurotthisui": [
+      {
+        "category": "Entry Hazards",
+        "role": "Spikes",
+        "tier": "main",
+        "note": "Ceaseless Edge"
+      },
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Encore",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Mixed",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Scarf",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Aqua Jet",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Sucker Punch",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "skarmory": [
+      {
+        "category": "Entry Hazards",
+        "role": "Spikes",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Phazers",
+        "role": "Whirlwind / Roar",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Iron Defense / Acid Armor",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "tinglu": [
+      {
+        "category": "Entry Hazards",
+        "role": "Spikes",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Phazers",
+        "role": "Whirlwind / Roar",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Specially Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Mixed Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "chesnaught": [
+      {
+        "category": "Entry Hazards",
+        "role": "Spikes",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "overqwil": [
+      {
+        "category": "Entry Hazards",
+        "role": "Spikes",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "blissey": [
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Calm Mind",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Specially Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "clefable": [
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Support",
+        "role": "Wish",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Defensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Encore",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Trick / Switcheroo",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Calm Mind",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Mixed Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "excadrill": [
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Hazard Control",
+        "role": "Rapid Spin / Mortal Spin",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "garganacl": [
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Curse",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Iron Defense / Acid Armor",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Specially Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Mixed Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "greattusk": [
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Hazard Control",
+        "role": "Rapid Spin / Mortal Spin",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Defensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Bulk Up",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "heatran": [
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Specially Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "irontreads": [
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Hazard Control",
+        "role": "Rapid Spin / Mortal Spin",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Defensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "landorustherian": [
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Mixed",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Scarf",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "tinkaton": [
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Defensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Encore",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "torkoal": [
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Hazard Control",
+        "role": "Rapid Spin / Mortal Spin",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "tyranitar": [
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Phazers",
+        "role": "Whirlwind / Roar",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Band",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Specially Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "chansey": [
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Specially Defensive",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "mamoswine": [
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Band",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Ice Shard",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "quagsire": [
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "sandyshocks": [
+      {
+        "category": "Entry Hazards",
+        "role": "Stealth Rock",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Scarf",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "ribombee": [
+      {
+        "category": "Entry Hazards",
+        "role": "Sticky Web",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "araquanid": [
+      {
+        "category": "Entry Hazards",
+        "role": "Sticky Web",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "ironmoth": [
+      {
+        "category": "Entry Hazards",
+        "role": "Toxic Spikes",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Specs",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Agility",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "slowkinggalar": [
+      {
+        "category": "Entry Hazards",
+        "role": "Toxic Spikes",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Trick / Switcheroo",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Specially Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Mixed Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "toxapex": [
+      {
+        "category": "Entry Hazards",
+        "role": "Toxic Spikes",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Specially Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Mixed Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "weezinggalar": [
+      {
+        "category": "Entry Hazards",
+        "role": "Toxic Spikes",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Hazard Control",
+        "role": "Defog",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "corviknight": [
+      {
+        "category": "Hazard Control",
+        "role": "Defog",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Iron Defense / Acid Armor",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Mixed Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "scizor": [
+      {
+        "category": "Hazard Control",
+        "role": "Defog",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Band",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Bullet Punch",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Quick Attack",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "mandibuzz": [
+      {
+        "category": "Hazard Control",
+        "role": "Defog",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Defensive)",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Mixed Defensive",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "talonflame": [
+      {
+        "category": "Hazard Control",
+        "role": "Defog",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "hatterene": [
+      {
+        "category": "Hazard Control",
+        "role": "Magic Bounce",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Support",
+        "role": "Healing Wish / Lunar Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Calm Mind",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "cinderace": [
+      {
+        "category": "Hazard Control",
+        "role": "Court Change",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Sucker Punch",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "regieleki": [
+      {
+        "category": "Hazard Control",
+        "role": "Rapid Spin / Mortal Spin",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Support",
+        "role": "Screens Setters",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "cresselia": [
+      {
+        "category": "Support",
+        "role": "Healing Wish / Lunar Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Calm Mind",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Specially Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "enamorus": [
+      {
+        "category": "Support",
+        "role": "Healing Wish / Lunar Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Mixed",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Specs",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Scarf",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Agility",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Calm Mind",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "latias": [
+      {
+        "category": "Support",
+        "role": "Healing Wish / Lunar Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Trick / Switcheroo",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Agility",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Calm Mind",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "ninetales": [
+      {
+        "category": "Support",
+        "role": "Healing Wish / Lunar Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Encore",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "alomomola": [
+      {
+        "category": "Support",
+        "role": "Healing Wish / Lunar Dance",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Support",
+        "role": "Wish",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "indeedee": [
+      {
+        "category": "Support",
+        "role": "Healing Wish / Lunar Dance",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Trick / Switcheroo",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "umbreon": [
+      {
+        "category": "Support",
+        "role": "Wish",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Mixed Defensive",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "dragapult": [
+      {
+        "category": "Support",
+        "role": "Screens Setters",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Mixed",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Band",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Specs",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Dragon Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Quick Attack",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Sucker Punch",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "ninetalesalola": [
+      {
+        "category": "Support",
+        "role": "Screens Setters",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Encore",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "zamazenta": [
+      {
+        "category": "Support",
+        "role": "Screens Setters",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Phazers",
+        "role": "Whirlwind / Roar",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Band",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Iron Defense / Acid Armor",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "grimmsnarl": [
+      {
+        "category": "Support",
+        "role": "Screens Setters",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Prankster",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "blaziken": [
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "darkrai": [
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Trick / Switcheroo",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Specs",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Scarf",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Nasty Plot",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Sucker Punch",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "hoopaunbound": [
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Trick / Switcheroo",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Mixed",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Band",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Specs",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "ironvaliant": [
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Encore",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Trick / Switcheroo",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Mixed",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Band",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Specs",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Scarf",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Calm Mind",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Shadow Sneak",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Vacuum Wave",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "lokix": [
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Band",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "First Impression",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Sucker Punch",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "okidogi": [
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Bulk Up",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Mixed Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "rillaboom": [
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Band",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Grassy Glide",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "serperior": [
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Scarf",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "weavile": [
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Band",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Ice Shard",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "zarude": [
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Encore",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Bulk Up",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "ironjugulis": [
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Offensive)",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "pelipper": [
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Defensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "tornadustherian": [
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Defensive)",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Specs",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Nasty Plot",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Specially Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "goodrahisui": [
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Defensive)",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Phazers",
+        "role": "Dragon Tail",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "reuniclus": [
+      {
+        "category": "Other Utility",
+        "role": "Knock Off (Defensive)",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Specially Defensive",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "dragonite": [
+      {
+        "category": "Other Utility",
+        "role": "Encore",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Phazers",
+        "role": "Dragon Tail",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Band",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Dragon Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Extreme Speed",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "hawlucha": [
+      {
+        "category": "Other Utility",
+        "role": "Encore",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "toxicroak": [
+      {
+        "category": "Other Utility",
+        "role": "Encore",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "ceruledge": [
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Bulk Up",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Shadow Sneak",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "ragingbolt": [
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Specs",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Calm Mind",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Thunderclap",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "volcanion": [
+      {
+        "category": "Other Utility",
+        "role": "Taunt",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Specs",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "gholdengo": [
+      {
+        "category": "Other Utility",
+        "role": "Trick / Switcheroo",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Scarf",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Nasty Plot",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "latios": [
+      {
+        "category": "Other Utility",
+        "role": "Trick / Switcheroo",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Specs",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Scarf",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Calm Mind",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "rotomwash": [
+      {
+        "category": "Other Utility",
+        "role": "Trick / Switcheroo",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Scarf",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Nasty Plot",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "greninja": [
+      {
+        "category": "Other Utility",
+        "role": "Trick / Switcheroo",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Water Shuriken",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "moltres": [
+      {
+        "category": "Phazers",
+        "role": "Whirlwind / Roar",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Specially Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Mixed Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "ironboulder": [
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "ironhands": [
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "kingambit": [
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Sucker Punch",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "kommoo": [
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Mixed",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Belly Drum",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Clangorous Soul",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Vacuum Wave",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "slitherwing": [
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Band",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "First Impression",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Specially Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "ursaluna": [
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "arcaninehisui": [
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Band",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Extreme Speed",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "barraskewda": [
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Band",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Aqua Jet",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "lilliganthisui": [
+      {
+        "category": "Wallbreakers",
+        "role": "Physical",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Victory Dance",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "hydrapple": [
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Nasty Plot",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "ironcrown": [
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Specs",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Agility",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Calm Mind",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "keldeo": [
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Specs",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Calm Mind",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Vacuum Wave",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "kyurem": [
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Wallbreakers",
+        "role": "Mixed",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Specs",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Dragon Dance",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "manaphy": [
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Iron Defense / Acid Armor",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Tail Glow",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Take Heart",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "pecharunt": [
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Nasty Plot",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "primarina": [
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Specs",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Calm Mind",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "sinistcha": [
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Calm Mind",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "thundurustherian": [
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Nasty Plot",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "venusaur": [
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Growth",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "walkingwake": [
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Specs",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Agility",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "hydreigon": [
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Specs",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Nasty Plot",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "magnezone": [
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Specs",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "polteageist": [
+      {
+        "category": "Wallbreakers",
+        "role": "Special",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Shell Smash",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "ditto": [
+      {
+        "category": "Choice Item Users",
+        "role": "Choice Scarf",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "moltresgalar": [
+      {
+        "category": "Setup Sweepers",
+        "role": "Agility",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Nasty Plot",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "comfey": [
+      {
+        "category": "Setup Sweepers",
+        "role": "Calm Mind",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Triage",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "enamorustherian": [
+      {
+        "category": "Setup Sweepers",
+        "role": "Calm Mind",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Setup Sweepers",
+        "role": "Iron Defense / Acid Armor",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "dondozo": [
+      {
+        "category": "Setup Sweepers",
+        "role": "Curse",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "mimikyu": [
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Priority",
+        "role": "Shadow Sneak",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "quaquavel": [
+      {
+        "category": "Setup Sweepers",
+        "role": "Swords Dance",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "zapdos": [
+      {
+        "category": "Walls",
+        "role": "Physically Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Offensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "fezandipiti": [
+      {
+        "category": "Walls",
+        "role": "Specially Defensive",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "slowking": [
+      {
+        "category": "Walls",
+        "role": "Specially Defensive",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "niche",
+        "note": null
+      }
+    ],
+    "skeledirge": [
+      {
+        "category": "Walls",
+        "role": "Mixed Defensive",
+        "tier": "main",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "main",
+        "note": null
+      }
+    ],
+    "amoonguss": [
+      {
+        "category": "Walls",
+        "role": "Mixed Defensive",
+        "tier": "niche",
+        "note": null
+      },
+      {
+        "category": "Pivots",
+        "role": "Defensive",
+        "tier": "niche",
+        "note": null
+      }
+    ]
+  }
+}
