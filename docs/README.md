@@ -25,6 +25,7 @@
 - [LangGraph ReAct 에이전트 아키텍처](architecture/langgraph-architecture.md)
 - [LangGraph Tool 아키텍처](architecture/langgraph-tools-architecture.md)
 - [Minimax Prompt Algorithm 작동 방식](architecture/minimax-algorithm.md)
+- [Smogon 커뮤니티 데이터 정제 — 설계 의도](architecture/smogon-meta-design.md) — 정제 산출물(strategies/roles JSON)의 구조와 각 정제 결정의 why
 
 ## ReAct Agent 노트 (`agent-notes/`)
 - [LLM 기반 도구 호출 종료 판단 설계](agent-notes/react-agent-llm-based-stopping-criteria.md)
