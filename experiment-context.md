@@ -207,8 +207,12 @@ uv run python scripts/battles/local_1v1.py \
 | EXP-046 | oracle attacker 식별 fix | 43.3% (13/30) | 16.6 | damage 정확화→단기 damage 맹신으로 −13.4pp. `docs/analysis/exp-046-react-glm51-analysis.md` |
 | EXP-047 | oracle **전무브 통일** | **63.3% (19/30)** | 16.8 | 혼합 척도 편향 해소, +6.6pp vs 044. `docs/analysis/exp-047-react-glm51-analysis.md` |
 | EXP-048 | oracle N-roll 난수 분산 | 53.3% (16/30) | 16.4 | 정확도 한계 도달 → react/langGraph 구조 병목 확인. `docs/analysis/exp-048-react-glm51-analysis.md` |
+| EXP-049a | + 턴 간 메모리(D) | 40.0% (12/30) | 17.6 | 매턴 brief 블로트 + my_plan 단기 재진술(역효과). `docs/analysis/exp-049a-react-glm51-analysis.md` · ⚠️oracle 버그 하 |
+| EXP-049b | + B 노드 분리 | 60.0% (18/30) | 18.2 | strategy 노드 clean-rebuild 종합. `docs/analysis/exp-049b-react-glm51-analysis.md` · ⚠️oracle 버그 하 |
+| EXP-049c | + Smogon 도구(방식1) | 60.0% (18/30) 재검 | 16.5 | overview 빈 결함 복구 후 재검. `docs/analysis/exp-049c-react-glm51-analysis.md` · ⚠️oracle 버그 하 |
+| **EXP-050a** | + teampreview 풀 정보 + **oracle 버그 수정**(pack `c9ac112` + max_hp `dd9b040`) | **70.0% (21/30)** | 18.0 | **시리즈 최고, oracle 정상 후 첫 측정**. `docs/analysis/exp-050a-react-glm51-analysis.md` |
 
-**핵심 (★)**: "정확성≠승률" — oracle damage 정확도 향상은 한계 도달. 병목은 **react/langGraph 구조**(damage observation → 전략 변환). → **EXP-048 이후 연구 방향 전환**: 정확도 영역(oracle/sim fix) → **구조 영역(react/langGraph)**. EXP-049a(턴 간 메모리) 🔵 진행 중, EXP-049b(다단계 노드)/049c(Smogon 메타 도구) 로드맵 — [`docs/architecture/react-architecture-redesign.md`](docs/architecture/react-architecture-redesign.md).
+**핵심 (★)**: EXP-044~049c는 **oracle 데미지 버그**(`_pack_pokemon` 빈 pack → `Teams.unpack` 랜덤 폴백 + `active_state.max_hp`=100 → dex maxhp 덮어쓰기, EXP-050a에서 발견·수정) 하의 측정 — 절대 승률이 무작위 왜곡. "정확성≠승률" 가설은 이 가짜 상태의 산물. **EXP-050a(70%)가 oracle 수정 후 첫 정상 측정** → 정확한 oracle에서 오히려 +10~16pp 향상으로 **"정확성=승률" 재확립**. teampreview 풀 정보(Smogon overview 12종 + 역할 + 상대 선발 예측) + 정확 oracle 시너지. 다음: opp stats 정확화 / 사람 사고 후속(050b+). [`docs/analysis/exp-050a-react-glm51-analysis.md`](docs/analysis/exp-050a-react-glm51-analysis.md) · [`react-architecture-redesign.md`](docs/architecture/react-architecture-redesign.md).
 
 ### 전체 실험 이력
 
@@ -250,7 +254,10 @@ uv run python scripts/battles/local_1v1.py \
 | EXP-046 | react oracle attacker fix | 2026-06-22 | ✅ 완료 | 43.3% (13/30) | damage 정확화→단기 damage 맹신으로 −13.4pp |
 | EXP-047 | react oracle 전무브 통일 | 2026-06-23 | ✅ 완료 | 63.3% (19/30) | 혼합 척도 편향 해소, +6.6pp vs 044 |
 | EXP-048 | react oracle N-roll 난수 분산 | 2026-06-23 | ✅ 완료 | 53.3% (16/30) | 정확도 한계 도달 → react/langGraph 구조 병목 확인 |
-| EXP-049a | react-memory-d (턴 간 메모리) | 2026-06-24 | 🔵 진행 | — | baseline=EXP-048(53.3%). 설계 `docs/architecture/react-architecture-redesign.md` |
+| EXP-049a | react-memory-d (턴 간 메모리) | 2026-06-24 | ✅ 완료 | 40.0% (12/30) | 매턴 brief 블로트 + my_plan 단기 재진술(역효과). ⚠️oracle 버그 하 |
+| EXP-049b | react-strategy-node (B 노드) | 2026-06-24 | ✅ 완료 | 60.0% (18/30) | strategy 노드 clean-rebuild 종합. ⚠️oracle 버그 하 |
+| EXP-049c | react-smogon-tool (방식1) | 2026-06-25 | ✅ 완료 | 60.0% (18/30) 재검 | overview 빈 결함 복구 후 재검. ⚠️oracle 버그 하 |
+| EXP-050a | react-teampreview (풀 정보 + oracle 버그 수정) | 2026-06-26 | ✅ 완료 | **70.0% (21/30)** | 시리즈 최고. oracle 정상 후 첫 측정(pack/max_hp 버그 수정). `docs/analysis/exp-050a-react-glm51-analysis.md` |
 
 ---
 
