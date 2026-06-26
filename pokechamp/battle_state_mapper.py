@@ -250,8 +250,14 @@ def _pack_pokemon(pokemon: Any) -> str:
     # silently falls back to a random demo team (Girafarig/Swanna/...) so the
     # oracle computes damage for the WRONG pokemon (EXP-050a root cause:
     # oracle returned Pelipper U-turn -> Ogerpon-W OHKO from a random matchup).
-    # poke_env exposes nature/evs/ivs only for the own team; opponents get
-    # competitive-neutral defaults (Serious / 0 EV / perfect IV / level 100).
+    # NOTE: poke_env does NOT expose evs/nature/ivs for own OR opp — Pokemon has
+    # base_stats/level/max_hp but NO evs/nature/ivs property (verified by full
+    # property list). So getattr below ALWAYS returns None for both → both fall
+    # back to neutral (Serious / 0 EV / perfect IV / level 100). Stats themselves
+    # are NOT zero (Showdown computes them from dex base + Lv100 + IV31 + EV0);
+    # only the EV contribution is missing. This distorts absolute damage BOTH
+    # ways: own attackers hit too soft (no EV), opp walls take too much (no
+    # HP/Def EV). See EXP-050a §2.1 (정정2).
     nature = getattr(pokemon, "nature", None)
     parts.append(_normalize_id(nature) if nature else "serious")
     evs = getattr(pokemon, "evs", None)

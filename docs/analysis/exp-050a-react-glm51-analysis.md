@@ -64,8 +64,12 @@
 | **정당 (2×+)** 193회 | 63.3% | `closecombat→kingambit`(4×), `icebeam→landorust`(4×), `hurricane→ironvaliant`(2×), `hydropump→clodsire`(2×) |
 | **비현실 (1×/0.5×)** 112회 | 36.7% | `water→gholdengo`(1×) x7, `ghost/fire→zamazenta`(1×) x10, `dragon→moltres`(1×) x4, `grass→ogerponwellspring`(1×) |
 
-- 이전 `uturn→ogerpon 100%`(랜덤 폴백 + max_hp 덮어쓰기) 소멸은 사실. **하지만 opp stats가 0 EV 기본**(`_pack_pokemon` neutral — poke_env에 nature/evs/ivs 속성이 없어 own·opp 모두 dex 기본 0 EV) → opp 방어가 실제 경쟁 세팅(EV 투자)보다 낮아 **절대 데미지가 과대** → 1× 매치업도 100% OHKO로 둔갑. gholdengo/zamazenta/moltres(내구형)에서 두드러짐(실제론 절대 OHKO 안 됨).
-- max_hp 버그(`dd9b040`)는 dex maxhp를 존중하도록 고쳤으나, **방어력(EV/IV/nature)은 여전히 0 EV 기본** → 절대 데미지 왜곡 잔존. **2차(opp stats 추정)** 로 감소 가능.
+- 이전 `uturn→ogerpon 100%`(랜덤 폴백 + max_hp 덮어쓰기) 소멸은 사실. 하지만 **절대 데미지가 양방향으로 왜곡**:
+  - **★핵심 정정2 (2026-06-26)**: poke_env `Pokemon`은 `base_stats`·`level`·`max_hp` property는 노출하지만 **`evs`/`nature`/`ivs` property 자체가 없음** (`pokemon.py` property 전수 확인). 따라서 `_pack_pokemon`의 `getattr(evs/nature/ivs)`는 **own이든 opp든 항상 `None` → 둘 다 neutral 폴백 (EV=0 / IV=31 / Serious)**. 본 §2.1 초안의 "opp만 0 EV" 및 `battle_state_mapper.py:253` 주석의 "own은 poke_env EV 사용" 가정은 **둘 다 틀림** → **own·opp 모두 EV=0**.
+  - **own 공격력 과소**: 실제 EV 252 attacker가 EV=0 → own 데미지 **과소평가**.
+  - **opp 방어력 과소 → 피해 과대**: 실제 EV 252 HP/Def wall이 EV=0 → 1× 매치업도 100% OHKO로 둔갑. gholdengo/zamazenta/moltres(내구형)에서 두드러짐(실제론 절대 OHKO 안 됨).
+  - **스탯 값 자체는 0이 아님**: Showdown이 `species + Lv100 + IV31 + EV0 + neutral`로 dex base 기반 정상 계산 (예: Ogerpon-Wellspring SpA=276 / Def=204). 0인 건 **EV 투자분만**.
+- max_hp 버그(`dd9b040`)는 dex maxhp를 존중하도록 고쳤으나, **EV 투자분은 여전히 0** → 절대 데미지 양방향 왜곡 잔존. **stats 추정(own·opp)** 로 감소 가능 — 단 설계 논의 필요(§5.1, **보류**).
 
 ### 2.2 데미지 분포 정상화 (1482회 oracle 쿼리)
 
@@ -104,7 +108,11 @@
 - **teampreview 풀 정보**: 정상 작동하나, oracle 수정 없이는 효과 측정 불가(버그가 결과를 무력화). 수정 후 시너지로 작용.
 
 ### 다음 레버 (목표 90%까지 +20pp)
-1. **opp stats 정확화** (2차): §2.1에서 100% OHKO의 **36.7%(112회)가 type 1×/0.5× 비현실**로 확인 — opp 0 EV 방어로 절대 데미지 과대. Smogon sets 기반 추정(EV/nature)으로 1× 비현실 100% 감소 → 데미지 절대값 sim(29-38%) 근접.
+1. **★stats 추정 (own·opp)** — **보류** (설계 논의 필요): §2.1 정정2에서 **own·opp 둘 다 EV=0** 확인 (poke_env 미노출). 양방향 왜곡(own 공격 과소 + opp 방어 과소→피해 과대)을 잡으려면 3축 동시 고려:
+   - **own EV 회수**: 팀 빌드(manifest / `modern_replays` 로딩)에서 own EV/nature 회수 → poke_env 또는 mapper에 흘리기.
+   - **opp EV 추정**: bayesian prediction(`bayesian/pokemon_predictor.py` + `pokemon.py:get_predicted_stats`)이 이미 EV/nature 추정 보유 → oracle payload 주입.
+   - **구간 데미지**: EV 확정 불가 시 min/max/중앙 spread (N-roll 난수 분산과 유사).
+   - **사용자 통찰**: "최상위권은 자기 포켓몬 EV 조절 + 상대 EV 추측으로 킬 여부 판정" — 본 시스템 반영은 위 3축 모두 손대야 해 논의 多 → 별도 EXP로 미룸.
 2. **044~049c 재측정 검토**: oracle 수정이 전 시리즈에 영향이므로, 핵심 실험(047/049b)을 수정된 oracle로 재측정하면 절대 승률 재해석 가능. (단, 비용 큼.)
 3. **사람 사고 후속** (050b/c/d): 역할횟수·phase·자원 ledger.
 4. calculate·simulate 중복 해소 / sim-oracle 교차검증(안전망).
