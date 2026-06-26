@@ -239,10 +239,22 @@ def _pack_pokemon(pokemon: Any) -> str:
         parts.append(",".join(_normalize_id(mid) for mid in moves))
     else:
         parts.append("")
-    # nature (not available in poke_env for opponent Pokémon)
-    parts.append("")
-    # evs (not available — leave empty)
-    parts.append("")
+    # nature / evs / ivs / level — must be EXPLICIT. Leaving them empty makes
+    # the packed string unparseable by Showdown ``Teams.unpack``, which then
+    # silently falls back to a random demo team (Girafarig/Swanna/...) so the
+    # oracle computes damage for the WRONG pokemon (EXP-050a root cause:
+    # oracle returned Pelipper U-turn -> Ogerpon-W OHKO from a random matchup).
+    # poke_env exposes nature/evs/ivs only for the own team; opponents get
+    # competitive-neutral defaults (Serious / 0 EV / perfect IV / level 100).
+    nature = getattr(pokemon, "nature", None)
+    parts.append(_normalize_id(nature) if nature else "serious")
+    evs = getattr(pokemon, "evs", None)
+    if isinstance(evs, dict):
+        parts.append(
+            ",".join(str(evs.get(k, 0)) for k in ("hp", "atk", "def", "spa", "spd", "spe"))
+        )
+    else:
+        parts.append("0,0,0,0,0,0")
     # gender
     gender = getattr(pokemon, "gender", None)
     if gender is not None:
@@ -251,13 +263,19 @@ def _pack_pokemon(pokemon: Any) -> str:
         parts.append(gender_str[0].upper() if gender_str else "")
     else:
         parts.append("")
-    # ivs (not available — leave empty)
-    parts.append("")
+    # ivs — perfect (31) when unknown
+    ivs = getattr(pokemon, "ivs", None)
+    if isinstance(ivs, dict):
+        parts.append(
+            ",".join(str(ivs.get(k, 31)) for k in ("hp", "atk", "def", "spa", "spd", "spe"))
+        )
+    else:
+        parts.append("31,31,31,31,31,31")
     # shiny
     parts.append("S" if getattr(pokemon, "shiny", False) else "")
-    # level
+    # level — always explicit (empty level contributed to the unpack failure)
     level = getattr(pokemon, "level", 100)
-    parts.append(str(level) if level != 100 else "")
+    parts.append(str(level))
     # happiness (not available)
     parts.append("")
 
