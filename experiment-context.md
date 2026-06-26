@@ -211,6 +211,7 @@ uv run python scripts/battles/local_1v1.py \
 | EXP-049b | + B 노드 분리 | 60.0% (18/30) | 18.2 | strategy 노드 clean-rebuild 종합. `docs/analysis/exp-049b-react-glm51-analysis.md` · ⚠️oracle 버그 하 |
 | EXP-049c | + Smogon 도구(방식1) | 60.0% (18/30) 재검 | 16.5 | overview 빈 결함 복구 후 재검. `docs/analysis/exp-049c-react-glm51-analysis.md` · ⚠️oracle 버그 하 |
 | **EXP-050a** | + teampreview 풀 정보 + **oracle 버그 수정**(pack `c9ac112` + max_hp `dd9b040`) | **70.0% (21/30)** | 18.0 | **시리즈 최고, oracle 정상 후 첫 측정**. `docs/analysis/exp-050a-react-glm51-analysis.md` |
+| **EXP-050b** | + 자기 팀 역할 매 턴 state 주입(낙후 a 해소) + `unknown_item` fix | 🟡 코드 완료/배틀 대기 | — | 050a(70%) baseline. human-thought point 1·3 전제. 메모리 낙후(a): `my_role_balance`/`my_team_roles`가 teampreview-only → 매 턴 `BattleAgentState` 주입 + `_format_memory_brief` "Your team roles" 섹션. `active/EXP-050b-own-role-injection` |
 
 **핵심 (★)**: EXP-044~049c는 **oracle 데미지 버그**(`_pack_pokemon` 빈 pack → `Teams.unpack` 랜덤 폴백 + `active_state.max_hp`=100 → dex maxhp 덮어쓰기, EXP-050a에서 발견·수정) 하의 측정 — 절대 승률이 무작위 왜곡. "정확성≠승률" 가설은 이 가짜 상태의 산물. **EXP-050a(70%)가 oracle 수정 후 첫 정상 측정** → 정확한 oracle에서 오히려 +10~16pp 향상으로 **"정확성=승률" 재확립**. teampreview 풀 정보(Smogon overview 12종 + 역할 + 상대 선발 예측) + 정확 oracle 시너지. 다음: opp stats 정확화 / 사람 사고 후속(050b+). [`docs/analysis/exp-050a-react-glm51-analysis.md`](docs/analysis/exp-050a-react-glm51-analysis.md) · [`react-architecture-redesign.md`](docs/architecture/react-architecture-redesign.md).
 
@@ -258,6 +259,7 @@ uv run python scripts/battles/local_1v1.py \
 | EXP-049b | react-strategy-node (B 노드) | 2026-06-24 | ✅ 완료 | 60.0% (18/30) | strategy 노드 clean-rebuild 종합. ⚠️oracle 버그 하 |
 | EXP-049c | react-smogon-tool (방식1) | 2026-06-25 | ✅ 완료 | 60.0% (18/30) 재검 | overview 빈 결함 복구 후 재검. ⚠️oracle 버그 하 |
 | EXP-050a | react-teampreview (풀 정보 + oracle 버그 수정) | 2026-06-26 | ✅ 완료 | **70.0% (21/30)** | 시리즈 최고. oracle 정상 후 첫 측정(pack/max_hp 버그 수정). `docs/analysis/exp-050a-react-glm51-analysis.md` |
+| EXP-050b | react-own-role-injection (자기 팀 역할 매 턴 주입) | 2026-06-26 | 🟡 코드 완료/배틀 대기 | — | 050a(70%) baseline. 메모리 낙후(a) 해소: `my_role_balance`/`my_team_roles` 매 턴 `BattleAgentState` 주입(`state.py`/`common.py`/`react_agent._format_memory_brief`/`langchain_player.choose_move`) + `unknown_item` 노이즈 fix. §0-4 단일 기능 "자기 팀 역할 매 턴 보이게". **사람 사고 모방 050b/c/d/e 시리즈 시작** (plan `/root/.claude/plans/misty-orbiting-brooks.md`). |
 
 ---
 

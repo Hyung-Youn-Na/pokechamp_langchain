@@ -68,6 +68,15 @@ class BattleAgentState(TypedDict):
     my_plan: str
     plan_turn: int
 
+    # -- Own team roles (EXP-050b, human-thought point 1·3) --
+    # Own team role balance + per-pokemon roles, injected every turn so the
+    # agent judges switches/sacrifices against its own structure. In 050a these
+    # lived on BattleMemory but were teampreview-only — BattleAgentState lacked
+    # the fields, so _format_memory_brief could not surface them mid-battle.
+    my_role_balance: Dict[str, int]
+    my_team_roles: Dict[str, List[Dict[str, Any]]]
+    preview_seed_turn: int
+
     # -- Tool call tracking (accumulated via reducer) --
     tool_call_count: Annotated[int, _add_int]
 

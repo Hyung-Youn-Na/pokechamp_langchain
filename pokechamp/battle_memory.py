@@ -283,7 +283,10 @@ def update_opp_revealed(memory: BattleMemory, battle: Any) -> None:
         entry["moves"] = moves
 
     item = getattr(mon, "item", None)
-    if item:
+    # Filter poke_env's sentinel for unrevealed items so it isn't rendered as
+    # noise in the brief (matches battle_state_mapper._pack_pokemon /
+    # _build_active_state, which both treat "unknown_item"/"" as "no item").
+    if item and str(item).lower() not in ("unknown_item", ""):
         entry["item"] = str(item)
 
     tera_type = getattr(mon, "_terastallized_type", None)

@@ -542,6 +542,10 @@ class LangChainPlayer(LLMPlayer):
             memory = BattleMemory()
             self._battle_memory[battle.battle_tag] = memory
         refresh_team_roles(memory, battle)
+        # Own team roles too (EXP-050b): idempotent + battle-invariant, so
+        # calling each turn guarantees my_role_balance/my_team_roles are
+        # populated for build_battle_state even if teampreview didn't seed.
+        refresh_own_team_roles(memory, battle)
         update_opp_revealed(memory, battle)
 
         # Build state
