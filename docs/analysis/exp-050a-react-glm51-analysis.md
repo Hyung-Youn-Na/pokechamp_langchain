@@ -55,14 +55,17 @@
 
 ## 2. ★ oracle 버그 해소 확인 (본 실험 핵심)
 
-### 2.1 100% OHKO의 정당화
+### 2.1 100% OHKO — 63% 정당, 37% 비현실 (정정 2026-06-26)
 
-| 시점 | 100% OHKO 예시 | 판정 |
-|------|----------------|------|
-| 버그 전 (049c 재검) | `uturn→ogerponwellspring` (Pelipper Atk 50, Bug 2× — **절대 불가**) | 비현실 |
-| **050a (수정 후)** | `closecombat→kingambit` (Fighting 4×), `icebeam→landorust` (Ice 4×), `hurricane→ironvaliant` (Flying 2×) | **정당한 강력 매치업** |
+> **정정**: 초안 "100%가 진짜 강력 매치업에서만"은 부분 틀림. dex type chart(oracle과 동일)로 305회 100% OHKO를 전수 검증한 결과 **193회(63.3%)만 2×+ 정당**, **112회(36.7%)는 type 1×/0.5× 비현실**.
 
-→ 이전 `uturn→ogerpon 100%`(랜덤 폴백 + max_hp 덮어쓰기) 소멸. 100%가 이제 **진짜 4×/2× 강력 STAB**에서만 발생.
+| 구분 | 비율 | 예시 |
+|------|------|------|
+| **정당 (2×+)** 193회 | 63.3% | `closecombat→kingambit`(4×), `icebeam→landorust`(4×), `hurricane→ironvaliant`(2×), `hydropump→clodsire`(2×) |
+| **비현실 (1×/0.5×)** 112회 | 36.7% | `water→gholdengo`(1×) x7, `ghost/fire→zamazenta`(1×) x10, `dragon→moltres`(1×) x4, `grass→ogerponwellspring`(1×) |
+
+- 이전 `uturn→ogerpon 100%`(랜덤 폴백 + max_hp 덮어쓰기) 소멸은 사실. **하지만 opp stats가 0 EV 기본**(`_pack_pokemon` neutral — poke_env에 nature/evs/ivs 속성이 없어 own·opp 모두 dex 기본 0 EV) → opp 방어가 실제 경쟁 세팅(EV 투자)보다 낮아 **절대 데미지가 과대** → 1× 매치업도 100% OHKO로 둔갑. gholdengo/zamazenta/moltres(내구형)에서 두드러짐(실제론 절대 OHKO 안 됨).
+- max_hp 버그(`dd9b040`)는 dex maxhp를 존중하도록 고쳤으나, **방어력(EV/IV/nature)은 여전히 0 EV 기본** → 절대 데미지 왜곡 잔존. **2차(opp stats 추정)** 로 감소 가능.
 
 ### 2.2 데미지 분포 정상화 (1482회 oracle 쿼리)
 
@@ -70,7 +73,7 @@
 |---------|------|--------|--------|-------|----|
 | 비율 | 20.6% | 31.6% | 25.4% | 19.6% | 2.7% |
 
-정상 분포. opp dex maxhp(301/401/651)가 정상 반영되어 절대 데미지가 합리적.
+정상 분포(버그 전 무작위와 다름). 단 100% 구간의 **36.7%는 1× 비현실**(§2.1) — 절대 데미지는 여전히 opp 0 EV로 과대. dex maxhp(301/401/651)는 정상 반영됐으나 **방어력 EV/IV/nature가 0 EV 기본**이라 절대값 왜곡 잔존.
 
 ### 2.3 probe 입증 (stderr probe)
 - D(`max_hp=None` = 수정후): Pelipper U-turn vs Ogerpon-Wellspring **37.9%** 정상.
@@ -101,7 +104,7 @@
 - **teampreview 풀 정보**: 정상 작동하나, oracle 수정 없이는 효과 측정 불가(버그가 결과를 무력화). 수정 후 시너지로 작용.
 
 ### 다음 레버 (목표 90%까지 +20pp)
-1. **opp stats 정확화** (2차): opp가 0 EV 기본이라 데미지 절대값이 dex 근사. Smogon sets 기반 추정으로 100% 중 1× 비현실 케이스(opp 낮은 방어) 감소.
+1. **opp stats 정확화** (2차): §2.1에서 100% OHKO의 **36.7%(112회)가 type 1×/0.5× 비현실**로 확인 — opp 0 EV 방어로 절대 데미지 과대. Smogon sets 기반 추정(EV/nature)으로 1× 비현실 100% 감소 → 데미지 절대값 sim(29-38%) 근접.
 2. **044~049c 재측정 검토**: oracle 수정이 전 시리즈에 영향이므로, 핵심 실험(047/049b)을 수정된 oracle로 재측정하면 절대 승률 재해석 가능. (단, 비용 큼.)
 3. **사람 사고 후속** (050b/c/d): 역할횟수·phase·자원 ledger.
 4. calculate·simulate 중복 해소 / sim-oracle 교차검증(안전망).
