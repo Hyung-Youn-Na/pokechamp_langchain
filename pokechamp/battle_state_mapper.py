@@ -190,11 +190,17 @@ def _build_active_state(
         if raw_tera is not None:
             tera_type = _normalize_id(getattr(raw_tera, "name", str(raw_tera)))
 
+    # NOTE: max_hp is intentionally NOT sent. poke_env reports opponent HP on a
+    # 0-100 Showdown percent scale (opp max_hp == 100, not absolute HP). Sending
+    # it made the oracle worker's applyActiveState() overwrite the dex-based real
+    # maxhp (Ogerpon-Wellspring 301 / Clodsire 401 / Blissey 651) with 100, so
+    # any damage >= 100 became a false is_ohko (EXP-050a 100% OHKO root cause).
+    # Without max_hp, applyActiveState keeps the dex maxhp and scales hp from
+    # hp_pct alone — correct for both own (EV-unknown → dex default) and opp.
     return {
         "species_id": species,
         "level": getattr(pokemon, "level", 100),
         "hp_pct": hp_pct,
-        "max_hp": max_hp,
         "status": _map_status(getattr(pokemon, "status", None)),
         "volatiles": _map_volatiles(getattr(pokemon, "effects", None)),
         "boosts": _map_boosts(getattr(pokemon, "boosts", None)),
