@@ -2,6 +2,7 @@
 
 > LLM agent(pokechamp)가 abyssal player 상대 **승률 90%+ 달성**을 위한 실험의 세션 간 컨텍스트 문서.
 > 새 세션 시작 시 이 파일을 먼저 읽어 context를 복원하고, 섹션 0의 행동 규칙을 따르세요.
+> **team preview(050) 마무리 후 로드맵 진행 세션**: [`docs/handoff/2026-06-29-team-preview-handoff.md`](docs/handoff/2026-06-29-team-preview-handoff.md)를 먼저 읽을 것 (050 시리즈 결과/학습 + 다음 EXP).
 
 ---
 
