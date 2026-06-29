@@ -48,7 +48,6 @@ from pokechamp.battle_memory import (
     refresh_own_team_roles,
     refresh_team_roles,
     update_opp_revealed,
-    build_lead_payoff_matrix,
     to_species_key,
 )
 from pokechamp.battle_tools import BattleContext, set_battle_context
@@ -163,11 +162,7 @@ class LangChainPlayer(LLMPlayer):
         "an early KO?\n"
         "5. Team order after the lead - order remaining Pokemon by how soon "
         "you might need them as switch-ins\n"
-        "6. Synergy - your lead should set up the rest of your team for success\n"
-        "7. Lead payoff matrix (provided below) - rank leads by expected "
-        "value across the opponent's likely leads; AVOID leading a late-game "
-        "win-condition sweeper unless it strongly punishes their lead. Decide "
-        "in order: win path -> lead objective -> lead Pokemon.\n\n"
+        "6. Synergy - your lead should set up the rest of your team for success\n\n"
         "Opponent data is limited during team preview: you can see their "
         "species, types, base stats, and possible abilities, but NOT their "
         "exact moves, items, or abilities.\n\n"
@@ -263,12 +258,12 @@ class LangChainPlayer(LLMPlayer):
             user_prompt += "\n\n" + self._render_preview_analysis(
                 memory, opp_leads, strategy
             )
-            # EXP-050c (codex feedback): structured lead payoff matrix so lead
-            # choice is an expected-value / minimax decision over the opp lead
-            # distribution, not a single guess. Sweeper leads are flagged
-            # `preserve` so the LLM keeps win cons off the lead slot.
-            lead_matrix = build_lead_payoff_matrix(battle, memory, top_k_opp=3)
-            user_prompt += "\n\n" + self._render_lead_matrix(lead_matrix)
+            # EXP-050e: lead payoff matrix REMOVED. In 050c/050d it conflicted
+            # with ability recovery — the role-based matrix flagged weather
+            # sweepers (Kingdra Swift Swim, Excadrill Sand Rush) as `preserve`
+            # (avoid leading), but in weather teams those ARE the win-con lead.
+            # ability/item info (050d recovery) + Smogon overview now drive lead
+            # selection without the matrix (050d: 50%, −20pp with matrix).
             user_prompt += (
                 "\n\nRespond with ONLY a JSON object (no prose, no code "
                 'fences): {"team_order":"<6-digit, first is lead>",'
