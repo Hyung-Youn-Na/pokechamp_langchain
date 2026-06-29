@@ -258,15 +258,26 @@ def _pack_pokemon(pokemon: Any) -> str:
     # only the EV contribution is missing. This distorts absolute damage BOTH
     # ways: own attackers hit too soft (no EV), opp walls take too much (no
     # HP/Def EV). See EXP-050a §2.1 (정정2).
-    nature = getattr(pokemon, "nature", None)
+    # EXP-050d: recover nature/EV/IV from the team pack (_own_pack_set) for OWN
+    # Pokemon — poke_env exposes no evs/nature/ivs property (the EV=0 damage
+    # distortion, EXP-050a §2.1 정정2). Opp has no pack → neutral fallback.
+    pack = getattr(pokemon, "_own_pack_set", None)
+    nature = (getattr(pack, "nature", None) if pack else None) or getattr(
+        pokemon, "nature", None
+    )
     parts.append(_normalize_id(nature) if nature else "serious")
-    evs = getattr(pokemon, "evs", None)
-    if isinstance(evs, dict):
-        parts.append(
-            ",".join(str(evs.get(k, 0)) for k in ("hp", "atk", "def", "spa", "spd", "spe"))
-        )
+    pack_evs = getattr(pack, "evs", None) if pack else None
+    if isinstance(pack_evs, list) and len(pack_evs) >= 6:
+        # TeambuilderPokemon.evs is indexed [hp,atk,def,spa,spd,spe] (STATS_TO_IDX)
+        parts.append(",".join(str(pack_evs[i]) for i in range(6)))
     else:
-        parts.append("0,0,0,0,0,0")
+        evs = getattr(pokemon, "evs", None)
+        if isinstance(evs, dict):
+            parts.append(
+                ",".join(str(evs.get(k, 0)) for k in ("hp", "atk", "def", "spa", "spd", "spe"))
+            )
+        else:
+            parts.append("0,0,0,0,0,0")
     # gender
     gender = getattr(pokemon, "gender", None)
     if gender is not None:
@@ -276,13 +287,17 @@ def _pack_pokemon(pokemon: Any) -> str:
     else:
         parts.append("")
     # ivs — perfect (31) when unknown
-    ivs = getattr(pokemon, "ivs", None)
-    if isinstance(ivs, dict):
-        parts.append(
-            ",".join(str(ivs.get(k, 31)) for k in ("hp", "atk", "def", "spa", "spd", "spe"))
-        )
+    pack_ivs = getattr(pack, "ivs", None) if pack else None
+    if isinstance(pack_ivs, list) and len(pack_ivs) >= 6:
+        parts.append(",".join(str(pack_ivs[i]) for i in range(6)))
     else:
-        parts.append("31,31,31,31,31,31")
+        ivs = getattr(pokemon, "ivs", None)
+        if isinstance(ivs, dict):
+            parts.append(
+                ",".join(str(ivs.get(k, 31)) for k in ("hp", "atk", "def", "spa", "spd", "spe"))
+            )
+        else:
+            parts.append("31,31,31,31,31,31")
     # shiny
     parts.append("S" if getattr(pokemon, "shiny", False) else "")
     # level — always explicit (empty level contributed to the unpack failure)

@@ -49,6 +49,7 @@ from pokechamp.battle_memory import (
     refresh_team_roles,
     update_opp_revealed,
     build_lead_payoff_matrix,
+    to_species_key,
 )
 from pokechamp.battle_tools import BattleContext, set_battle_context
 from pokechamp.llm_player import LLMPlayer
@@ -181,6 +182,34 @@ class LangChainPlayer(LLMPlayer):
         '"opp_win_condition": "<their long-term win path>"}'
     )
 
+    def set_own_pack(self, sets):
+        """Store the parsed own-team pack for info recovery (EXP-050d).
+
+        ``sets`` is the List[TeambuilderPokemon] from FixedTeamProvider — the
+        ability/item/EV/nature/IV source that poke_env does not surface at
+        teampreview (own ability/item Unknown) nor to the oracle (EV=0).
+        """
+        self._own_pack_latest = sets
+
+    def _overlay_own_pack(self, battle):
+        """Attach the parsed own-team set to each own Pokemon as ``_own_pack_set``.
+
+        Downstream consumers (teampreview ability/item, oracle EV/nature/IV,
+        lead matrix ability) read own-team info poke_env does not expose.
+        Idempotent; no-op when no pack (random/teamloader mode).
+        """
+        own_pack = getattr(self, "_own_pack_latest", None)
+        if not own_pack:
+            return
+        pack_map = {
+            to_species_key(getattr(m, "species", "") or ""): m for m in own_pack
+        }
+        team = getattr(battle, "team", None) or {}
+        for mon in team.values():
+            key = to_species_key(getattr(mon, "species", "") or "")
+            if key in pack_map:
+                mon._own_pack_set = pack_map[key]
+
     def teampreview(self, battle: AbstractBattle) -> str:
         """Team preview: LLM oneshot -> /team order + BattleMemory win-plan seed.
 
@@ -208,6 +237,7 @@ class LangChainPlayer(LLMPlayer):
                 self._battle_memory[battle.battle_tag] = memory
             refresh_own_team_roles(memory, battle)
             refresh_team_roles(memory, battle)
+            self._overlay_own_pack(battle)  # EXP-050d: own ability/EV recovery
 
             # EXP-050a v2: full-info analysis (bloat limit lifted per user
             # policy) — opponent likely-lead prediction, Smogon strategy
@@ -275,8 +305,10 @@ class LangChainPlayer(LLMPlayer):
                 )
                 return f"/team {order}"
         except Exception as e:
-            print(f"[teampreview 050a] Error: {e}")
-            self._log_preview(battle, status="exception_fallback", error=str(e))
+            import traceback
+            tb = traceback.format_exc()
+            print(f"[teampreview 050a] Error: {e}\n{tb}")
+            self._log_preview(battle, status="exception_fallback", error=tb)
 
         return self.random_teampreview(battle)
 
@@ -593,6 +625,10 @@ class LangChainPlayer(LLMPlayer):
             self._battle_memory[battle.battle_tag] = memory
         refresh_team_roles(memory, battle)
         update_opp_revealed(memory, battle)
+        # EXP-050d: attach own pack (ability/item/EV/nature/IV) to own Pokemon so
+        # the oracle (_pack_pokemon) and tools recover own-team info poke_env
+        # does not surface. No-op in random/teamloader mode.
+        self._overlay_own_pack(battle)
 
         # Build state
         state = build_battle_state(battle, sim, constraint, memory=memory)

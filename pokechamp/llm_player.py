@@ -1823,14 +1823,22 @@ class LLMPlayer(Player):
         team_data = {"own_pokemon": [], "opponent_pokemon": []}
 
         for i, pokemon in enumerate(own_team, 1):
+            pack = getattr(pokemon, "_own_pack_set", None)
             try:
                 info = {
                     "index": i,
                     "name": pokemon.species,
                     "type1": pokemon.type_1.name if pokemon.type_1 else "Unknown",
                     "type2": pokemon.type_2.name if pokemon.type_2 else None,
-                    "ability": pokemon.ability or "Unknown",
-                    "item": pokemon.item or "None",
+                    # EXP-050d: recover ability/item from the team pack (poke_env
+                    # surfaces own ability/item as Unknown/unknown_item at
+                    # teampreview). Falls back to pokemon.ability/item otherwise.
+                    "ability": (pack.ability if pack and pack.ability else None)
+                    or pokemon.ability
+                    or "Unknown",
+                    "item": (pack.item if pack and pack.item else None)
+                    or pokemon.item
+                    or "None",
                     "moves": (
                         [m.name for m in pokemon.moves.values()]
                         if hasattr(pokemon, "moves") and pokemon.moves

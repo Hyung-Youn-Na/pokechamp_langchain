@@ -213,7 +213,8 @@ uv run python scripts/battles/local_1v1.py \
 | EXP-049c | + Smogon 도구(방식1) | 60.0% (18/30) 재검 | 16.5 | overview 빈 결함 복구 후 재검. `docs/analysis/exp-049c-react-glm51-analysis.md` · ⚠️oracle 버그 하 |
 | **EXP-050a** | + teampreview 풀 정보 + **oracle 버그 수정**(pack `c9ac112` + max_hp `dd9b040`) | **70.0% (21/30)** | 18.0 | **시리즈 최고, oracle 정상 후 첫 측정**. `docs/analysis/exp-050a-react-glm51-analysis.md` |
 | **EXP-050b** | + 자기 팀 역할 매 턴 state 주입(낙후 a 해소) + `unknown_item` fix | ❌ 역효과(회수) | **53.3% (16/30)** | 050a(70%) 대비 **−16.7pp**, paired net −5. 진단: per-mon 라벨 장황 → 매 턴 brief 블로트 + 역할 라벨 오용(049a 패턴 재현). **회수** → 050c에서 teampreview matrix로 대체. |
-| **EXP-050c** | + teampreview lead payoff matrix (codex) + 050b 매턴 주입 회수 | 🟡 코드 완료/배틀 대기 | — | 050a(70%) baseline. codex: role/win con을 **teampreview payoff matrix**로(매 턴 아님). own×opp top-3 매트릭스 + lead mode(preserve=win con 보존). `active/EXP-050c-lead-payoff-matrix` |
+| **EXP-050c** | + teampreview lead payoff matrix (codex) + 050b 매턴 주입 회수 | ⚠️ 보류 | **60.0% (18/30)** | 050a(70%) 대비 **−10pp**, paired net −3. matrix 자기모순(preserve mon rank1 추천 — mode vs ranking 기준 충돌) + ability Unknown 제약. parse failures 5=matrix 무관(턴 결정 위기). **050e에서 fix/재평가**. |
+| **EXP-050d** | + own pack 회수(ability/item/EV/nature/IV) | 🟡 코드 완료/배틀 대기 | — | 050a(70%) baseline. ability Unknown(teampreview) + EV=0 왜곡(oracle) 공통 근원(pack) 해소. `active/EXP-050d-own-pack-recovery` |
 
 **핵심 (★)**: EXP-044~049c는 **oracle 데미지 버그**(`_pack_pokemon` 빈 pack → `Teams.unpack` 랜덤 폴백 + `active_state.max_hp`=100 → dex maxhp 덮어쓰기, EXP-050a에서 발견·수정) 하의 측정 — 절대 승률이 무작위 왜곡. "정확성≠승률" 가설은 이 가짜 상태의 산물. **EXP-050a(70%)가 oracle 수정 후 첫 정상 측정** → 정확한 oracle에서 오히려 +10~16pp 향상으로 **"정확성=승률" 재확립**. teampreview 풀 정보(Smogon overview 12종 + 역할 + 상대 선발 예측) + 정확 oracle 시너지. 다음: opp stats 정확화 / 사람 사고 후속(050b+). [`docs/analysis/exp-050a-react-glm51-analysis.md`](docs/analysis/exp-050a-react-glm51-analysis.md) · [`react-architecture-redesign.md`](docs/architecture/react-architecture-redesign.md).
 
@@ -262,7 +263,8 @@ uv run python scripts/battles/local_1v1.py \
 | EXP-049c | react-smogon-tool (방식1) | 2026-06-25 | ✅ 완료 | 60.0% (18/30) 재검 | overview 빈 결함 복구 후 재검. ⚠️oracle 버그 하 |
 | EXP-050a | react-teampreview (풀 정보 + oracle 버그 수정) | 2026-06-26 | ✅ 완료 | **70.0% (21/30)** | 시리즈 최고. oracle 정상 후 첫 측정(pack/max_hp 버그 수정). `docs/analysis/exp-050a-react-glm51-analysis.md` |
 | EXP-050b | react-own-role-injection (자기 팀 역할 매 턴 주입) | 2026-06-26 | ❌ 역효과(회수) | 53.3% (16/30) | 050a(70%) 대비 **−16.7pp**, paired net −5(신규승 4 / 역퇴행 9). 진단: per-mon 라벨 장황(tyranitar 역할 6개) → 매 턴 brief 블로트 + 역할 라벨 오용(049a "매턴 주입 역효과" 재현). **회수**(050c에서 teampreview matrix로 대체, `unknown_item` fix만 유지). |
-| EXP-050c | react-lead-payoff-matrix (codex teampreview 구조화) | 2026-06-28 | 🟡 코드 완료/배틀 대기 | — | 050a(70%) baseline. 050b 매 턴 주입 회수 + codex(`.temp/codex_feedback/lead-selection-feedback.md`): own×opp top-3 lead payoff matrix + `classify_lead_mode`(preserve=win con 보존) + "win path→lead objective→lead" 순서. 매 턴 아닌 teampreview 1회성. plan `/root/.claude/plans/misty-orbiting-brooks.md`. |
+| EXP-050c | react-lead-payoff-matrix (codex teampreview 구조화) | 2026-06-28 | ⚠️ 보류 | 60.0% (18/30) | 050a(70%) 대비 **−10pp**, paired net −3. matrix 자기모순(preserve mon rank1 추천 — `classify_lead_mode` worst-case vs ranking avg 충돌) + ability Unknown(105/105 own, weather setter 모르고 plan) 제약. parse failures 5=matrix 무관(턴 결정 위기 JSON→산문). **050e에서 preserve fix + ability 회수 위에서 재평가**. |
+| EXP-050d | react-own-pack-recovery (ability/item/EV/nature/IV) | 2026-06-29 | 🟡 코드 완료/배틀 대기 | — | 050a(70%) baseline. ability Unknown(teampreview) + EV=0 왜곡(oracle) 공통 근원 = team pack(`FixedTeamProvider._load` parsed sets 회수). teampreview `_format_lead_selection_data` + oracle `_pack_pokemon` + player overlay. memory `own-team-info-recovery.md`. plan `/root/.claude/plans/misty-orbiting-brooks.md`. |
 
 ---
 

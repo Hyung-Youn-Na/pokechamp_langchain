@@ -53,6 +53,7 @@ class Pokemon:
         "_type_2",
         "_weightkg",
         "_battle_format",
+        "_own_pack_set",  # EXP-050d fork-only: own-team pack overlay (ability/EV)
     )
 
     def __init__(
@@ -88,6 +89,7 @@ class Pokemon:
 
         # Battle related attributes
         self._active: bool = False
+        self._own_pack_set = None  # EXP-050d: own-team TeambuilderPokemon or None
         self._boosts: Dict[str, int] = {
             "accuracy": 0,
             "atk": 0,

@@ -357,6 +357,8 @@ async def main():
         if fixed_combo is not None:
             player.update_team(fixed_combo.player_at(0))
             opponent.update_team(fixed_combo.opponent_at(0))
+            if hasattr(player, "set_own_pack"):
+                player.set_own_pack(fixed_combo.player_sets_at(0))
         elif player_teamloader is None or opponent_teamloader is None:
             player.update_team(load_random_team(id=None, vgc=False))
             opponent.update_team(load_random_team(id=None, vgc=False))
@@ -447,6 +449,8 @@ async def main():
                 # Battle 0 was staged before the loop; here we stage battle i+1.
                 player.update_team(fixed_combo.player_at(i + 1))
                 opponent.update_team(fixed_combo.opponent_at(i + 1))
+                if hasattr(player, "set_own_pack"):
+                    player.set_own_pack(fixed_combo.player_sets_at(i + 1))
             elif "vgc" in args.battle_format:
                 player.update_team(load_random_team(id=None, vgc=True))
                 opponent.update_team(load_random_team(id=None, vgc=True))

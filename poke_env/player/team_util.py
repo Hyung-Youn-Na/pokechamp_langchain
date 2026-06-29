@@ -266,16 +266,26 @@ class FixedTeamProvider:
                 )
         # Pre-parse and cache packed teamstrings — minimizes loop I/O and
         # guarantees identical output across instantiations.
-        self._teams = [self._load_packed(i) for i in self.indices]
+        # EXP-050d: also keep the parsed TeambuilderPokemon sets (ability/item/
+        # EV/nature/IV) for own-team info recovery — teampreview ability/item +
+        # oracle EV/nature/IV (memory own-team-info-recovery.md).
+        loaded = [self._load(i) for i in self.indices]
+        self._teams = [packed for packed, _ in loaded]
+        self._team_sets = [sets for _, sets in loaded]
 
-    def _load_packed(self, idx):
+    def _load(self, idx):
         with open(self._files[idx], "r") as f:
             team_data = f.read()
         team = self._team_set.parse_showdown_team(team_data)
         for mon in team:
-            if mon.species is not None:
-                mon.nickname = mon.species
-        return self._team_set.join_team(team)
+            # metamon packs have no nickname, so parse_showdown_team leaves
+            # species=None and puts the species name in nickname. Normalise so
+            # species is always set (EXP-050d own-pack recovery keys on species).
+            sp = mon.species or mon.nickname
+            if sp:
+                mon.species = sp
+                mon.nickname = sp
+        return self._team_set.join_team(team), team
 
     def at(self, position):
         """Packed teamstring for the ``position``-th (0-based) battle.
@@ -283,6 +293,14 @@ class FixedTeamProvider:
         Indices shorter than the battle count wrap around with modulo.
         """
         return self._teams[position % len(self._teams)]
+
+    def team_sets_at(self, position):
+        """Parsed TeambuilderPokemon sets for the ``position``-th battle (EXP-050d).
+
+        Own-team info recovery source: ability/item/EV/nature/IV for the player's
+        own team (teampreview + oracle). See ``own-team-info-recovery.md``.
+        """
+        return self._team_sets[position % len(self._team_sets)]
 
     def index_at(self, position):
         return self.indices[position % len(self.indices)]
@@ -314,6 +332,10 @@ class FixedTeamCombo:
 
     def opponent_at(self, position):
         return self.opponent.at(position)
+
+    def player_sets_at(self, position):
+        """Parsed own-team sets for EXP-050d own-team info recovery."""
+        return self.player.team_sets_at(position)
 
     def player_index(self, position):
         return self.player.index_at(position)
