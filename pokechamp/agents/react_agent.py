@@ -106,28 +106,6 @@ def _format_memory_brief(state: BattleAgentState) -> str:
             + ", ".join(f"{cat} x{n}" for cat, n in items)
         )
 
-    # Own team roles (EXP-050b): inject every turn so the agent judges switches
-    # and sacrifices against its own team structure (human-thought point 3 — a
-    # sweeper's 40% HP is precious, a spent wall's 80% is expendable). These
-    # fields were teampreview-only in 050a; BattleAgentState now carries them.
-    own_role_balance = state.get("my_role_balance") or {}
-    if own_role_balance:
-        items = sorted(own_role_balance.items(), key=lambda kv: -kv[1])
-        parts.append(
-            "Your team roles: "
-            + ", ".join(f"{cat} x{n}" for cat, n in items)
-        )
-        own_team_roles = state.get("my_team_roles") or {}
-        labels: list[str] = []
-        for species, rlist in own_team_roles.items():
-            cats = sorted(
-                {r.get("category", "") for r in rlist if r.get("category")}
-            )
-            if cats:
-                labels.append(f"{species}: {', '.join(cats)}")
-        if labels:
-            parts.append("  per-mon: " + "; ".join(labels))
-
     revealed = state.get("opp_revealed") or {}
     rev_lines: list[str] = []
     for species, info in revealed.items():
@@ -349,7 +327,7 @@ def _make_strategy_synthesis(max_tool_calls: int):
 
         result: Dict[str, Any] = {
             "messages": [response],
-            "reasoning": (response.content or "")[:2000],
+            "reasoning": response.content or "",
         }
         result.update(extract_llm_usage(response))
         return result

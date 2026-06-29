@@ -310,3 +310,157 @@ def plan_is_stale(memory: BattleMemory, current_turn: int, max_age: int = 5) -> 
     if memory.plan_turn <= 0:
         return True
     return (current_turn - memory.plan_turn) > max_age
+
+
+# ---------------------------------------------------------------------------
+# Lead payoff matrix (EXP-050c, codex lead-selection feedback)
+# ---------------------------------------------------------------------------
+
+# Own-team role categories relevant to lead choice.
+_LEAD_PROACTIVE_CATEGORIES = ("Entry Hazards", "Pivots")  # open the game-plan
+_LEAD_WINCON_CATEGORIES = ("Setup Sweepers",)  # late-game win con — avoid leading
+
+
+def _stab_types(mon: Any) -> list:
+    """The mon's STAB attacking types (type_1, type_2)."""
+    types = []
+    for t in (getattr(mon, "type_1", None), getattr(mon, "type_2", None)):
+        if t is not None:
+            types.append(t)
+    return types
+
+
+def _matchup_mults(attacker: Any, defender: Any) -> tuple:
+    """(attacker→defender avg STAB mult, defender→attacker avg STAB mult).
+
+    Uses ``defender.damage_multiplier(attacking_type)`` (poke_env ``pokemon.py``).
+    Falls back to 1.0 (neutral) so the matrix never breaks team preview.
+    """
+    def _avg(stab_types: list, who: Any) -> float:
+        if not stab_types:
+            return 1.0
+        total, n = 0.0, 0
+        for t in stab_types:
+            try:
+                total += float(who.damage_multiplier(t))
+                n += 1
+            except Exception:
+                pass
+        return (total / n) if n else 1.0
+
+    return (
+        _avg(_stab_types(attacker), defender),
+        _avg(_stab_types(defender), attacker),
+    )
+
+
+def classify_lead_mode(
+    own_cats: set, max_off: float, max_def: float, avg_spe_adv: float
+) -> str:
+    """Lead mode from role + matchup (codex idea 2).
+
+    - ``preserve``: late-game win-con role (sweeper) without a 2×+ lead reason
+    - ``proactive``: hazard/pivot role — open the game-plan
+    - ``pressure``: immediate KO pressure (2×+ offense, not outsped)
+    - ``anti_lead``: high forced-out risk (2×+ defense)
+    - ``neutral``: otherwise
+    """
+    if (own_cats & set(_LEAD_WINCON_CATEGORIES)) and max_off < 2.0:
+        return "preserve"
+    if own_cats & set(_LEAD_PROACTIVE_CATEGORIES):
+        return "proactive"
+    if max_off >= 2.0 and avg_spe_adv >= 0:
+        return "pressure"
+    if max_def >= 2.0:
+        return "anti_lead"
+    return "neutral"
+
+
+def _find_opp_mon(battle: Any, opp_key: str) -> Any:
+    """Look up an opponent mon by species key (team or preview roster)."""
+    opp_team = getattr(battle, "opponent_team", None) or {}
+    if not opp_team:
+        preview = getattr(battle, "_teampreview_opponent_team", None)
+        if preview:
+            opp_team = list(preview)
+    mons = opp_team.values() if isinstance(opp_team, dict) else opp_team
+    for m in mons:
+        if to_species_key(getattr(m, "species", "") or "") == opp_key:
+            return m
+    return None
+
+
+def build_lead_payoff_matrix(
+    battle: Any, memory: BattleMemory, top_k_opp: int = 3
+) -> List[Dict[str, Any]]:
+    """Own_leads × opp top-k lead payoff matrix (EXP-050c, codex feedback).
+
+    Deterministic precompute (no LLM, no oracle). Each own-lead candidate is
+    scored against the opponent's top-k predicted leads on speed, type matchup
+    (offense vs forced-out risk), proactive utility, and a penalty for exposing
+    a late-game win condition as the lead. Returns per-own-lead expected value
+    (avg over opp distribution) + worst-case (min) + a lead mode, ranked by avg.
+    """
+    opp_leads = predict_opp_leads(battle, memory, top_n=top_k_opp)
+    own_team = getattr(battle, "team", None) or {}
+    own_mons = list(own_team.values())
+    if not own_mons or not opp_leads:
+        return []
+
+    rows: List[Dict[str, Any]] = []
+    for own in own_mons:
+        own_key = to_species_key(getattr(own, "species", "") or "")
+        own_roles = (memory.my_team_roles or {}).get(own_key, [])
+        own_cats = {r.get("category", "") for r in own_roles if r.get("category")}
+        own_bs = getattr(own, "base_stats", None) or {}
+        own_spe = own_bs.get("spe", 0) if isinstance(own_bs, dict) else 0
+
+        cells: List[Dict[str, Any]] = []
+        for ol in opp_leads:
+            opp_mon = _find_opp_mon(battle, ol.get("key", ""))
+            if opp_mon is None:
+                continue
+            off_mult, def_mult = _matchup_mults(own, opp_mon)
+            spe_adv = own_spe - ol.get("speed", 0)
+            utility = 1.0 if (own_cats & set(_LEAD_PROACTIVE_CATEGORIES)) else 0.0
+            win_con = 1.0 if (own_cats & set(_LEAD_WINCON_CATEGORIES)) else 0.0
+            score = (
+                (off_mult - 1.0) * 1.0      # offense payoff
+                - (def_mult - 1.0) * 1.2    # forced-out risk (slightly heavier)
+                + spe_adv / 50.0            # speed tier
+                + utility * 0.6             # proactive lead value
+                - win_con * 0.8             # preserve late-game win con
+            )
+            cells.append(
+                {
+                    "opp": ol.get("species", ""),
+                    "off": round(off_mult, 2),
+                    "def": round(def_mult, 2),
+                    "spe_adv": spe_adv,
+                    "score": round(score, 2),
+                }
+            )
+        if not cells:
+            continue
+        scores = [c["score"] for c in cells]
+        avg = sum(scores) / len(scores)
+        worst = min(scores)
+        mode = classify_lead_mode(
+            own_cats,
+            max(c["off"] for c in cells),
+            max(c["def"] for c in cells),
+            sum(c["spe_adv"] for c in cells) / len(cells),
+        )
+        rows.append(
+            {
+                "species": getattr(own, "species", ""),
+                "key": own_key,
+                "roles": sorted(c for c in own_cats if c),
+                "cells": cells,
+                "avg": round(avg, 2),
+                "worst": round(worst, 2),
+                "mode": mode,
+            }
+        )
+    rows.sort(key=lambda r: r["avg"], reverse=True)
+    return rows

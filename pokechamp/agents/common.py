@@ -113,10 +113,6 @@ def build_battle_state(
         opp_win_condition=(memory.opp_win_condition if memory else ""),
         my_plan=(memory.my_plan if memory else ""),
         plan_turn=(memory.plan_turn if memory else 0),
-        # Own team roles (EXP-050b): surface every turn, not just teampreview.
-        my_role_balance=(memory.my_role_balance if memory else {}),
-        my_team_roles=(memory.my_team_roles if memory else {}),
-        preview_seed_turn=(memory.preview_seed_turn if memory else -1),
         tool_call_count=0,
         total_prompt_tokens=0,
         total_completion_tokens=0,

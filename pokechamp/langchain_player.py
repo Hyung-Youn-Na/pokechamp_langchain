@@ -48,6 +48,7 @@ from pokechamp.battle_memory import (
     refresh_own_team_roles,
     refresh_team_roles,
     update_opp_revealed,
+    build_lead_payoff_matrix,
 )
 from pokechamp.battle_tools import BattleContext, set_battle_context
 from pokechamp.llm_player import LLMPlayer
@@ -161,7 +162,11 @@ class LangChainPlayer(LLMPlayer):
         "an early KO?\n"
         "5. Team order after the lead - order remaining Pokemon by how soon "
         "you might need them as switch-ins\n"
-        "6. Synergy - your lead should set up the rest of your team for success\n\n"
+        "6. Synergy - your lead should set up the rest of your team for success\n"
+        "7. Lead payoff matrix (provided below) - rank leads by expected "
+        "value across the opponent's likely leads; AVOID leading a late-game "
+        "win-condition sweeper unless it strongly punishes their lead. Decide "
+        "in order: win path -> lead objective -> lead Pokemon.\n\n"
         "Opponent data is limited during team preview: you can see their "
         "species, types, base stats, and possible abilities, but NOT their "
         "exact moves, items, or abilities.\n\n"
@@ -228,6 +233,12 @@ class LangChainPlayer(LLMPlayer):
             user_prompt += "\n\n" + self._render_preview_analysis(
                 memory, opp_leads, strategy
             )
+            # EXP-050c (codex feedback): structured lead payoff matrix so lead
+            # choice is an expected-value / minimax decision over the opp lead
+            # distribution, not a single guess. Sweeper leads are flagged
+            # `preserve` so the LLM keeps win cons off the lead slot.
+            lead_matrix = build_lead_payoff_matrix(battle, memory, top_k_opp=3)
+            user_prompt += "\n\n" + self._render_lead_matrix(lead_matrix)
             user_prompt += (
                 "\n\nRespond with ONLY a JSON object (no prose, no code "
                 'fences): {"team_order":"<6-digit, first is lead>",'
@@ -269,6 +280,45 @@ class LangChainPlayer(LLMPlayer):
 
         return self.random_teampreview(battle)
 
+    def _render_lead_matrix(self, matrix: list) -> str:
+        """Render the lead payoff matrix (EXP-050c) as compact prompt text.
+
+        Ranked by expected value (avg over opponent top leads) with worst-case
+        and a lead mode. Tells the LLM to choose lead mode first, then the
+        Pokemon, and to prefer robust (high worst-case) leads that preserve
+        late-game win conditions (codex lead-selection feedback).
+        """
+        if not matrix:
+            return ""
+        lines = [
+            "LEAD PAYOFF MATRIX (own lead candidates ranked by expected value",
+            "over opponent top-3 predicted leads; cells = offense / forced-out",
+            "risk / speed adv / score):",
+            "  rank | lead          | mode       | avg    | worst  | roles",
+        ]
+        for i, r in enumerate(matrix, 1):
+            roles = ", ".join(r["roles"]) or "-"
+            lines.append(
+                f"  {i:>2}   | {r['species']:<12} | {r['mode']:<10} "
+                f"| {r['avg']:+5.2f} | {r['worst']:+5.2f} | {roles}"
+            )
+        lines.append("  cell detail (top candidates):")
+        for r in matrix[:4]:
+            cells = "; ".join(
+                f"vs {c['opp']} off {c['off']:.1f}/risk {c['def']:.1f}"
+                f"/spe {c['spe_adv']:+d}/{c['score']:+.2f}"
+                for c in r["cells"]
+            )
+            lines.append(f"    {r['species']}: {cells}")
+        lines.append(
+            "  Lead guidance: pick the lead MODE first, then the Pokemon -"
+            " proactive (hazard/pivot to open the game-plan), pressure (KO"
+            " threat), anti_lead (survive their lead), or preserve (keep a"
+            " late-game win con OFF the lead). Prefer high avg AND high"
+            " worst-case (robust across opp leads)."
+        )
+        return "\n".join(lines)
+
     def _log_preview(
         self,
         battle: AbstractBattle,
@@ -305,11 +355,11 @@ class LangChainPlayer(LLMPlayer):
         if seed is not None:
             entry["seed"] = seed
         if response is not None:
-            entry["response"] = (response or "")[:2000]
+            entry["response"] = response or ""
         if user_prompt is not None:
-            entry["user_prompt"] = (user_prompt or "")[:4000]
+            entry["user_prompt"] = user_prompt or ""
         if error:
-            entry["error"] = error[:300]
+            entry["error"] = error or ""
         try:
             path = os.path.join(log_dir, "preview_llm_log.jsonl")
             with open(path, "a", encoding="utf-8") as f:
@@ -542,10 +592,6 @@ class LangChainPlayer(LLMPlayer):
             memory = BattleMemory()
             self._battle_memory[battle.battle_tag] = memory
         refresh_team_roles(memory, battle)
-        # Own team roles too (EXP-050b): idempotent + battle-invariant, so
-        # calling each turn guarantees my_role_balance/my_team_roles are
-        # populated for build_battle_state even if teampreview didn't seed.
-        refresh_own_team_roles(memory, battle)
         update_opp_revealed(memory, battle)
 
         # Build state
