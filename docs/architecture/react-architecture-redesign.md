@@ -1,8 +1,15 @@
 # ReAct Agent 구조 변환 설계: B(다단계 노드) + D(턴 간 메모리) + Smogon 메타
 
-> 작성일: 2026-06-23 (갱신 2026-06-24) · 실험 시리즈: EXP-049+
-> 상태: **설계 확정 → 구현 단계**. 결정 사항:
+> 작성일: 2026-06-23 (갱신 2026-06-24, 06-29) · 실험 시리즈: EXP-049+
+> 상태: **설계 → 구현 완료 → 후속(050b 회수 / 050c 진행 중)**. 결정 사항:
 >   - Smogon 주입 = **방식 1(새 도구)** · EXP-049 범위 = **분할(049a/b/c)** · baseline = **EXP-048**
+>
+> ⚠️ **후속 정정 (2026-06-29)**:
+>   - **049a/b/c 전체가 oracle 데미지 버그 하 오염** → EXP-050a(버그 수정 후 70%)에서 폐기. 본 문서가 전제한
+>     §1 "정확한 damage ≠ 더 나은 결론"은 direction pivot으로 **폐기** — 정확 oracle에서 +10~16pp 향상 확인.
+>     단, **B(5노드)/D(메모리) 구조 자체는 현 코드에 그대로 유지**되어 구조 묘사는 유효. 승률 해석은 버그 노이즈.
+>   - **EXP-050b**(자기 팀 역할 매 턴 주입)은 **역효과(53.3%, −16.7pp)로 050c에서 회수(revert)** —
+>     unknown_item fix만 유지. **EXP-050c**는 teampreview **lead payoff matrix**(`battle_memory.py:build_lead_payoff_matrix`)로 대체, 로그 truncate 해제. 코드 완료/배틀 대기.
 > 자매 문서: [`smogon-meta-design.md`](smogon-meta-design.md) (Smogon 데이터 정제 설계)
 
 ---
@@ -79,20 +86,25 @@ class BattleMemory:
 
 ---
 
-## 5. B (다단계 노드) — 새 그래프 토폴로지 ★ (EXP-049b)
+## 5. B (다단계 노드) — 그래프 토폴로지 ★ (EXP-049b **구현 완료**)
 
-**현재**: `build_context → agent ⇄ tool_execution → parse_action` (`react_agent.py:493-520`)
+> **상태 (2026-06-29 갱신)**: 이 설계는 EXP-049b에서 **이미 default 그래프로 구현**됨
+> (`react_agent.py:create_react_agent` L573-635). 아래는 "제안"이 아닌 **현 구현 설명**. 단, 설계 시
+> 가정한 `decide` 노드는 실제로 구현되지 않았고 — `strategy_synthesis`가 clean rebuild(+ 전략 종합)를,
+> `parse_action`이 JSON 추출을 담당하는 **5노드** 구조로 최종 낙찰.
 
-**제안**: 정량 도구 루프와 전략 종합을 노드로 분리. dead field(`reasoning`, `evaluation_scores`) 활성화.
+**과거(구버전)**: `build_context → agent ⇄ tool_execution → parse_action`
+
+**현 구현**: 정량 도구 루프와 전략 종합을 노드로 분리. dead field(`reasoning`, `evaluation_scores`) 활성화.
 
 ```
 build_context ──► tool_agent ⇄ tool_execution      (정량 도구: damage/상성/sim/strategy_insight)
                        │
                        ▼ (도구 종료 or 예산)
-                strategy_synthesis                  (★ 신설: 정량 결과 + Smogon 자연어 + D 메모리 종합)
-                       │                             → reasoning 갱신, opp_win_condition/my_plan 갱신
+                strategy_synthesis                  (★ 신설: 정량 결과 + Smogon 자연어 + D 메모리 종합
+                       │                              + clean rebuild → reasoning/my_plan 갱신)
                        ▼
-                    decide                          (최종 JSON — force-termination clean-rebuild 이관)
+                  parse_action                       (최종 JSON 추출 — clean rebuild는 위 노드에서)
                        │
                        ▼
                      END
@@ -101,10 +113,14 @@ build_context ──► tool_agent ⇄ tool_execution      (정량 도구: damag
 | 노드 | 역할 | state 갱신 |
 |---|---|---|
 | `build_context` | 시스템 프롬프트 + state + **D 메모리 주입** | messages |
-| `tool_agent` | 정량 도구 호출 루프 (현재 agent 노드 도구호출 부분 분리) | messages, tool_call_count |
-| `tool_execution` | 기존 동일 (dedup, 예산, `react_agent.py:238-350`) | messages |
-| `strategy_synthesis` ★ | 정량 결과 + 상대/내 포켓몬 Smogon 전략 + 메모리를 **종합**해 "이 턴의 전략적 결론" 도출 + win condition/plan 갱신 | **reasoning**, **opp_win_condition**, **my_plan** |
-| `decide` | 최종 JSON 출력 (현재 agent 노드 force-termination clean-rebuild 로직 `react_agent.py:138-205` 이관) | chosen_action |
+| `tool_agent` | 정량 도구 호출 루프 (강제종료 안 함) | messages, tool_call_count |
+| `tool_execution` | 기존 동일 (dedup, 예산, no_data 플래그 예산 제외) | messages |
+| `strategy_synthesis` ★ | 정량 결과 + 상대/내 포켓몬 Smogon 전략 + 메모리를 **종합**해 "이 턴의 전략적 결론" 도출 + **clean rebuild**(force-termination 로직 흡수) + win condition/plan 갱신 | **reasoning**, **opp_win_condition**, **my_plan** |
+| `parse_action` | 최종 JSON 추출 (clean rebuild는 위 노드에서 수행) | chosen_action |
+
+> **`decide` 노드 미구현 (2026-06-29 정정)**: 설계엔 `decide`(force-termination clean-rebuild 이관) 노드가
+> 있었으나, 구현 시 `strategy_synthesis`가 clean rebuild를 직접 담당하고 `parse_action`은 단순 JSON 추출로
+> 축소되어 **`decide` 노드는 만들어지지 않았습니다**. 따라서 실제 그래프는 5노드입니다.
 
 **분리 이유**: 현재 "도구호출 + 결정 + 강제종료"가 agent 노드에 매몰. 분리로 (a) 정량 관찰의 전략적 해석이 **구조적 단계**화 → LLM 자유 추론 의존도 감소, (b) win condition/plan이 노드 출력으로 명시 갱신 → D 메모리 ③④와 결합, (c) dead field 활성화.
 

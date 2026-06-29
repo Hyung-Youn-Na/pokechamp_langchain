@@ -34,7 +34,7 @@
 │                  │ │            │ │                   │
 │  build_context   │ │build_prompt│ │ build_prompt      │
 │       ↓          │ │     ↓      │ │     ↓             │
-│  agent_loop ←──→ │ │ call_llm   │ │ think (CoT)       │
+│  tool_agent ←──→ │ │ call_llm   │ │ think (CoT)       │
 │  tool_execution  │ │     ↓      │ │     ↓             │
 │       ↓          │ │parse_action│ │ decide            │
 │  parse_action    │ │            │ │                   │
@@ -42,7 +42,7 @@
        │
        ▼  (ReAct만 Tool 사용)
 ┌─────────────────────────────────────────────────────────────────────┐
-│  pokechamp/battle_tools.py  (8개 @tool 함수)                       │
+│  pokechamp/battle_tools.py  (9개 @tool 함수)                       │
 │                                                                     │
 │  ┌─────────────────────┐  ┌──────────────────────────┐             │
 │  │ calculate_damage    │  │ check_type_effectiveness │             │
@@ -79,7 +79,7 @@ agents/common.py         ← build_battle_state(), action_to_battle_order()
 agents/react_agent.py  agents/io_agent.py  agents/cot_agent.py
      │
      ▼
-battle_tools.py         ← 8개 LangChain @tool 함수
+battle_tools.py         ← 9개 LangChain @tool 함수
 ```
 
 ### 1.3 핵심 설계 원칙
@@ -92,7 +92,7 @@ battle_tools.py         ← 8개 LangChain @tool 함수
 
 ## 2. Battle Tools 상세
 
-`pokechamp/battle_tools.py`에 정의된 8개의 LangChain `@tool` 함수. ReAct 에이전트가 배틀 분석을 위해 호출합니다.
+`pokechamp/battle_tools.py`에 정의된 9개의 LangChain `@tool` 함수. ReAct 에이전트가 배틀 분석을 위해 호출합니다.
 
 ### 2.1 컨텍스트 주입 패턴: BattleContext
 
@@ -122,7 +122,7 @@ LangChainPlayer._run_langgraph_agent()
     │
     └── graph.invoke(state)
             │
-            ├── agent_loop → tool_calls
+            ├── tool_agent → tool_calls
             │       │
             │       ▼
             │   tool_execution 노드
@@ -130,6 +130,8 @@ LangChainPlayer._run_langgraph_agent()
             │       ▼
             │   calculate_damage()
             │       └── ctx = get_battle_context()   ← 전역 컨텍스트 읽기
+            │
+            ├── strategy_synthesis → clean rebuild 결정 (EXP-049b)
             │
             └── parse_action → 결과 반환
 ```
@@ -218,6 +220,17 @@ LangChainPlayer._run_langgraph_agent()
 | **내부 로직** | `fast_battle_evaluation()` → 팀 수 차이 보정 (마싱 포켓몬당 -25, 라스트 포켓몬 -35) |
 | **의존** | `minimax_optimizer.fast_battle_evaluation` |
 
+#### 2.2.9 `get_strategy_insight` (EXP-049c)
+
+| 항목 | 내용 |
+|------|------|
+| **목적** | Smogon 커뮤니티 전략(역할/견제/약점/승리 경로) 자연어 조회 |
+| **입력** | `species: str`, `aspect: str = "overview"` ("overview" 또는 "moveset") |
+| **출력** | JSON `{species, home_tier, overview/moveset}` 또는 `{no_data: true}` (데이터 결함 시) |
+| **내부 로직** | `get_cached_smogon_strategies()`에서 종족 키 조회 → overview/moveset 캡(2000자, bloat guard) |
+| **제약** | overview 빈 시 `no_data` 플래그 → tool-call 예산에서 제외(대안 도구 예산 확보) |
+| **의존** | `data_cache.get_cached_smogon_strategies`, `battle_memory.to_species_key` |
+
 ### 2.3 Tool 내보내기
 
 ```python
@@ -230,6 +243,7 @@ ALL_BATTLE_TOOLS = [
     simulate_turn,
     get_move_details,
     evaluate_position,
+    get_strategy_insight,   # EXP-049c (Smogon method 1)
 ]
 ```
 
@@ -255,9 +269,13 @@ ALL_BATTLE_TOOLS = [
 
 가장 정교한 에이전트. Tool Calling을 활용한 ReAct(Reasoning + Acting) 루프를 실행합니다.
 
+> **EXP-049b 구조 (5노드):** `build_context → tool_agent ⇄ tool_execution → strategy_synthesis → parse_action`.
+> 과거 `agent_loop`(툴 호출 + 강제종료 통합)가 `tool_agent`(툴 호출만)와 `strategy_synthesis`(clean rebuild)로
+> 분리되었습니다. 아래 단순화 다이어그램은 4박스 요약이며, 노드 표가 정확합니다.
+
 ```
 ┌──────────────┐     ┌─────────────────────┐     ┌──────────────────┐
-│ build_context│────→│     agent_loop      │────→│   parse_action   │
+│ build_context│────→│     tool_agent      │────→│   parse_action   │
 │              │     │  ┌───────────────┐  │     │                  │
 │ messages 초기│     │  │ LLM 호출      │  │     │ JSON에서 action  │
 │ 시스템/유저  │     │  │ tool_calls?   │  │     │ 추출             │
@@ -280,14 +298,15 @@ ALL_BATTLE_TOOLS = [
 | 노드 | 함수 | 역할 |
 |------|------|------|
 | `build_context` | `build_context(state)` | 시스템 프롬프트 + 배틀 상태를 messages에 구성 |
-| `agent_loop` | `agent_loop(state, llm, tools)` | LLM에 메시지 전송 → 도구 호출 여부 판단. MAX_TOOL_CALLS(5) 초과 시 도구 바인딩 해제 |
+| `tool_agent` | `tool_agent(state, llm, tools)` | LLM에 메시지 전송 → 도구 호출 여부 판단. **강제종료 안 함**(EXP-049b 분리) |
 | `tool_execution` | `tool_execution(state, tools_by_name)` | AIMessage.tool_calls에서 도구명/인자 추출 → 실행 → ToolMessage 생성 |
+| `strategy_synthesis` | `strategy_synthesis(state, llm)` | 툴 루프 종료 후 **clean rebuild**로 전략 결정 + `my_plan` 장기화 (EXP-049b) |
 | `parse_action` | `parse_action(state)` | 대화 히스토리에서 최종 JSON 액션 추출 |
 
-**라우팅 로직** (`should_continue`):
-- AIMessage에 `tool_calls`가 있으면 → `"tools"` (tool_execution)
-- AIMessage에 `tool_calls`가 없으면 → `"parse"` (parse_action)
-- 안전장치: 도구 호출 횟수가 MAX_TOOL_CALLS 초과 시 강제로 `"parse"`
+**라우팅 로직** (`should_continue`, EXP-049b):
+- AIMessage에 `tool_calls`가 있고 예산 남았으면 → `"tools"` (tool_execution)
+- 그 외(툴 호출 없음 / 예산 도달) → `"strategy_synthesis"` (clean rebuild)
+- 카운터는 state의 `tool_call_count`(Annotated) 기반 (`"parse"` 라우팅은 더 이상 사용 안 함)
 
 **제약사항**:
 - 최대 5회 Tool 호출/턴
@@ -379,6 +398,15 @@ class BattleAgentState(TypedDict):
     # -- 추론 상태 --
     reasoning: str
     evaluation_scores: Dict[str, float]
+
+    # -- 배틀 메모리 (EXP-049a, design D — 턴 간 누적) --
+    opp_role_balance: Dict[str, int]
+    opp_team_roles: Dict[str, List[Dict]]
+    opp_revealed: Dict[str, Dict]
+    opp_win_condition: str
+    my_plan: str
+    plan_turn: int
+    tool_call_count: Annotated[int, _add_int]      # success만 누적 (EXP-049b)
 
     # -- LLM 사용량 추적 (reducer로 누적) --
     total_prompt_tokens: Annotated[int, _add_int]      # 노드 간 합산
@@ -624,7 +652,7 @@ uv run python scripts/battles/local_1v1_langchain.py \
 
 | 알고리즘 | 클래스 | Tool 사용 | 특징 |
 |----------|--------|----------|------|
-| `react` | ReAct | O (8개) | Tool Calling 기반 정량 분석 |
+| `react` | ReAct | O (9개) | Tool Calling 기반 정량 분석 |
 | `io_langchain` | IO | X | 단일 LLM 호출 베이스라인 |
 | `cot_langchain` | CoT | X | Chain-of-Thought 추론 |
 | 그 외 (io, sc, cot, tot, minimax...) | LLMPlayer | X | 기존 코드 경로 (변경 없음) |
@@ -654,7 +682,7 @@ uv run python scripts/battles/local_1v1_langchain.py \
 | `scripts/battles/local_1v1_langchain.py` | 431 | 엔트리포인트, 배틀 루프, 메트릭 |
 | `pokechamp/langchain_player.py` | 262 | LangChainPlayer (choose_move 오버라이드) |
 | `pokechamp/langchain_backend.py` | 367 | LangChainBackend + OllamaChatModel |
-| `pokechamp/battle_tools.py` | 796 | 8개 @tool 함수 + BattleContext |
+| `pokechamp/battle_tools.py` | 796 | 9개 @tool 함수 + BattleContext |
 | `pokechamp/agents/state.py` | 69 | BattleAgentState TypedDict |
 | `pokechamp/agents/common.py` | — | build_battle_state, action_to_battle_order |
 | `pokechamp/agents/react_agent.py` | — | ReAct 에이전트 그래프 |

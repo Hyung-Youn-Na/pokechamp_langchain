@@ -1,5 +1,10 @@
 # EXP-036 (react / glm-5.1) 실험 분석
 
+> ⚠️ **참고 (2026-06-29)**: 본 분석은 oracle 도입 전(랜덤팀 baseline)이나, 본문의 "거짓 OHKO 매몰"
+> 진단은 실제로는 oracle `max_hp` 덮어쓰기 버그(EXP-050a 수정)의 증상과 혼재되었을 가능성이
+> 있습니다. 단, 본 fix1(priority 정렬) 자체는 sim 계열이라 oracle 버그와 독립. 원인 규명은
+> [`exp-050a`](exp-050a-react-glm51-analysis.md) 참조. 본문은 이력 보존.
+
 > 분석 일시: 2026-06-17
 > EXP-036: 2026-06-17, glm-5.1 (ollama/glm-5.1:cloud), react, 30전 vs abyssal
 > 비교: EXP-034 (안 A, 76.7%) · baseline `react-glm51` (76.7%) — 동일 조건(glm-5.1, temp 0.3, seed 42, N=30)

@@ -1,5 +1,11 @@
 # EXP-035~038 재검증 ablation 가이드 (고정 팀 dynamic-resolve 매치업)
 
+> ⚠️ **전제 폐기 + 미실행 경고 (2026-06-29 갱신)**: 본 가이드는 EXP-038의 "시뮬레이터 정확도 ≠ 승률"
+> 결론을 전제로 EXP-039~041 ablation(fix1/2/3 leave-one-out)을 설계했으나, (a) 그 전제가 EXP-050a
+> (direction pivot, "정확성 = 승률")에 의해 폐기되었고, (b) **EXP-039~041 ablation은 실제로 실행되지
+> 않았습니다**(분석 문서 부재). 본 절차서는 참고용으로만 보존. ablation 대상(fix1/2/3)은 sim 계열이라
+> oracle 버그와 독립이나, 해석 프레임이 구식. **최신 결론: [`exp-050a`](exp-050a-react-glm51-analysis.md).**
+
 > EXP-035~038(simulation dynamic resolve fix 시리즈)의 fix1/fix2/fix3 각각의 **한계 효과(marginal effect)**를
 > 고정 팀 `dynamic-v1` 매치업(동적 무브 밀집)에서 leave-one-out 제거 ablation으로 재검증하는 절차.
 > 단일 진실 원본: [`experiment-context.md`](../../experiment-context.md) §9.

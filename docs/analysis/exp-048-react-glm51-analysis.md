@@ -1,5 +1,12 @@
 # EXP-048 (react / glm-5.1) 실험 분석 — Oracle N-roll 난수 분산
 
+> ⚠️ **결론 폐기 + 오염 경고 (2026-06-29 갱신)**: 본 분석은 oracle 데미지 버그(`_pack_pokemon` 빈
+> pack 랜덤 폴백 + `active_state.max_hp`=opp 퍼센트(100) 덮어쓰기) **하의 측정**이며, 특히 본문의
+> **"oracle damage 정확도 한계 도달 / 정확성 ≠ 승률, 병목은 langGraph 구조" 결론은 가짜**입니다.
+> EXP-050a(commit `c9ac112`+`dd9b040`)가 정확 oracle에서 +10~16pp 향상을 확인해 **"정확성 = 승률"을
+> 재확립**(direction pivot)하며 이를 직접 반박. 본문 결론은 폐기되었으나 이력 보존.
+> **최신 결론: [`exp-050a-react-glm51-analysis.md`](exp-050a-react-glm51-analysis.md).**
+
 > 분석 일시: 2026-06-23
 > EXP-048: 2026-06-23, glm-5.1 (ollama/glm-5.1:cloud), react + `--enable_showdown_oracle` + **전무브 oracle + N-roll 난수 분산**(roll_count 8, damage min/max/median, ko 비율), 30전 vs abyssal
 > 비교: EXP-044 (oracle off, 56.7%) · EXP-047 (전무브 통일·단일 roll, 63.3%) — 동일 `dynamic-v2.json`/seed 42/N=30

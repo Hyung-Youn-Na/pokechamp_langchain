@@ -2,7 +2,17 @@
 
 > 분석 일자: 2026-06-11
 > 대상 실험: `EXP-028-react-glm51` (LangGraph ReAct 에이전트)
-> 대상 파일: `tools/battle_viewer.py` (1,965 lines)
+> 대상 파일: `tools/battle_viewer.py` (당시 1,965행 → 현재 **2,280행**)
+
+> ⚠️ **정정 (2026-06-29)**:
+> - **라인 번호는 모두 1,965행 기준 구버전**. 현재 파일은 2,280행으로 라인이 이동 — 버그
+>   시그니처(`tool_result_idx < len`, `_truncate(reasoning, 1000)`, `return matched` 등)로 재검색 필요.
+> - **EXP-050c "로그 truncate 해제"(commit c988c4d)**는 **로그 저장 단**(react_agent reasoning 전체 저장,
+>   `_log_preview` 전체 저장)에 적용됨 — **뷰어 렌더링의 `_truncate`는 별개로 여전히 존재**(§2.1/§2.2).
+>   단, 원본 로그는 이제 전체 저장되어 뷰어만 고치면 전체 reasoning 표시 가능.
+> - **현존 버그(재확인)**: §1.2 툴 결과 매칭(`tool_result_idx < len` 항상 True)은 여전히 현존.
+> - **일부 해결 가능**: §2.4/§3.2/§3.3의 `.battle-panel`/`battlePlaceholder`/`battle-group-*` "미존재"
+>   지적은 이후 뷰어 개선으로 일부 해결되었을 수 있음 — 렌더링 재확인 권장.
 
 ---
 

@@ -44,12 +44,13 @@ pokechamp/
 │   ├── langchain_player.py   # [NEW] LangGraph player (delegates legacy algos to LLMPlayer)
 │   ├── langchain_backend.py  # [NEW] LangChain chat-model backend adapter
 │   ├── agents/         # [NEW] LangGraph agent workflows
-│   │   ├── react_agent.py     # ReAct agent (build_context → agent ⇄ tool_execution → parse_action)
+│   │   ├── react_agent.py     # ReAct agent (build_context → tool_agent ⇄ tool_execution → strategy_synthesis → parse_action)
 │   │   ├── io_agent.py        # IO via LangGraph (baseline)
 │   │   ├── cot_agent.py       # Chain-of-thought via LangGraph
 │   │   ├── common.py          # Shared helpers (state build, action↔order, JSON parse)
 │   │   ├── llm_logging.py     # LLM reasoning logging callback
 │   │   └── state.py           # BattleAgentState / messaging
+│   ├── battle_memory.py # [NEW] Turn-level battle memory (EXP-049a, design D)
 │   ├── battle_tools.py # [NEW] Battle analysis tools (damage, type, matchup, simulate…)
 │   ├── mcp_player.py    # MCP protocol support
 │   ├── llm_vgc_player.py # VGC doubles support

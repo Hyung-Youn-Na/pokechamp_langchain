@@ -320,7 +320,7 @@ uv run python -m pytest tests/test_showdown_oracle.py -m oracle -v
 1. **resolved type (ModifyType, runMove 전)** — `singleResolve()` L132-139. weatherball/terablast/ivycudgel 등의 `onModifyType`을 `runMove` **전**에 `singleEvent`+`runEvent("ModifyType")`으로 실행. `typeMove`는 `let`. runMove 후엔 source/field 변형으로 콜백이 안 먹음.
 2. **teraType 주입** — `applyActiveState()` L71-77. terablast가 `pokemon.teraType`를 읽으므로 `st.tera_type` 주입.
 3. **weather/terrain source** — `buildBattle()` L92-94. `setWeather(weather, fieldSource)`에 source 전달(durationCallback 요구).
-4. **active HP/status/boost 주입** — `applyActiveState()`. packed team엔 HP/boost/tera가 없으므로 payload `active_state`에서 주입.
+4. **active HP/status/boost 주입** — `applyActiveState()`. packed team엔 HP/boost/tera가 없으므로 payload `active_state`에서 주입. **단, `max_hp`는 주입하면 안 됨** (EXP-050a fix — mapper가 `max_hp`를 의도적으로 생략; 아래 '실험 검증 이력' EXP-050a 참조).
 5. **Wall 직접 보정** — `singleResolve()` L148-160. Showdown의 side-condition `ModifyDamage` 이벤트가 hand-built Battle(start 없음)에서 **발화하지 않으므로**, Reflect/Light Screen/Aurora Veil damage × 0.5를 runMove 결과에 직접 적용.
 6. **damage = runMove 전후 HP 차이** — L142-146. `runMove`가 `|cant|nopp|`로 조용히 return하면 0이 되며, 이 경우 `battle_tools.py`의 `damage_pct_median > 0` 가드가 sim fallback을 보존한다.
 7. **N-roll 난수 분산** — `resolve(payload)` L196-238. `roll_count`(기본 8)개 seed로 `singleResolve`를 반복(각 seed 전체 변형)해 데미지 난수(0.85–1.0) 샘플링 → `damage.min/max/median` + `ko_estimate`를 **비율**(ohko 발생 횟수/N)로. 타입/BP/상성은 roll 무관(날씨/tera 고정)이라 첫 결과 사용. `roll_count=1`이면 단일 roll(min==max)로 현행 호환.
@@ -330,9 +330,14 @@ uv run python -m pytest tests/test_showdown_oracle.py -m oracle -v
 - **EXP-045**: attacker 식별 버그(worker `active[0]`=team 첫째 + mapper active 정렬 누락) → damage 0%. mapper(`battle_state_mapper.py:_pack_team` lead)에서 해결(worker 수정 아님).
 - **EXP-046**: 동적 무브 damage 정확화 후 sim/oracle 혼합 척도 편향.
 - **EXP-047**: 전무브 oracle 통일 + wall 직접 보정 → 승률 63.3% (+6.6pp vs baseline).
-- **EXP-048(예정)**: N-roll 난수 분산(min/max/median) → 샘플 노이즈 감소 효과 측정.
+- **EXP-048**: N-roll 난수 분산(min/max/median).
+- **EXP-050a (★ worker가 아닌 mapper fix)**: EXP-044~049c 전체를 오염시킨 **oracle 데미지 버그 2건**은 worker가 아니라 **`battle_state_mapper.py`**에서 수정됨(commit `c9ac112`+`dd9b040`):
+  1. **빈 pack 랜덤 폴백** — `_pack_pokemon`이 nature/evs/ivs/level을 빈 값으로 둬 `Teams.unpack`이 Girafarig/Swanna 등 **랜덤 데모 팀**으로 폴백 → 잘못된 포켓몬 damage. fix: mapper가 **명시적으로** nature="serious"/EV0/IV31/level100을 채움(`_pack_pokemon` L219-294).
+  2. **`max_hp`=100 거짓 OHKO** — poke_env가 상대 HP를 0-100 퍼센트로 보고하는데 mapper가 이를 `active_state.max_hp`로 보내면 worker `applyActiveState()`가 dex maxhp(Ogerpon 301/Clodsire 401/Blissey 651)를 **100으로 덮어쓰기** → damage≥100이 전부 100% OHKO. fix: mapper가 **`max_hp`를 의도적으로 생략**(`_build_active_state` L193-211 주석) → worker가 dex maxhp 유지, hp_pct만으로 스케일.
 
-상세: `docs/analysis/exp-045~047-*-analysis.md`.
+  → **재현 시 주의**: 위 두 fix는 worker 코드가 아니라 Python **mapper**에 있다. worker의 `applyActiveState`는 `if (st.max_hp)` 분기를 그대로 두되, **payload에 `max_hp`가 오지 않도록 mapper가 통제**하는 구조. worker만 복사하고 mapper를 최신으로 안 맞추면 100% OHKO 버그가 재현된다.
+
+상세: `docs/analysis/exp-045~049c-*-analysis.md`(⚠️ 오염 — 경고문 참조), `docs/analysis/exp-050a-react-glm51-analysis.md`.
 
 ## 참조
 

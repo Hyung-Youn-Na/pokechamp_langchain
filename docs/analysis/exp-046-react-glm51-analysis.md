@@ -1,5 +1,12 @@
 # EXP-046 (react / glm-5.1) 실험 분석 — Oracle attacker 식별 fix 적용 후
 
+> ⚠️ **결론 폐기 + 오염 경고 (2026-06-29 갱신)**: 본 분석은 oracle 데미지 버그(`_pack_pokemon` 빈
+> pack 랜덤 폴백 + `active_state.max_hp`=opp 퍼센트(100) 덮어쓰기) **하의 측정**이며, 특히 본문의
+> **"정확한 damage가 승률을 떨어뜨렸다 / 정확성 ≠ 승률" 결론은 가짜**입니다. EXP-050a(commit
+> `c9ac112`+`dd9b040`)가 정확 oracle에서 +10~16pp 향상을 확인해 **"정확성 = 승률"을 재확립**
+> (direction pivot). 사실 본 시점엔 빈 pack 랜덤 폴백이 여전히 살아있어 "정확한 damage"가
+> 아니었습니다. 본문 결론은 폐기되었으나 이력 보존. **최신 결론: [`exp-050a-react-glm51-analysis.md`](exp-050a-react-glm51-analysis.md).**
+
 > 분석 일시: 2026-06-23
 > EXP-046: 2026-06-22, glm-5.1 (ollama/glm-5.1:cloud), react + `--enable_showdown_oracle` + **attacker 식별 fix**(`_pack_team` lead 정렬 + damage 가드), 30전 vs abyssal
 > 비교: EXP-044 (oracle off, 56.7%) · EXP-045 (oracle pre-fix, 53.3%) — 동일 `dynamic-v2.json`/seed 42/N=30

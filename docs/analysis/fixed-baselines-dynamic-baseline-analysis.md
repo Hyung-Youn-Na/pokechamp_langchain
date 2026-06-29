@@ -1,5 +1,11 @@
 # 고정 팀 dynamic-resolve baseline 분석 (io / react / minimax)
 
+> ⚠️ **오염 경고 (2026-06-29 갱신)**: 본 분석은 2026-06-19, oracle 통합(EXP-045+) **이전**에 작성되었습니다.
+> sim-only 측정이라 oracle 데미지 버그와는 무관할 수 있으나, 후속 시리즈(EXP-045~049c)가 모두
+> oracle 버그 하 오염 측정으로 끝났습니다. 따라서 본문의 "fix2/fix3 진짜 효과 측정 기대" 등 전망은
+> EXP-050a(oracle 수정 후) 정상 측정으로 재검증이 필요합니다. 본문 정량(react 66.7% / minimax 53.3%)은
+> 이력 보존. **최신 결론: [`exp-050a`](exp-050a-react-glm51-analysis.md).**
+
 > 분석 일시: 2026-06-19
 > 고정 팀 dynamic baseline: glm-5.1 (ollama/glm-5.1:cloud), temp 0.3, seed 42, N=30 vs abyssal
 > 팀 모드: **fixed** (manifest `dynamic-v1.json`, sha256:5bf6bf05…)

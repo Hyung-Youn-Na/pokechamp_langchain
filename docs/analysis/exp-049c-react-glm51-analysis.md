@@ -1,5 +1,11 @@
 # EXP-049c 분석: react + Smogon 자연어 전략 도구 (get_strategy_insight)
 
+> ⚠️ **오염 경고 (2026-06-29 갱신)**: 본 분석은 oracle 데미지 버그(`_pack_pokemon` 빈 pack 랜덤
+> 폴백 + `active_state.max_hp`=opp 퍼센트(100) 덮어쓰기) **하의 측정**이며, 상위 결론이 오염된
+> EXP-049b(60.0%, 버그 하 편행)에 기반합니다. 단, 본문의 자체 정정(방식1 = Smogon overview
+> 데이터 결함)은 유효하며, `get_strategy_insight` 도구의 `no_data` 플래그 처리는 현 코드에 반영.
+> EXP-050a에서 버그 수정 후 EXP-044~049c 전체 폐기. **최신 결론: [`exp-050a`](exp-050a-react-glm51-analysis.md).**
+
 > **알고리즘**: react · **백엔드**: ollama/glm-5.1:cloud · **상대**: abyssal (io, gemini-2.5-pro)
 > **N**: 30 · **seed**: 42 · **temperature**: 0.3 · **팀 모드**: fixed (`dynamic-v2.json`)
 > **oracle**: on · **날짜**: 2026-06-24

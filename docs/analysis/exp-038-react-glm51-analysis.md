@@ -1,5 +1,11 @@
 # EXP-038 (react / glm-5.1) 실험 분석 — 시리즈 종합
 
+> ⚠️ **결론 폐기 (2026-06-29 갱신)**: 본 분석은 oracle 도입 전(랜덤팀 baseline, sim-only)이므로
+> oracle 데미지 버그와 무관합니다. 그러나 본문의 **"시뮬레이터 정확도 ≠ 승률" 결론은 가짜**입니다 —
+> 이 결론은 후속 oracle 시리즈(EXP-046/048)에 잘못 전이되었다가, EXP-050a가 정확 oracle에서
+> +10~16pp 향상을 확인해 **"정확성 = 승률"을 재확립**(direction pivot)하며 폐기되었습니다.
+> 본문 결론은 이력 보존. **최신 결론: [`exp-050a-react-glm51-analysis.md`](exp-050a-react-glm51-analysis.md).**
+
 > 분석 일시: 2026-06-18
 > EXP-038: 2026-06-18, glm-5.1 (ollama/glm-5.1:cloud), react, 30전 vs abyssal
 > 비교: EXP-037 (fix1+fix2, 66.7%) · EXP-036 (fix1, 80.0%) · baseline `react-glm51` (76.7%) — 동일 조건(glm-5.1, temp 0.3, seed 42, N=30)

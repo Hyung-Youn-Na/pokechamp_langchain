@@ -5,6 +5,13 @@
 > 시스템 프롬프트에 명확한 종료 가이드가 없어 비효율적 도구 사용(simulate_turn 과의존)이 발생.
 > Rule-based 종료 조건 대신 LLM의 추론 능력을 활용하는 접근을 모색.
 
+> ⚠️ **EXP-049b 업데이트 (2026-06-29)**: 아이디어 4(Reflection 노드로 LLM 메타인지를 그래프에 명시)의
+> 핵심 방향이 **`strategy_synthesis` 노드**로 구현되었습니다 — clean rebuild로 툴 결과를 종합하고
+> `STRATEGY_SYSTEM_PROMPT`가 `my_plan`(장기 승리 경로)을 명시 출력합니다. 단, confidence 기반 라우팅
+> (아이디어4의 `should_continue` 개선)은 채택되지 않았고, `should_continue`는 여전히 rule-based
+> (예산 + tool_calls 유무, `"tools"`/`"strategy_synthesis"`). 본 문서의 "현재 그래프" 다이어그램과
+> `"parse"` 라우팅은 4노드 구버전입니다.
+
 ---
 
 ## 문제 정의

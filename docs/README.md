@@ -24,8 +24,11 @@
 ## 아키텍처 (`architecture/`)
 - [LangGraph ReAct 에이전트 아키텍처](architecture/langgraph-architecture.md)
 - [LangGraph Tool 아키텍처](architecture/langgraph-tools-architecture.md)
+- [ReAct 구조 재설계 roadmap](architecture/react-architecture-redesign.md) — B(5노드) + D(턴 메모리) + Smogon 결합 (EXP-049+)
 - [Minimax Prompt Algorithm 작동 방식](architecture/minimax-algorithm.md)
 - [Smogon 커뮤니티 데이터 정제 — 설계 의도](architecture/smogon-meta-design.md) — 정제 산출물(strategies/roles JSON)의 구조와 각 정제 결정의 why
+- [Showdown Oracle Worker 재현 가이드](architecture/oracle-worker-reproduction.md) — `oracle-worker.js` 재현 절차 + 전체 소스 + mapper fix 주의
+- [고정 팀 모드](architecture/fixed-team-mode.md) — manifest 기반 매치업 고정 (ablation 격리)
 
 ## ReAct Agent 노트 (`agent-notes/`)
 - [LLM 기반 도구 호출 종료 판단 설계](agent-notes/react-agent-llm-based-stopping-criteria.md)

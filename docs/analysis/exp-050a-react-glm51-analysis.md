@@ -115,6 +115,8 @@
    - **사용자 통찰**: "최상위권은 자기 포켓몬 EV 조절 + 상대 EV 추측으로 킬 여부 판정" — 본 시스템 반영은 위 3축 모두 손대야 해 논의 多 → 별도 EXP로 미룸.
 2. **044~049c 재측정 검토**: oracle 수정이 전 시리즈에 영향이므로, 핵심 실험(047/049b)을 수정된 oracle로 재측정하면 절대 승률 재해석 가능. (단, 비용 큼.)
 3. **사람 사고 후속** (050b/c/d): 역할횟수·phase·자원 ledger.
+   - **EXP-050b (2026-06-27, 회수됨)**: 자기 팀 역할 매 턴 주입 + unknown_item fix(commit `9ab4bcd`). 결과 **53.3% (−16.7pp 역효과)** — 매 턴 주입이 토큰 블로트·주의 분산으로 작용. **EXP-050c에서 회수(revert)**, 단 unknown_item fix·BattleMemory 역할 필드는 유지(050c가 사용).
+   - **EXP-050c (진행 중)**: 매 턴 주입 대신 **teampreview 1회성 lead payoff matrix**(`battle_memory.py:build_lead_payoff_matrix` + `classify_lead_mode`)로 전환 — lead를 expected-value/minimax 결정으로 구조화(preserve/proactive/pressure/anti_lead). 로그 truncate 해제(분석 충실도, commit `c988c4d`). **코드 완료/배틀 대기**(`active/EXP-050c-lead-payoff-matrix`). baseline = 050a 70%.
 4. calculate·simulate 중복 해소 / sim-oracle 교차검증(안전망).
 
 ---

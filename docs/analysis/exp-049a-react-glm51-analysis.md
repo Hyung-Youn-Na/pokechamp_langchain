@@ -1,5 +1,12 @@
 # EXP-049a 분석: react + D 턴 간 메모리 (BattleMemory)
 
+> ⚠️ **오염 경고 (2026-06-29 갱신)**: 본 분석은 oracle 데미지 버그(`_pack_pokemon` 빈 pack 랜덤
+> 폴백 + `active_state.max_hp`=opp 퍼센트(100) 덮어쓰기) **하의 측정**입니다. baseline EXP-048(53.3%)
+> 자체가 동일 오염. "D 메모리가 역효과(−13.3pp)"라는 결론은 버그 노이즈 위에서 측정되어 신뢰 불가.
+> 단, 본문이 지적한 **토큰 블로트 / my_plan 단기 재진술** 문제는 구조적 사실로 유효하며, 이는
+> EXP-049b `strategy_synthesis` 노드(clean rebuild)로 이어졌습니다. EXP-050a에서 버그 수정 후
+> EXP-044~049c 전체 폐기. **최신 결론: [`exp-050a`](exp-050a-react-glm51-analysis.md).**
+
 > **알고리즘**: react · **백엔드**: ollama/glm-5.1:cloud · **상대**: abyssal (io, gemini-2.5-pro)
 > **N**: 30 · **seed**: 42 · **temperature**: 0.3 · **팀 모드**: fixed (`dynamic-v2.json`, EXP-048과 동일 매치업)
 > **oracle**: on (`--enable_showdown_oracle`, EXP-048과 동일) · **날짜**: 2026-06-24

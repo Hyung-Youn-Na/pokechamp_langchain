@@ -34,10 +34,11 @@
 ┌─────────────────────────────────────────────────────────────────────┐
 │              LangGraph ReAct 에이전트 그래프                        │
 │                                                                     │
-│  build_context → agent ⇄ tool_execution → parse_action → END       │
+│  build_context → tool_agent ⇄ tool_execution                       │
+│      → strategy_synthesis → parse_action → END  (5노드, EXP-049b~) │
 │                                                                     │
 │  - 최대 5회 툴 호출 반복                                           │
-│  - 8개의 배틀 분석 툴 사용 가능                                    │
+│  - 9개의 배틀 분석 툴 사용 가능                                    │
 │  - 최종 JSON 액션 반환                                              │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -142,6 +143,15 @@ class BattleAgentState(TypedDict):
     reasoning: str
     evaluation_scores: Dict[str, float]
 
+    # 배틀 메모리 (EXP-049a, design D — 턴 간 누적)
+    opp_role_balance: Dict[str, int]      # 상대 팀 역할 분포
+    opp_team_roles: Dict[str, List[Dict]]
+    opp_revealed: Dict[str, Dict]          # 드러난 moves/item/tera
+    opp_win_condition: str                 # LLM 추론 (다음 턴에 읽음)
+    my_plan: str                           # LLM 추론 장기 승리 경로
+    plan_turn: int
+    tool_call_count: Annotated[int, _add_int]      # ← 노드 간 합산 (success만)
+
     # LLM 사용량 (reducer로 자동 누적)
     total_prompt_tokens: Annotated[int, _add_int]      # ← 노드 간 합산
     total_completion_tokens: Annotated[int, _add_int]   # ← 노드 간 합산
@@ -168,25 +178,38 @@ class BattleAgentState(TypedDict):
                              │
                              ▼
                     ┌─────────────────┐
-              ┌────▶│   agent_loop    │◀────────────────┐
+              ┌────▶│   tool_agent    │◀────────────────┐
               │     └────────┬────────┘                  │
               │              │                            │
               │   ┌──────────┴──────────┐                 │
               │   │ should_continue()?   │                 │
               │   └──┬──────────────┬───┘                 │
               │      │              │                      │
-              │  "parse"        "tools"                    │
+              │ "strategy_     "tools"                     │
+              │ synthesis"        │                        │
               │      │              │                      │
               │      ▼              ▼                      │
-              │  ┌─────────┐  ┌──────────────────┐       │
-              │  │ parse   │  │ tool_execution   │───────┘
-              │  │ _action │  │ (툴 결과 반환)    │  (최대 5회 반복)
-              │  └────┬────┘  └──────────────────┘
-              │       │
-              │       ▼
-              │    ┌──────┐
-              └───▶│ END  │
-                   └──────┘
+              │  ┌──────────────┐ ┌──────────────────┐    │
+              │  │ strategy_    │ │ tool_execution   │────┘
+              │  │ synthesis    │ │ (툴 결과 반환)    │ (최대 5회 반복)
+              │  │ (clean       │ └──────────────────┘
+              │  │  rebuild)    │
+              │  └──────┬───────┘
+              │         │
+              │         ▼
+              │  ┌─────────────┐
+              └─▶│ parse_action│
+                 └──────┬──────┘
+                        │
+                        ▼
+                     ┌──────┐
+                     │ END  │
+                     └──────┘
+
+> **EXP-049b 구조 변경:** `agent_loop`(툴 호출 + 강제종료 통합)가 분리되어 —
+> `tool_agent`(툴 호출 전담, 강제종료 안 함) ⇄ `tool_execution` 루프 후,
+> `strategy_synthesis`(clean rebuild로 전략 결정 + my_plan 장기화) → `parse_action`.
+> `should_continue`는 `"tools"` / `"strategy_synthesis"`로 라우팅(`"parse"` 아님).
 ```
 
 ### 3.2 그래프 노드 상세
@@ -205,7 +228,22 @@ def build_context(state: BattleAgentState) -> dict:
 - 유저 프롬프트: `state_translate()`가 생성한 배틀 상태 텍스트 + 제약 프롬프트
 - IO/CoT 에이전트와 **동일한 배틀 상태 텍스트**를 사용하여 실험 비교 가능성 보장
 
-#### `agent_loop` — LLM 의사결정
+#### `tool_agent` — 툴 호출 전담 (EXP-049b 분리)
+
+> **구조 변경 (EXP-049b):** 과거의 `agent_loop`(툴 호출 + 강제종료 통합)가 둘로 분리되었습니다 —
+> `tool_agent`(**툴 호출만**, 강제종료·최종 결정 안 함) ⇄ `tool_execution` 루프 후,
+> `strategy_synthesis`(**clean rebuild**로 전략 결정 + `my_plan` 장기화) → `parse_action`.
+> 아래는 개요용 의사코드; 실제 구현은 `react_agent.py`(`_make_tool_agent`, `_make_strategy_synthesis`) 참조.
+> 툴 호출 횟수는 `sum(ToolMessage)`가 아닌 **state의 `tool_call_count`(Annotated) 카운터**로 추적합니다.
+
+#### `strategy_synthesis` — 전략 종합 + clean rebuild (EXP-049b, design B)
+
+> 툴 루프 종료(예산 도달·툴 호출 없음) 후 누적 메시지 히스토리에서 **툴 결과 + 마지막 추론만 추려
+> clean rebuild**(`STRATEGY_SYSTEM_PROMPT` + `response_format=json_object`). per-turn 프롬프트 블로트를
+> 방지하고, `my_plan`을 단기 행동이 아닌 **장기 승리 경로**로 강제(EXP-049a 95.4% 단기 재진술 교정).
+> JSON 파싱 실패 시 1회 retry(`react_agent.py` `_make_strategy_synthesis`).
+
+#### `tool_agent` — 툴 호출 (개요 의사코드)
 
 ```python
 def agent_loop(state, *, llm, tools) -> dict:
@@ -227,7 +265,13 @@ def agent_loop(state, *, llm, tools) -> dict:
 - LLM은 툴을 호출할지, 최종 답변을 생성할지 스스로 결정
 - 토큰 사용량 자동 추적 (`extract_llm_usage`)
 
-#### `should_continue` — 라우팅 로직
+#### `should_continue` — 라우팅 로직 (EXP-049b: `"tools"` / `"strategy_synthesis"`)
+
+> **변경:** 라우팅은 `"tools"` / `"strategy_synthesis"`입니다 (`"parse"` 아님). 예산
+> (`tool_call_count >= max`) 도달 시 즉시 `strategy_synthesis`로 clean rebuild 결정.
+> 카운터는 state의 Annotated 필드 기반. 실제 구현은 `react_agent.py` `_make_should_continue`.
+
+#### `should_continue` — 라우팅 (개요 의사코드)
 
 ```python
 def should_continue(state) -> str:
@@ -276,24 +320,26 @@ def parse_action(state) -> dict:
 ### 3.3 반복 사이클 예시
 
 ```
-[Turn 1] agent_loop → LLM: "calculate_damage(thunderbolt)" 호출
+[Turn 1] tool_agent → LLM: "calculate_damage(thunderbolt)" 호출
          ↓ should_continue → "tools"
 [Turn 2] tool_execution → {"damage": "35%", "turns_to_ko": 3}
          ↓
-[Turn 3] agent_loop → LLM: "check_type_effectiveness(fire)" 호출
+[Turn 3] tool_agent → LLM: "check_type_effectiveness(fire)" 호출
          ↓ should_continue → "tools"  
 [Turn 4] tool_execution → {"multiplier": 2.0, "description": "super effective"}
          ↓
-[Turn 5] agent_loop → LLM: '{"move": "flamethrower"}' 최종 답변
-         ↓ should_continue → "parse"
-[Turn 6] parse_action → {"chosen_action": {"move": "flamethrower"}}
+[Turn 5] tool_agent → 툴 호출 없는 최종 추론
+         ↓ should_continue → "strategy_synthesis"
+[Turn 6] strategy_synthesis → clean rebuild → '{"move": "flamethrower", "my_plan": "..."}'
+         ↓
+[Turn 7] parse_action → {"chosen_action": {"move": "flamethrower"}}
          ↓
          END
 ```
 
 ---
 
-## 4. 배틀 분석 툴 (8종)
+## 4. 배틀 분석 툴 (9종)
 
 `battle_tools.py`에 정의된 `@tool` 데코레이터 기반 LangChain 툴:
 
@@ -307,6 +353,7 @@ def parse_action(state) -> dict:
 | `simulate_turn` | 특정 기술 조합으로 턴 시뮬레이션 | `LocalSim.calculate_remaining_hp()` |
 | `get_move_details` | 기술 상세 정보 (동적 타입/위력/우선도) | `resolve_dynamic_type/power/priority()` |
 | `evaluate_position` | 현재 포지션 점수 평가 (0-100) | `fast_battle_evaluation()` |
+| `get_strategy_insight` | Smogon 커뮤니티 전략(역할/견제/약점/승리 경로) | `get_cached_smogon_strategies()` (EXP-049c) |
 
 **모든 툴은 `BattleContext` 데이터클래스에서 현재 배틀 상태를 읽어옵니다:**
 
@@ -456,21 +503,15 @@ def build_context(state: BattleAgentState) -> dict:
 | 섹션 | 내용 | 목적 |
 |------|------|------|
 | **역할 정의** | "You are a competitive Pokémon battle AI" | 에이전트 정체성 설정 |
-| **Available Tools** | 8개 툴의 이름, 시그니처, 용도 설명 | LLM이 툴을 올바르게 호출하도록 안내 |
+| **Available Tools** | 9개 툴의 이름, 시그니처, 용도 설명 | LLM이 툴을 올바르게 호출하도록 안내 |
 | **Decision Process** | 5단계 의사결정 플로우 (상태 읽기 → 데미지 계산 → 타입 확인 → 비교 → JSON 출력) | 체계적인 분석 유도 |
 | **CRITICAL Rules** | 최대 5회 툴 호출, 보유 기술만 데미지 계산, 상태기술 제외, 에러 시 재시도 금지 | 환각/비효율적 툴 사용 방지 |
 | **Output Format** | JSON 전용 출력, 마크다운 금지, 올바른/잘못된 예시 | 파싱 신뢰성 보장 |
 
-**강제 종료 프롬프트** (최대 툴 호출 도달 시):
-```python
-SystemMessage(content=(
-    "STOP. You have used all your tool calls. "
-    "Output ONLY a JSON action now. No prose. No code fences. No explanation.\n"
-    '{"move": "earthquake"}\n'
-    "Your JSON action:"
-))
-```
-→ 툴을 바인딩하지 않은 상태로 LLM을 호출하여 강제로 최종 답변을 유도합니다.
+**강제 종료 → clean rebuild (EXP-049b 변경):** 과거엔 예산 도달 시 강제종료 프롬프트로 LLM을
+호출했으나, 현재는 `should_continue`가 예산 도달 시 **`strategy_synthesis` 노드로 라우팅**하여
+clean rebuild로 최종 결정을 내립니다(§3.2 `strategy_synthesis` 참조). 툴 미바인딩 강제 호출은
+더 이상 사용하지 않습니다.
 
 #### 유저 프롬프트 구성
 
@@ -679,7 +720,7 @@ pokechamp/
 ├── llm_player.py                   ← LLMPlayer (+ teampreview, _log_llm_call, lead selection 추가)
 ├── langchain_backend.py            ← 통합 LLM 백엔드 (OllamaChatModel 포함)
 ├── langchain_player.py             ← LangChainPlayer (choose_move 오버라이드)
-├── battle_tools.py                 ← 8개 배틀 분석 툴 + BattleContext
+├── battle_tools.py                 ← 9개 배틀 분석 툴 + BattleContext (EXP-049c get_strategy_insight)
 └── agents/
     ├── __init__.py                 ← 패키지 초기화 (create_*_agent 익스포트)
     ├── state.py                    ← BattleAgentState TypedDict 정의

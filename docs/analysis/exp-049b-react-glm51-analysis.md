@@ -1,5 +1,11 @@
 # EXP-049b 분석: react + B 노드 분리 (strategy_synthesis)
 
+> ⚠️ **오염 경고 (2026-06-29 갱신)**: 본 분석의 측정(60.0%)은 oracle 데미지 버그 하의 값입니다.
+> EXP-050a가 "049b/c의 60%는 버그 하 편행"이라 폐기했으며, "B 노드(strategy_synthesis)=핵심 승률
+> 레버"라는 결론은 direction pivot(정확한 oracle이 레버)과 충돌합니다. 단, **5노드 그래프 구조 자체
+> (`strategy_synthesis` 노드 추가)는 그대로 유지**되어 현 코드에 반영되어 있으므로, 본문의 구조 묘사는
+> CURRENT입니다. 본문 정량·승률 결론은 신뢰 불가(이력 보존). **최신 결론: [`exp-050a`](exp-050a-react-glm51-analysis.md).**
+
 > **알고리즘**: react · **백엔드**: ollama/glm-5.1:cloud · **상대**: abyssal (io, gemini-2.5-pro)
 > **N**: 30 · **seed**: 42 · **temperature**: 0.3 · **팀 모드**: fixed (`dynamic-v2.json`)
 > **oracle**: on (`--enable_showdown_oracle`) · **날짜**: 2026-06-24

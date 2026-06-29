@@ -1,5 +1,9 @@
 # EXP-037 (react / glm-5.1) 실험 분석
 
+> ⚠️ **참고 (2026-06-29)**: 본 분석은 oracle 도입 전(랜덤팀 baseline)이나, 동적 위력 damage가 여전히
+> oracle 빈-pack 랜덤 폴백 버그의 영향권과 겹칩니다. 결론(fix2 보류) 자체는 합리적이나, 원인 해석은
+> [`exp-050a`](exp-050a-react-glm51-analysis.md)로 보정 필요. 본문은 이력 보존.
+
 > 분석 일시: 2026-06-17
 > EXP-037: 2026-06-17, glm-5.1 (ollama/glm-5.1:cloud), react, 30전 vs abyssal
 > 비교: EXP-036 (fix1, 80.0%) · baseline `react-glm51` (76.7%) — 동일 조건(glm-5.1, temp 0.3, seed 42, N=30)

@@ -1,5 +1,12 @@
 # EXP-045 (react / glm-5.1) 실험 분석 — Showdown Oracle 동적 무브 통합 (마일스톤 1+2)
 
+> ⚠️ **오염 경고 (2026-06-29 갱신)**: 본 분석은 oracle 데미지 버그(`_pack_pokemon` 빈 pack 랜덤
+> 폴백 + `active_state.max_hp`=opp 퍼센트(100) 덮어쓰기) **하의 측정**입니다. 본문이 attacker 식별
+> 버그를 잡았다고 진단하나, **진짜 치명 버그(빈 pack → Pelipper/Swanna 등 랜덤 폴백, max_hp=100
+> → 거짓 100% OHKO)는 인지하지 못했습니다**. baseline EXP-044(56.7%) 자체도 동일 오염. EXP-050a
+> (commit `c9ac112`+`dd9b040`)에서 수정되어 EXP-044~049c 전체가 폐기. 정량·결론은 신뢰 불가(이력 보존).
+> **정상 측정 최신 결론: [`exp-050a-react-glm51-analysis.md`](exp-050a-react-glm51-analysis.md).**
+
 > 분석 일시: 2026-06-22
 > EXP-045: 2026-06-22, glm-5.1 (ollama/glm-5.1:cloud), react + **`--enable_showdown_oracle`**, 30전 vs abyssal
 > 비교: EXP-044 (react, 동일 manifest, **oracle off**) — 동일 `dynamic-v2.json`, 동일 seed 42, 변수 1개(`enable_showdown_oracle`)

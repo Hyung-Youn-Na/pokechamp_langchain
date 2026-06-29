@@ -1,5 +1,11 @@
 # EXP-047 (react / glm-5.1) 실험 분석 — 전무브 Oracle 통일 (혼합 척도 편향 해소)
 
+> ⚠️ **오염 경고 (2026-06-29 갱신)**: 본 분석은 oracle 데미지 버그(`_pack_pokemon` 빈 pack 랜덤
+> 폴백 + `active_state.max_hp`=opp 퍼센트(100) 덮어쓰기) **하의 측정**입니다. "혼합 척도 해소가
+> +6.6pp"라는 결론은 빈 pack 랜덤 폴백 노이즈 위의 우연 편행일 가능성이 있습니다. baseline
+> EXP-044(56.7%)와 본 측정 모두 오염. EXP-050a에서 수정되어 EXP-044~049c 전체가 폐기.
+> 정량·결론은 신뢰 불가(이력 보존). **정상 측정 최신 결론: [`exp-050a-react-glm51-analysis.md`](exp-050a-react-glm51-analysis.md).**
+
 > 분석 일시: 2026-06-23
 > EXP-047: 2026-06-23, glm-5.1 (ollama/glm-5.1:cloud), react + `--enable_showdown_oracle` + **전무브 oracle 통일**(게이트 제거·opp_m 통일·side_conditions), 30전 vs abyssal
 > 비교: EXP-044 (oracle off, 56.7%) · EXP-045 (pre-fix, 53.3%) · EXP-046 (fix, 43.3%) — 동일 `dynamic-v2.json`/seed 42/N=30
