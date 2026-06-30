@@ -11,10 +11,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from pokechamp.agents.common import parse_action_json
+from pokechamp.agents.common import build_battle_state, parse_action_json
 from pokechamp.agents.react_agent import _format_memory_brief
 from pokechamp.battle_memory import (
     BattleMemory,
+    detect_plan_disruption,
     plan_is_stale,
     refresh_team_roles,
     to_species_key,
@@ -266,3 +267,175 @@ def test_parse_action_json_strategy_keys_need_action():
         '{"win_condition_opponent": "sweep", "my_plan": "something"}', None
     )
     assert out is None
+
+
+# ---------------------------------------------------------------------------
+# detect_plan_disruption (EXP-051 plan resilience)
+# ---------------------------------------------------------------------------
+
+
+def _team_mon(species, fainted=False):
+    """Own-team mon stub with a fainted flag (EXP-053 KO-only detection)."""
+    m = _mock_pokemon(species)
+    m.fainted = fainted
+    return m
+
+
+def _mock_battle_active(active_species, turn=1, team=None):
+    """Battle with own active mon + optional team (for disruption tests)."""
+    return SimpleNamespace(
+        active_pokemon=_mock_pokemon(active_species),
+        turn=turn,
+        team=team or {},
+    )
+
+
+def test_detect_plan_disruption_first_turn():
+    """No snapshot yet → never flag a disruption on the first observation."""
+    mem = BattleMemory()
+    battle = _mock_battle_active("Gholdengo", turn=1)
+    disrupted, reason = detect_plan_disruption(mem, battle)
+    assert disrupted is False
+    assert reason is None
+    # snapshot now seeded for the next turn's comparison
+    assert mem.last_my_active_species == "gholdengo"
+
+
+def test_detect_plan_disruption_no_change():
+    """Same species on consecutive turns → no disruption, no nudge."""
+    mem = BattleMemory()
+    detect_plan_disruption(mem, _mock_battle_active("Gholdengo", turn=1))
+    disrupted, reason = detect_plan_disruption(
+        mem, _mock_battle_active("Gholdengo", turn=2)
+    )
+    assert disrupted is False
+    assert reason is None
+
+
+def test_detect_plan_disruption_my_ko():
+    """Own active was KO'd and replaced → flag disruption (EXP-053 KO-only)."""
+    mem = BattleMemory()
+    detect_plan_disruption(
+        mem,
+        _mock_battle_active(
+            "Gholdengo", turn=1, team={"g": _team_mon("Gholdengo", fainted=False)}
+        ),
+    )
+    # turn 2: Kingambit active; Gholdengo now fainted (KO'd last turn)
+    disrupted, reason = detect_plan_disruption(
+        mem,
+        _mock_battle_active(
+            "Kingambit",
+            turn=2,
+            team={
+                "g": _team_mon("Gholdengo", fainted=True),
+                "k": _team_mon("Kingambit", fainted=False),
+            },
+        ),
+    )
+    assert disrupted is True
+    assert reason is not None
+    assert "gholdengo" in reason
+    # snapshot updated to the new mon so the same KO is not re-flagged next turn
+    assert mem.last_my_active_species == "kingambit"
+
+
+def test_detect_plan_disruption_alive_switch_not_flagged():
+    """Pivot / voluntary switch / forced switch (Roar): species changes but the
+    previous active is still alive → NO disruption nudge (EXP-053). Covers
+    U-turn, Volt Switch, Flip Turn, manual switch, and phazing (Roar/Whirlwind)."""
+    mem = BattleMemory()
+    detect_plan_disruption(
+        mem,
+        _mock_battle_active(
+            "Gholdengo", turn=1, team={"g": _team_mon("Gholdengo", fainted=False)}
+        ),
+    )
+    # turn 2: Kingambit active via pivot / switch / Roar — Gholdengo still alive,
+    # just switched out. Must NOT flag a plan disruption.
+    disrupted, reason = detect_plan_disruption(
+        mem,
+        _mock_battle_active(
+            "Kingambit",
+            turn=2,
+            team={
+                "g": _team_mon("Gholdengo", fainted=False),
+                "k": _team_mon("Kingambit", fainted=False),
+            },
+        ),
+    )
+    assert disrupted is False
+    assert reason is None
+    assert mem.last_my_active_species == "kingambit"
+
+
+def test_detect_plan_disruption_no_active():
+    """active_pokemon=None → no exception, no disruption, snapshot untouched."""
+    mem = BattleMemory()
+    mem.last_my_active_species = "gholdengo"
+    battle = SimpleNamespace(active_pokemon=None, turn=2)
+    disrupted, reason = detect_plan_disruption(mem, battle)
+    assert disrupted is False
+    assert reason is None
+    # snapshot must not be clobbered when there is no active mon
+    assert mem.last_my_active_species == "gholdengo"
+
+
+def test_format_memory_brief_replan_marker():
+    """plan_invalidated state → brief carries the replan nudge; else absent."""
+    base = {"my_plan": "set hazards then sweep", "plan_turn": 3}
+
+    disrupted = dict(
+        base,
+        plan_invalidated=True,
+        replan_reason="your gholdengo was removed (KO/forced switch)",
+    )
+    brief = _format_memory_brief(disrupted)
+    assert "PLAN DISRUPTED" in brief
+    assert "gholdengo was removed" in brief
+
+    ok = dict(base, plan_invalidated=False, replan_reason="")
+    brief_ok = _format_memory_brief(ok)
+    assert "PLAN DISRUPTED" not in brief_ok
+
+
+# ---------------------------------------------------------------------------
+# build_battle_state plan_invalidated reset (EXP-051 frequency guard layer 2)
+# ---------------------------------------------------------------------------
+
+
+def _mock_battle_for_state(active_species=None, turn=1):
+    """Minimal battle mock satisfying build_battle_state's reads."""
+    mon = _mock_pokemon(active_species) if active_species else None
+    return SimpleNamespace(
+        battle_tag="b1",
+        turn=turn,
+        format="gen9ou",
+        available_moves=[],
+        available_switches=[],
+        active_pokemon=mon,
+        opponent_active_pokemon=None,
+        team={},
+        opponent_team={},
+        weather=None,
+        terrain=None,
+        can_dynamax=False,
+        can_tera=True,
+    )
+
+
+def _mock_sim():
+    return SimpleNamespace(state_translate=lambda b: ("sys", "state", "state_action"))
+
+
+def test_build_battle_state_resets_invalidated_flag():
+    """The one-turn plan_invalidated nudge is copied into state then reset on
+    memory (frequency guard layer 2) so it never persists across turns."""
+    mem = BattleMemory()
+    mem.plan_invalidated = True
+    mem.replan_reason = "your gholdengo was removed (KO/forced switch)"
+    state = build_battle_state(_mock_battle_for_state(), _mock_sim(), "", memory=mem)
+    assert state["plan_invalidated"] is True  # surfaced this turn
+    assert "gholdengo was removed" in state["replan_reason"]
+    assert mem.plan_invalidated is False  # consumed — reset
+    assert mem.replan_reason == ""

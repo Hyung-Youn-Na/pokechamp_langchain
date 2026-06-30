@@ -86,6 +86,17 @@ def build_battle_state(
     team_summary = _summarize_team(battle.team)
     opponent_summary = _summarize_team(battle.opponent_team)
 
+    # EXP-051 plan resilience: capture the one-turn plan_invalidated nudge
+    # before resetting the memory flag (frequency guard layer 2). The nudge
+    # is consumed into state here so it surfaces exactly once (build_context
+    # + strategy_synthesis this turn) and never persists into future turns
+    # even if the LLM omits my_plan.
+    plan_invalidated = memory.plan_invalidated if memory else False
+    replan_reason = memory.replan_reason if memory else ""
+    if memory is not None:
+        memory.plan_invalidated = False
+        memory.replan_reason = ""
+
     return BattleAgentState(
         messages=[],
         battle_tag=battle.battle_tag,
@@ -113,6 +124,8 @@ def build_battle_state(
         opp_win_condition=(memory.opp_win_condition if memory else ""),
         my_plan=(memory.my_plan if memory else ""),
         plan_turn=(memory.plan_turn if memory else 0),
+        plan_invalidated=plan_invalidated,
+        replan_reason=replan_reason,
         tool_call_count=0,
         total_prompt_tokens=0,
         total_completion_tokens=0,

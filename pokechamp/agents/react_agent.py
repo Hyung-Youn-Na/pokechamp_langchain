@@ -131,6 +131,15 @@ def _format_memory_brief(state: BattleAgentState) -> str:
     if my_plan:
         parts.append(f"My current plan (turn {plan_turn}): {my_plan}")
 
+    # EXP-051 plan resilience: one-turn replan nudge when the own active mon
+    # changed (KO/forced switch). _format_memory_brief is called by both
+    # build_context and strategy_synthesis, so this surfaces in both prompts.
+    if state.get("plan_invalidated"):
+        parts.append(
+            f"⚠️ PLAN DISRUPTED — {state.get('replan_reason', '')}. "
+            f"Re-assess your win path; update my_plan only if it genuinely shifted."
+        )
+
     if not parts:
         return ""
     return (
@@ -148,6 +157,8 @@ STRATEGY_SYSTEM_PROMPT = """You are the STRATEGY SYNTHESISER for a Pokémon batt
 ## CRITICAL: my_plan is a LONG-TERM win path, NOT this turn's action
 
 my_plan must describe how you win the WHOLE battle, not what you do this turn. The "Battle Memory" section shows your previous my_plan — keep it stable and only change it when your read of the win path genuinely shifts.
+
+If the Battle Memory flags your plan as disrupted (your active Pokemon was KO'd or forced out), re-formulate my_plan only when your long-term win path actually changed — do not rewrite it for one-turn tactical events.
 
 GOOD my_plan examples:
 - "Set Stealth Rock with Ting-Lu early, then win by sweeping with Gholdengo once the opponent's special wall (Clodsire) is removed."

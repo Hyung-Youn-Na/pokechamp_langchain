@@ -43,6 +43,7 @@ from pokechamp.agents.llm_logging import LLMLoggingCallback
 from pokechamp.agents.react_agent import create_react_agent
 from pokechamp.battle_memory import (
     BattleMemory,
+    detect_plan_disruption,
     gather_preview_strategy,
     predict_opp_leads,
     refresh_own_team_roles,
@@ -620,6 +621,13 @@ class LangChainPlayer(LLMPlayer):
             self._battle_memory[battle.battle_tag] = memory
         refresh_team_roles(memory, battle)
         update_opp_revealed(memory, battle)
+        # EXP-051 plan resilience: detect own-KO/forced-switch since last turn
+        # and flag my_plan as invalidated for a one-turn replan nudge. The
+        # flag is consumed into state and reset by build_battle_state below.
+        disrupted, disruption_reason = detect_plan_disruption(memory, battle)
+        if disrupted:
+            memory.plan_invalidated = True
+            memory.replan_reason = disruption_reason or ""
         # EXP-050d: attach own pack (ability/item/EV/nature/IV) to own Pokemon so
         # the oracle (_pack_pokemon) and tools recover own-team info poke_env
         # does not surface. No-op in random/teamloader mode.

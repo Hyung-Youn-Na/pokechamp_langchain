@@ -67,6 +67,10 @@ class BattleAgentState(TypedDict):
     opp_win_condition: str
     my_plan: str
     plan_turn: int
+    # Plan resilience nudge (EXP-051): set one turn when the own active mon
+    # changed (KO/forced switch); read by _format_memory_brief.
+    plan_invalidated: bool
+    replan_reason: str
 
     # -- Tool call tracking (accumulated via reducer) --
     tool_call_count: Annotated[int, _add_int]

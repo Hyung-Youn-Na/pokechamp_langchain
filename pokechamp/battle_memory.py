@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import string
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
 def to_species_key(name: str) -> str:
@@ -65,6 +65,15 @@ class BattleMemory:
     # ⑤b per-pokemon own role labels (EXP-050a v2, full info injection).
     my_team_roles: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
     preview_seed_turn: int = -1  # -1 = no preview seed (fallback); 0 = seeded at preview
+
+    # ⑥ plan resilience (EXP-051): event-based plan-disruption tracking.
+    # last_my_active_species snapshots the previous own active mon so a change
+    # (own KO / forced switch) flags my_plan as invalidated. plan_invalidated +
+    # replan_reason carry a one-turn replan nudge; reset after state copy
+    # (build_battle_state) so it never persists across turns.
+    last_my_active_species: str = ""
+    plan_invalidated: bool = False
+    replan_reason: str = ""
 
 
 def refresh_team_roles(memory: BattleMemory, battle: Any) -> None:
@@ -310,6 +319,62 @@ def plan_is_stale(memory: BattleMemory, current_turn: int, max_age: int = 5) -> 
     if memory.plan_turn <= 0:
         return True
     return (current_turn - memory.plan_turn) > max_age
+
+
+def _find_own_mon_by_key(battle: Any, species_key: str) -> Any:
+    """Look up an own-team mon by normalised species key (EXP-053)."""
+    team = getattr(battle, "team", None) or {}
+    for m in team.values():
+        if to_species_key(getattr(m, "species", "") or "") == species_key:
+            return m
+    return None
+
+
+def detect_plan_disruption(
+    memory: BattleMemory, battle: Any
+) -> "tuple[bool, Optional[str]]":
+    """Detect whether ``my_plan`` was disrupted by an **own KO** this turn.
+
+    EXP-053 narrows EXP-051's over-broad trigger: a change in the own active
+    species alone is NOT a disruption — voluntary switches, pivots (U-turn /
+    Volt Switch / Flip Turn) and forced switches (Roar / Whirlwind / Dragon
+    Tail / Circle Throw) all change the active mon while it is still alive,
+    and must NOT trigger a replan nudge. Only a real faint (the previous
+    active is now ``fainted``) breaks a plan built around that mon.
+
+    Confirmation source: the previous active's ``fainted`` flag (status FNT),
+    looked up in ``battle.team`` by species key. First-turn calls (empty
+    snapshot) and same-species turns never flag a disruption.
+
+    Returns ``(disrupted, reason)``: ``reason`` is a human-readable nudge
+    when disrupted, else ``None``.
+    """
+    mon = getattr(battle, "active_pokemon", None)
+    if mon is None:
+        return False, None
+
+    curr = to_species_key(getattr(mon, "species", "") or "")
+    if not curr:
+        return False, None
+
+    prev = memory.last_my_active_species
+    disrupted = False
+    reason: Optional[str] = None
+    if prev and curr != prev:
+        # Species changed — only count it as a disruption if the PREVIOUS
+        # active actually fainted. Alive-but-switched (pivot / voluntary /
+        # forced switch) is normal play, not a plan disruption (EXP-053).
+        prev_mon = _find_own_mon_by_key(battle, prev)
+        if prev_mon is not None and getattr(prev_mon, "fainted", False):
+            disrupted = True
+            reason = (
+                f"your {prev} fainted — reassess whether your win path "
+                f"still holds"
+            )
+
+    # Snapshot the current active so the next call compares against it.
+    memory.last_my_active_species = curr
+    return disrupted, reason
 
 
 # ---------------------------------------------------------------------------
