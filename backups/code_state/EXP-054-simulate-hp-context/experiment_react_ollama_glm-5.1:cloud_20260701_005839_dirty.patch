@@ -1,0 +1,161 @@
+diff --git a/AGENTS.md b/AGENTS.md
+index 1363038..e47a91e 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -60,3 +60,9 @@ Prompt algorithms (`--player_prompt_algo`): `io`, `sc`, `cot`, `tot`, `minimax`,
+ - Common types: `feat`, `fix`, `clean`.
+ - Keep commits focused and atomic. Link related issues in PR descriptions.
+ - Never commit secrets — `passwords.json`, `passwords_vgc.json`, and `.env` files are gitignored.
++
++## Codex Feedback Notes
++
++- When the user asks to preserve brainstorming, design feedback, or experiment ideas from a Codex discussion, save the note under `.temp/codex_feedback/`.
++- Use descriptive Markdown filenames such as `lead-selection-feedback.md`; keep notes focused on the idea, context, and actionable next steps.
++- Do not mix these notes with experiment results in `.temp/experiments/` unless the user explicitly asks to promote the idea into an experiment.
+diff --git a/exp_analysis/ANALYSIS_MANUAL.md b/exp_analysis/ANALYSIS_MANUAL.md
+index 7f1a0c2..79ab6a0 100644
+--- a/exp_analysis/ANALYSIS_MANUAL.md
++++ b/exp_analysis/ANALYSIS_MANUAL.md
+@@ -30,7 +30,7 @@
+ - [ ] 로그 파일(`llm_log.jsonl` 또는 `langgraph_*.jsonl`)이 존재한다.
+ - [ ] 배틀 리플레이 HTML(`pokechamp* - battle-gen9ou-*.html`)이 N개 존재한다.
+ 
+-> ⚠️ **누락 시**: 절대 직접 배틀을 실행하지 말고 사용자에게 실행을 요청한다 (규칙: [6.4절](#64-배틀-실행-금지)).
++> ⚠️ **누락 시**: 절대 직접 배틀을 실행하지 말고 사용자에게 실행을 요청한다 (규칙: [6.4절](#64-배틀-실행-금지)). 단, **자율 모드**(`experiment-context.md` §10 — 사용자가 자율 실험을 goal/권한으로 부여한 경우)에서는 에이전트가 gate 기반(smoke→screen→N=30)으로 배틀을 직접 실행하므로, 그 로그로 본 메뉴얼의 동일 분석 절차를 적용한다.
+ 
+ ---
+ 
+@@ -324,6 +324,29 @@ print(f"tool_errors={errors}/{results} ({100*errors/results:.1f}%)")
+ 
+ > react 전용 메트릭(도구 분포/에러율)은 template 섹션 1.3 에, IO/minimax 전용 메트릭(파싱 실패/재시도)은 template 섹션 3 의 문제점으로 기재한다 (5절 차이표 참조).
+ 
++### 4.6 paired 비교 (동일 매치업 — fixed-team ablation, §10.2 gate)
++
++fixed-team 모드에서는 `battles[].player_team_idx` / `opponent_team_idx` 로 **동일 매치업 페어링**이 가능하다 → baseline 대비 **승패 전환(discordant pairs)** 으로 paired net 을 계산한다. 자율 모드 N=10 승격 gate 는 **paired net ≥ +1** 이 조건(`experiment-context.md` §10.2 step 7).
++
++```python
++import json, glob
++def battles_of(p):
++    f = glob.glob(f"{p}/battle_log/experiment_*.json")[0]
++    return json.load(open(f))["battles"]
++def by_matchup(bs):
++    return {(b["player_team_idx"], b["opponent_team_idx"]): b["won"] for b in bs}
++cand = by_matchup(battles_of(".temp/experiments/active/EXP-NNN-name"))
++base = by_matchup(battles_of(".temp/experiments/active/EXP-MMM-name"))  # baseline 경로
++keys = list(cand)                       # cand(신규)의 매치업을 기준
++pw = sum(1 for k in keys if base.get(k) == 0 and cand.get(k) == 1)  # base패→cand승
++wp = sum(1 for k in keys if base.get(k) == 1 and cand.get(k) == 0)  # base승→cand패
++print(f"paired: 패→승 {pw}, 승→패 {wp}, net {pw - wp:+d}")
++# McNemar 근사 (pw+wp > 0): z = (abs(pw - wp) - 1) / (pw + wp) ** 0.5
++# 매치업별 승패 행렬: for k in keys: print(k, base.get(k), cand.get(k))
++```
++
++> paired 는 **동일 manifest(동일 매치업 시퀀스)** 일 때만 공정하다. random 팀은 매치업이 달라 paired 불가 → 전체 승률 비교만. baseline 후보가 N=30 이어도 신규 EXP의 N=10 매치업(앞 10개)과 동일 키만 페어링된다.
++
+ ---
+ 
+ ## 5. 알고리즘별 데이터 차이 대응표
+@@ -356,8 +379,9 @@ react 의 파싱 실패는 도구 호출 흐름 내에서 처리되므로 "도
+ ### 6.3 재현성 (seed 42 / N≥30)
+ 보고서 메타 헤더에 `seed`, `temperature`, `N` 을 명시한다. **N<30 인 진행 중 실험**은 template 의 ⚠️ 경고 박스로 통계 유의성 낮음을 표기한다.
+ 
+-### 6.4 배틀 실행 금지
+-분석 단계에서 **결과 JSON/로그가 이미 존재해야** 한다. 데이터가 누락되었을 때 에이전트가 직접 `--N` 배틀을 실행하지 말고, 사용자에게 실험 실행 명령어를 안내한다 (명령어 템플릿은 experiment-context.md 섹션 3 참조).
++### 6.4 배틀 실행 (기본 금지 / 자율 모드 예외)
++- **기본**: 분석 단계에서 **결과 JSON/로그가 이미 존재해야** 한다. 데이터 누락 시 에이전트가 직접 `--N` 배틀을 실행하지 말고 사용자에게 실행 명령어를 안내한다 (명령어 템플릿은 experiment-context.md §3).
++- **자율 모드 예외**: 사용자가 자율 실험을 goal/권한으로 부여한 경우(`experiment-context.md` §10), 에이전트가 gate 기반(smoke→screen→N=30)으로 배틀을 **직접 실행**한다. 이때도 분석은 본 메뉴얼의 동일 절차(2~5절)로 수행하되, N=10/N=30 gate 평가에 **paired net**(4.6절)을 사용한다.
+ 
+ ### 6.5 abyssal 특화 공략 발견 시 거부 판정
+ 분석 중 "abyssal 의 matchup 임계값/Tera 미고려 등을 직접 노리면 승률이 오른다" 는 발견이 나오면, 그것을 개선 권고로 올리지 않고 **"범용 전략 관점에서 재검토 필요"** 로 명시한다.
+diff --git a/experiment-context.md b/experiment-context.md
+index 4f0333a..241e3e0 100644
+--- a/experiment-context.md
++++ b/experiment-context.md
+@@ -17,7 +17,9 @@
+    - 커밋 메시지에 EXP-ID 포함 (예: `feat(prompt): macro_prompt to user [EXP-002]`)
+    - 코드 상태(commit·argv·dirty patch)는 배틀 로그 `meta` 블록에 **자동 기록**됨 ([§8](#8-실험-코드파라미터-변경-자동-추적)). README 수동 해시 기록은 폐지(준수율 0%로 실패).
+ 7. **로그 분리**: `--log_dir`로 실험 전용 디렉토리 지정. `./battle_log/one_vs_one` (기본값) 사용 금지.
+-8. **배틀 실행 금지 (★)**: `--N` 배틀 실행은 **에이전트가 직접 하지 않음**. 에이전트는 (a) 코드 변경, (b) 디렉토리/README 준비, (c) **실행 명령어 안내**까지만 담당. 사용자가 명령어를 직접 실행 후 결과를 알려주면 분석 진행.
++8. **배틀 실행 (★)** — 두 모드:
++   - **기본(사용자 실행)**: `--N` 배틀은 에이전트가 직접 실행하지 않음. 에이전트는 (a) 코드 변경, (b) 디렉토리/README 준비, (c) **실행 명령어 안내**까지만 담당. 사용자가 명령어를 직접 실행 후 결과를 알려주면 분석 진행.
++   - **자율 모드**: 사용자가 자율 실험을 **goal/권한으로 명시적 부여**하면, 에이전트가 [§10 자율 실험 파이프라인](#10-자율-실험-파이프라인-gate-기반-폐쇄-루프)에 따라 `--N` 배틀을 **직접 실행**한다 (gate 기반 smoke → screen → N=30 폐쇄 루프). 자율 모드가 아닌 한 사용자 실행이 기본.
+ 9. **Smoke test 권장 (★)**: 코드 변경 후 본 측정(`--N 30`) 전에 **smoke test**(`--N 1` 단일 배틀)로 회귀·충돌·brief 출력을 먼저 확인한다(실험 전 검증 게이트). [`new_experiment.py`](scripts/exp/new_experiment.py)가 scaffold 시 smoke 명령을 자동 안내. smoke도 배틀이므로 **사용자가 실행**(§0-8). 비용이 적고 회귀·충돌을 조기 발견 — 잘못된 변경으로 `--N 30`을 낭비하는 것을 방지.
+ 
+ ---
+@@ -537,4 +539,52 @@ uv run python scripts/exp/verify_single_change.py EXP-NNN --baseline minimax --z
+ 
+ > EXP 번호는 `new_experiment.py` 가 자동 할당(§0-2). 위 표의 예정 번호를 고정 문자로 적으면 scan 이 선점하므로, 예정 행은 번호 없이 표기한다.
+ 
++---
++
++## 10. 자율 실험 파이프라인 (gate 기반 폐쇄 루프)
++
++> 사용자가 자율 실험을 **goal/권한으로 명시적 부여**할 때 적용 (§0-8 자율 모드).
++> 로그 분석 → 가설 → 코드 수정 → 테스트 → battle 실행 → 결과 분석 → 후속 실험을
++> 에이전트가 폐쇄 루프로 수행하며, **배틀을 직접 실행**한다. EXP-052/053(2026-06-30)에서
++> 정립. 목표: 고정 매치업에서 abyssal 상대 N=30 **승률 90% (27/30)** 이상 — 단,
++> abyssal 구현 허점 직접 공략이 아닌 **범용 gen9ou 전략 개선**만 허용 (§0-1).
++
++### 10.1 공통 실험 조건 (fixed-team ablation)
++- 알고리즘: **react** · 백엔드: `ollama/glm-5.1:cloud` · 상대: **abyssal**
++- `gen9ou` · `--temperature 0.3` · `--seed 42` · `--max_tokens 65536`
++- 팀 모드: **fixed** · manifest: `.temp/experiments/fixed-baselines/manifests/dynamic-v2.json` (sha256 `564353a6`, 050 시리즈 동일 30 매치업 → paired 비교)
++- Showdown oracle on (`--enable_showdown_oracle`) · LLM lead selection on (`--enable_llm_lead_selection`)
++- 한 실험당 **하나의 기능적 메커니즘**만 변경 (§0-4). 번호는 `scripts/exp/new_experiment.py` 자동 할당.
++
++### 10.2 후보별 게이트 (smoke → screen → N=30)
++각 후보는 아래 순서를 지킨다.
++1. **컨텍스트 복원**: 관련 문서·`git status`/`diff`/history·직전 EXP 로그를 source of truth로.
++2. **코드 상태 보존**: `preserve_code_state.py`로 직전/합성 상태 백업 (`backups/code_state/`).
++3. **paired 분석**: baseline(동일 매치업) 대비 승패 전환·토큰·도구 호출·신호 정밀도 비교 (`exp_analysis/ANALYSIS_MANUAL.md` 절차).
++4. **단위·회귀 테스트** 작성·실행 (`pytest tests/`).
++5. **port 8000 확인**: 서버 없을 때만 Showdown 시작. 중복 프로세스 금지.
++6. **N=1 smoke** (`battle_log/_smoke/`): 아래를 **모두** 충족해야 screen 진행.
++   - battle 정상 종료 · JSON/tool 치명 오류 없음 · 변경 신호가 의도한 이벤트에서만 발생
++   - oracle·teampreview·memory 정상 · prompt↔tool 정보 충돌 없음
++7. **N=10 screen** (`battle_log/`): 아래를 **모두** 충족해야 N=30 승격.
++   - **8/10 이상** · baseline 동일 10 매치업 대비 **paired net win +1 이상**
++   - correctness regression·과발동 없음 · 심각 tool error/parse failure/prompt bloat 없음
++8. **N=30 본측정**: N=10 로그를 `_screen/`으로 보존 후 **깨끗한 `battle_log/`**에서 실행.
++   - **27/30 (90%) 이상** = 성공.
++
++### 10.3 battle 실행 세부
++- background(PTY)로 실행, **60초 이내 간격**으로 상태(html 수·`run*.log` tail) 확인.
++- **중복 프로세스 금지** (실행 전 `pgrep -af local_1v1`). 일시적 실패는 원인 확인 후 **최대 2회 재시도**, 부분 실행을 정상 결과로 집계하지 않는다.
++
++### 10.4 후보 반복 · 정리
++- screen/N=30 실패 시 README·분석에 근거 기록 → **reversible local commit으로 회수** → 다음 후보.
++- 후속 후보: 로그에서 확인된 **범용 P0**에서 선택. (EXP-052/053 학습: 메모리/plan 레버는 050a(70%) 천장 → 다음은 **도구 정확성·결정 품질** 레버 — simulate_turn 정확화 / opp stats 추정 / strategy_synthesis 교정 구조. [`react-architecture-redesign.md`](docs/architecture/react-architecture-redesign.md) 참조.)
++- **최대 3개 후보** 중 가장 유망 1개만 N=30 확증. 모두 gate 미달 또는 N=30이 90% 미달이면 **추가 실험 없이 결과·다음 권고 보고**.
++- 각 EXP 후(성공·기각 무관): `preserve_code_state` · `verify_single_change.py`(한계 기록) · README 결과·분석 갱신 · `docs/analysis/exp-NNN-{algo}-{model}-analysis.md` 보고서 · **§5 인덱스 갱신** · `active/`→`archive/` 이동 · **EXP-ID scoped local commit** (push 금지).
++- **보호 규칙**: 기존 dirty worktree·사용자 변경 보존, 실험 무관 파일(`AGENTS.md` 등) 커밋 제외, `git reset --hard`/`git checkout -- <file>`·vendored `pokemon-showdown/` 수정·비밀값 출력·sub-agent 사용 금지, public CLI·battle-log 하위 호환성 유지.
++
++### 10.5 실험 결과 정리 (각 EXP 공통 보고 항목)
++EXP별 변경 · N=1/N=10/N=30 결과 · paired 변화 · 채택/기각 근거 · 로컬 commit 목록 ·
++남은 dirty 파일 · 90% 달성 여부 · 다음 권고. (최종 보고 템플릿은 [`exp_analysis/template.md`](exp_analysis/template.md) + 위 항목.)
++
+ 3종 알고리즘(io/react/minimax) 각각 측정, 같은 `dynamic-v1` manifest. baseline(fix1+2+3) 대비 델타 = fix 한계 기여(양수=도움, 음수=해). 각 EXP 후 **반드시 `git checkout HEAD -- poke_env/player/local_simulation.py` 원복**(다음 케이스 오염 방지).
+diff --git a/pokechamp/battle_tools.py b/pokechamp/battle_tools.py
+index 0030589..29e67ef 100644
+--- a/pokechamp/battle_tools.py
++++ b/pokechamp/battle_tools.py
+@@ -765,10 +765,17 @@ def simulate_turn(player_move: str, estimated_opponent_move: str) -> str:
+         # Guard: only apply a real (>0) median; zero keeps the sim value.
+         pmed = player_outcome.get("damage_pct_median") if player_outcome else None
+         omed = opp_outcome.get("damage_pct_median") if opp_outcome else None
++        # Oracle damage_pct is the absolute % of the target's MAX HP (Showdown
++        # standard), so subtract it from the CURRENT HP% — not from 100. The old
++        # ``100 - pmed`` assumed the target was at full HP, so a target already
++        # at 30% hit by a 50% median reported 50% (false survival) instead of 0
++        # (KO), mis-routing strategy_synthesis. hp_before_* are fractions
++        # (0..1); scale by 100. N-roll min/max stay absolute (max-HP %), so they
++        # need no context adjustment. (EXP-054)
+         if player_outcome and (pmed or 0) > 0:
+-            hp2 = max(0, round(100 - pmed))
++            hp2 = max(0, round(hp_before_opp * 100 - pmed))
+         if opp_outcome and (omed or 0) > 0:
+-            hp1 = max(0, round(100 - omed))
++            hp1 = max(0, round(hp_before_player * 100 - omed))
+ 
+         result = {
+             "player_move": player_move,

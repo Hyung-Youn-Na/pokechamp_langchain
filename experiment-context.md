@@ -17,7 +17,9 @@
    - 커밋 메시지에 EXP-ID 포함 (예: `feat(prompt): macro_prompt to user [EXP-002]`)
    - 코드 상태(commit·argv·dirty patch)는 배틀 로그 `meta` 블록에 **자동 기록**됨 ([§8](#8-실험-코드파라미터-변경-자동-추적)). README 수동 해시 기록은 폐지(준수율 0%로 실패).
 7. **로그 분리**: `--log_dir`로 실험 전용 디렉토리 지정. `./battle_log/one_vs_one` (기본값) 사용 금지.
-8. **배틀 실행 금지 (★)**: `--N` 배틀 실행은 **에이전트가 직접 하지 않음**. 에이전트는 (a) 코드 변경, (b) 디렉토리/README 준비, (c) **실행 명령어 안내**까지만 담당. 사용자가 명령어를 직접 실행 후 결과를 알려주면 분석 진행.
+8. **배틀 실행 (★)** — 두 모드:
+   - **기본(사용자 실행)**: `--N` 배틀은 에이전트가 직접 실행하지 않음. 에이전트는 (a) 코드 변경, (b) 디렉토리/README 준비, (c) **실행 명령어 안내**까지만 담당. 사용자가 명령어를 직접 실행 후 결과를 알려주면 분석 진행.
+   - **자율 모드**: 사용자가 자율 실험을 **goal/권한으로 명시적 부여**하면, 에이전트가 [§10 자율 실험 파이프라인](#10-자율-실험-파이프라인-gate-기반-폐쇄-루프)에 따라 `--N` 배틀을 **직접 실행**한다 (gate 기반 smoke → screen → N=30 폐쇄 루프). 자율 모드가 아닌 한 사용자 실행이 기본.
 9. **Smoke test 권장 (★)**: 코드 변경 후 본 측정(`--N 30`) 전에 **smoke test**(`--N 1` 단일 배틀)로 회귀·충돌·brief 출력을 먼저 확인한다(실험 전 검증 게이트). [`new_experiment.py`](scripts/exp/new_experiment.py)가 scaffold 시 smoke 명령을 자동 안내. smoke도 배틀이므로 **사용자가 실행**(§0-8). 비용이 적고 회귀·충돌을 조기 발견 — 잘못된 변경으로 `--N 30`을 낭비하는 것을 방지.
 
 ---
@@ -270,7 +272,8 @@ uv run python scripts/battles/local_1v1.py \
 | EXP-050e | react-ability-only-lead (matrix 제거) | 2026-06-29 | ✅ 완료(선발 마무리) | 63.3% (19/30) | 050d(50%) 대비 **+13.3pp**(matrix 제거 효과, paired net +4). 050a(70%) 대비 −6.7pp(net −2) — ability/EV 회수가 050a(ability Unknown·EV=0)보다 낮음(추정: weather setter lead 편향 tyranitar 13번 + oracle EV 회수 데미지 변화). **050a(70%) 시리즈 최고**. matrix·ability 충돌(050d −20pp)은 matrix 제거로 해소 입증. 선발 실험 마무리. |
 | EXP-051 | react-plan-resilience (KO 감지→소프트 replan nudge) | 2026-06-30 | ⚠️ N=10 진행(본측정 필요) | **90.0% (9/10)** | plan resilience 첫 EXP. 내 active species 변화(KO) 감지→`PLAN DISRUPTED` 1턴 nudge. vs **050e paired net +3**(60%→90%, z=1.34), vs 050a net +1. ⚠️**결함**: detect가 KO뿐 아니라 **Volt Switch/pivot 자발 교체까지 오탭**→DISRUPTED 과발동(평균 ~40% 턴)→**my_plan 단기 재진술 퇴화**(050a 95.4% 실패 모드 재현). 승률 90%는 plan resilience 인과라기보다 oracle+teampreview+pivot 전술 지배 가능. 후속 실험 **(KO 전용 감지로 pivot 오탭 제거, 번호 자동 할당)**에서 오탭 제거 후 순수 효과 측정. `docs/analysis/exp-051-react-glm51-analysis.md` |
 | EXP-052 | react-opp-alive-accurate (opp_alive 집계 정확화, 051 위 합성) | 2026-06-30 | ❌ 기각(합성+게이트 미달) | 60.0% (6/10) | opp_alive revealed-only 집계 버그 수정(teampreview 6명 ∪ revealed species 병합 헬퍼, fork additive). 단 **051(plan-resilience) 합성 상태**로 측정. vs 050e paired net **+0**, vs 050a **-2**, vs 051 **-3** → gate(8/10·net+1) 미달. 051 과발동(PLAN DISRUPTED 346/10배틀) 지배 하에 opp_alive 정확화가 역행; 합성 정합성 문제. **기각**, 후보는 052 제외 + KO-only(EXP-053). `docs/analysis/exp-052-react-glm51-analysis.md` |
-| EXP-053 | react-plan-disruption-ko-only (실제 own-KO 전용 nudge, 052 제외) | 2026-06-30 | ❌ 기각(N=10 게이트 미달) | 60.0% (6/10) | 051 detect 과발동 수정 — species 변화만 → **직전 active `fainted` 확인**(pivot/U-turn/Volt Switch/일반/강제 switch nudge=0). 050e+051 기반, **052(opp_alive) 제외**. 단위테스트 46 passed. **PLAN DISRUPTED 346→123/10배틀(-64%, KO-only 정밀도 검증)**. 그러나 승률 6/10 — vs 050e paired net **+0**, vs 050a **-2**, vs 051 **-3** → gate(8/10·net+1) 미달. 시사: 051 겉보기 +3pp는 정확한 plan 갱신이 아닌 **과발동-유도 단기 plan 재작성(050a 실패 모드)**에서 왔을 가능성; KO-only(정확 감지)는 050e 대비 효과 0. plan-resilience 레버는 전이 안 됨. **기각**, 후보2는 deterministic phase. |
+| EXP-053 | react-plan-disruption-ko-only (실제 own-KO 전용 nudge, 052 제외) | 2026-06-30 | ❌ 기각(N=10 게이트 미달) | 60.0% (6/10) | 051 detect 과발동 수정 — species 변화만 → **직전 active `fainted` 확인**(pivot/U-turn/Volt Switch/일반/강제 switch nudge=0). 050e+051 기반, **052(opp_alive) 제외**. 단위테스트 46 passed. **PLAN DISRUPTED 346→123/10배틀(-64%, KO-only 정밀도 검증)**. 그러나 승률 6/10 — vs 050e paired net **+0**, vs 050a **-2**, vs 051 **-3** → gate(8/10·net+1) 미달. 시사: 051 겉보기 +3pp는 정확한 plan 갱신이 아닌 **과발동-유도 단기 plan 재작성(050a 실패 모드)**에서 왔을 가능성; KO-only(정확 감지)는 050e 대비 효과 0. plan-resilience 레버는 전이 안 됨. **기각**, 후보는 도구 정확성·결정 품질 레버로 전환. |
+| EXP-054 | react-simulate-hp-context (simulate_turn oracle HP 맥락 보존) | 2026-07-01 | ❌ 기각(N=10 게이트 미달) | 50.0% (5/10) | 도구 정확성 레버. `battle_tools.py:766-771` oracle HP 보정 `100-pmed`(풀피 가정)→`hp_before*100-pmed`(현재 HP 절대 차감; damage_pct=MAX HP 기준 절대%). 053 net 0 유지 베이스(독립 메커니즘). smoke에서 **정확 동작 확인**(opp 0.27→1%, 0.15→0% KO, 거짓 생존 74%/85%/100% 제거). 그러나 승률 5/10 — vs 050a paired net **-3**(승→패 3만), vs 050e **-1**(z 0.00) → gate(8/10·net+1) 미달. **"정확성=승률" 반례** — 정확한 잔여 HP가 낙관적 공격 KO 유도를 약화(050a 거짓 생존이 유리했을 가능성) 또는 매턴 변동 신호로 과부하. 단독 도구 정확성은 역행; 결정 품질 구조(EXP-055 strategy_synthesis 교정)와 결합 필요. **기각**, 코드 회수 → 050e 순수 베이스에서 EXP-055. `docs/analysis/exp-054-react-glm51-analysis.md` |
 
 ---
 
@@ -536,5 +539,53 @@ uv run python scripts/exp/verify_single_change.py EXP-NNN --baseline minimax --z
 | 예정 | −fix1 (priority/protosynthesis) | (순번 자동 할당) | 최대 전이 예상 (매 턴 영향) |
 
 > EXP 번호는 `new_experiment.py` 가 자동 할당(§0-2). 위 표의 예정 번호를 고정 문자로 적으면 scan 이 선점하므로, 예정 행은 번호 없이 표기한다.
+
+---
+
+## 10. 자율 실험 파이프라인 (gate 기반 폐쇄 루프)
+
+> 사용자가 자율 실험을 **goal/권한으로 명시적 부여**할 때 적용 (§0-8 자율 모드).
+> 로그 분석 → 가설 → 코드 수정 → 테스트 → battle 실행 → 결과 분석 → 후속 실험을
+> 에이전트가 폐쇄 루프로 수행하며, **배틀을 직접 실행**한다. EXP-052/053(2026-06-30)에서
+> 정립. 목표: 고정 매치업에서 abyssal 상대 N=30 **승률 90% (27/30)** 이상 — 단,
+> abyssal 구현 허점 직접 공략이 아닌 **범용 gen9ou 전략 개선**만 허용 (§0-1).
+
+### 10.1 공통 실험 조건 (fixed-team ablation)
+- 알고리즘: **react** · 백엔드: `ollama/glm-5.1:cloud` · 상대: **abyssal**
+- `gen9ou` · `--temperature 0.3` · `--seed 42` · `--max_tokens 65536`
+- 팀 모드: **fixed** · manifest: `.temp/experiments/fixed-baselines/manifests/dynamic-v2.json` (sha256 `564353a6`, 050 시리즈 동일 30 매치업 → paired 비교)
+- Showdown oracle on (`--enable_showdown_oracle`) · LLM lead selection on (`--enable_llm_lead_selection`)
+- 한 실험당 **하나의 기능적 메커니즘**만 변경 (§0-4). 번호는 `scripts/exp/new_experiment.py` 자동 할당.
+
+### 10.2 후보별 게이트 (smoke → screen → N=30)
+각 후보는 아래 순서를 지킨다.
+1. **컨텍스트 복원**: 관련 문서·`git status`/`diff`/history·직전 EXP 로그를 source of truth로.
+2. **코드 상태 보존**: `preserve_code_state.py`로 직전/합성 상태 백업 (`backups/code_state/`).
+3. **paired 분석**: baseline(동일 매치업) 대비 승패 전환·토큰·도구 호출·신호 정밀도 비교 (`exp_analysis/ANALYSIS_MANUAL.md` 절차).
+4. **단위·회귀 테스트** 작성·실행 (`pytest tests/`).
+5. **port 8000 확인**: 서버 없을 때만 Showdown 시작. 중복 프로세스 금지.
+6. **N=1 smoke** (`battle_log/_smoke/`): 아래를 **모두** 충족해야 screen 진행.
+   - battle 정상 종료 · JSON/tool 치명 오류 없음 · 변경 신호가 의도한 이벤트에서만 발생
+   - oracle·teampreview·memory 정상 · prompt↔tool 정보 충돌 없음
+7. **N=10 screen** (`battle_log/`): 아래를 **모두** 충족해야 N=30 승격.
+   - **8/10 이상** · baseline 동일 10 매치업 대비 **paired net win +1 이상**
+   - correctness regression·과발동 없음 · 심각 tool error/parse failure/prompt bloat 없음
+8. **N=30 본측정**: N=10 로그를 `_screen/`으로 보존 후 **깨끗한 `battle_log/`**에서 실행.
+   - **27/30 (90%) 이상** = 성공.
+
+### 10.3 battle 실행 세부
+- background(PTY)로 실행, **60초 이내 간격**으로 상태(html 수·`run*.log` tail) 확인.
+- **중복 프로세스 금지** (실행 전 `pgrep -af local_1v1`). 일시적 실패는 원인 확인 후 **최대 2회 재시도**, 부분 실행을 정상 결과로 집계하지 않는다.
+
+### 10.4 후보 반복 · 정리
+- screen/N=30 실패 시 README·분석에 근거 기록 → **reversible local commit으로 회수** → 다음 후보.
+- 후속 후보: 로그에서 확인된 **범용 P0**에서 선택. (EXP-052/053 학습: 메모리/plan 레버는 050a(70%) 천장 → 다음은 **도구 정확성·결정 품질** 레버 — simulate_turn 정확화 / opp stats 추정 / strategy_synthesis 교정 구조. [`react-architecture-redesign.md`](docs/architecture/react-architecture-redesign.md) 참조.)
+- **최대 3개 후보** 중 가장 유망 1개만 N=30 확증. 모두 gate 미달 또는 N=30이 90% 미달이면 **추가 실험 없이 결과·다음 권고 보고**.
+- 각 EXP 후(성공·기각 무관): `preserve_code_state` · `verify_single_change.py`(한계 기록) · README 결과·분석 갱신 · `docs/analysis/exp-NNN-{algo}-{model}-analysis.md` 보고서 · **§5 인덱스 갱신** · `active/`→`archive/` 이동 · **EXP-ID scoped local commit** (push 금지).
+- **보호 규칙**: 기존 dirty worktree·사용자 변경 보존, 실험 무관 파일(`AGENTS.md` 등) 커밋 제외, `git reset --hard`/`git checkout -- <file>`·vendored `pokemon-showdown/` 수정·비밀값 출력·sub-agent 사용 금지, public CLI·battle-log 하위 호환성 유지.
+
+### 10.5 실험 결과 정리 (각 EXP 공통 보고 항목)
+EXP별 변경 · N=1/N=10/N=30 결과 · paired 변화 · 채택/기각 근거 · 로컬 commit 목록 ·
+남은 dirty 파일 · 90% 달성 여부 · 다음 권고. (최종 보고 템플릿은 [`exp_analysis/template.md`](exp_analysis/template.md) + 위 항목.)
 
 3종 알고리즘(io/react/minimax) 각각 측정, 같은 `dynamic-v1` manifest. baseline(fix1+2+3) 대비 델타 = fix 한계 기여(양수=도움, 음수=해). 각 EXP 후 **반드시 `git checkout HEAD -- poke_env/player/local_simulation.py` 원복**(다음 케이스 오염 방지).

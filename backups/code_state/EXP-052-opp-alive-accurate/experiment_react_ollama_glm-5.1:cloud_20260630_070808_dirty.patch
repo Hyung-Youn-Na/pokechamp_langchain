@@ -1,0 +1,589 @@
+diff --git a/AGENTS.md b/AGENTS.md
+index 1363038..e47a91e 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -60,3 +60,9 @@ Prompt algorithms (`--player_prompt_algo`): `io`, `sc`, `cot`, `tot`, `minimax`,
+ - Common types: `feat`, `fix`, `clean`.
+ - Keep commits focused and atomic. Link related issues in PR descriptions.
+ - Never commit secrets — `passwords.json`, `passwords_vgc.json`, and `.env` files are gitignored.
++
++## Codex Feedback Notes
++
++- When the user asks to preserve brainstorming, design feedback, or experiment ideas from a Codex discussion, save the note under `.temp/codex_feedback/`.
++- Use descriptive Markdown filenames such as `lead-selection-feedback.md`; keep notes focused on the idea, context, and actionable next steps.
++- Do not mix these notes with experiment results in `.temp/experiments/` unless the user explicitly asks to promote the idea into an experiment.
+diff --git a/experiment-context.md b/experiment-context.md
+index eeebe20..6bf8e19 100644
+--- a/experiment-context.md
++++ b/experiment-context.md
+@@ -268,6 +268,7 @@ uv run python scripts/battles/local_1v1.py \
+ | EXP-050c | react-lead-payoff-matrix (codex teampreview 구조화) | 2026-06-28 | ⚠️ 보류 | 60.0% (18/30) | 050a(70%) 대비 **−10pp**, paired net −3. matrix 자기모순(preserve mon rank1 추천 — `classify_lead_mode` worst-case vs ranking avg 충돌) + ability Unknown(105/105 own, weather setter 모르고 plan) 제약. parse failures 5=matrix 무관(턴 결정 위기 JSON→산문). **050e에서 preserve fix + ability 회수 위에서 재평가**. |
+ | EXP-050d | react-own-pack-recovery (ability/item/EV/nature/IV) | 2026-06-29 | ❌ 역효과(보류) | 50.0% (15/30) | 050a(70%) 대비 **−20pp**, net −6(역퇴행 9). ability 회수는 정상이나 **matrix와 충돌** — role 기반 `preserve`(88개, weather sweeper)가 ability 기반 weather 전략(Sand Rush/Swift Swim=핵심 lead)과 정면 충돌. matrix 제거(050e). |
+ | EXP-050e | react-ability-only-lead (matrix 제거) | 2026-06-29 | ✅ 완료(선발 마무리) | 63.3% (19/30) | 050d(50%) 대비 **+13.3pp**(matrix 제거 효과, paired net +4). 050a(70%) 대비 −6.7pp(net −2) — ability/EV 회수가 050a(ability Unknown·EV=0)보다 낮음(추정: weather setter lead 편향 tyranitar 13번 + oracle EV 회수 데미지 변화). **050a(70%) 시리즈 최고**. matrix·ability 충돌(050d −20pp)은 matrix 제거로 해소 입증. 선발 실험 마무리. |
++| EXP-051 | react-plan-resilience (KO 감지→소프트 replan nudge) | 2026-06-30 | ⚠️ N=10 진행(본측정 필요) | **90.0% (9/10)** | plan resilience 첫 EXP. 내 active species 변화(KO) 감지→`PLAN DISRUPTED` 1턴 nudge. vs **050e paired net +3**(60%→90%, z=1.34), vs 050a net +1. ⚠️**결함**: detect가 KO뿐 아니라 **Volt Switch/pivot 자발 교체까지 오탭**→DISRUPTED 과발동(평균 ~40% 턴)→**my_plan 단기 재진술 퇴화**(050a 95.4% 실패 모드 재현). 승률 90%는 plan resilience 인과라기보다 oracle+teampreview+pivot 전술 지배 가능. 후속 실험 **(KO 전용 감지로 pivot 오탭 제거, 번호 자동 할당)**에서 오탭 제거 후 순수 효과 측정. `docs/analysis/exp-051-react-glm51-analysis.md` |
+ 
+ ---
+ 
+diff --git a/pokechamp/agents/common.py b/pokechamp/agents/common.py
+index 449e4b7..6a23773 100644
+--- a/pokechamp/agents/common.py
++++ b/pokechamp/agents/common.py
+@@ -86,6 +86,17 @@ def build_battle_state(
+     team_summary = _summarize_team(battle.team)
+     opponent_summary = _summarize_team(battle.opponent_team)
+ 
++    # EXP-051 plan resilience: capture the one-turn plan_invalidated nudge
++    # before resetting the memory flag (frequency guard layer 2). The nudge
++    # is consumed into state here so it surfaces exactly once (build_context
++    # + strategy_synthesis this turn) and never persists into future turns
++    # even if the LLM omits my_plan.
++    plan_invalidated = memory.plan_invalidated if memory else False
++    replan_reason = memory.replan_reason if memory else ""
++    if memory is not None:
++        memory.plan_invalidated = False
++        memory.replan_reason = ""
++
+     return BattleAgentState(
+         messages=[],
+         battle_tag=battle.battle_tag,
+@@ -113,6 +124,8 @@ def build_battle_state(
+         opp_win_condition=(memory.opp_win_condition if memory else ""),
+         my_plan=(memory.my_plan if memory else ""),
+         plan_turn=(memory.plan_turn if memory else 0),
++        plan_invalidated=plan_invalidated,
++        replan_reason=replan_reason,
+         tool_call_count=0,
+         total_prompt_tokens=0,
+         total_completion_tokens=0,
+diff --git a/pokechamp/agents/react_agent.py b/pokechamp/agents/react_agent.py
+index 1a03f23..821aaf0 100644
+--- a/pokechamp/agents/react_agent.py
++++ b/pokechamp/agents/react_agent.py
+@@ -131,6 +131,15 @@ def _format_memory_brief(state: BattleAgentState) -> str:
+     if my_plan:
+         parts.append(f"My current plan (turn {plan_turn}): {my_plan}")
+ 
++    # EXP-051 plan resilience: one-turn replan nudge when the own active mon
++    # changed (KO/forced switch). _format_memory_brief is called by both
++    # build_context and strategy_synthesis, so this surfaces in both prompts.
++    if state.get("plan_invalidated"):
++        parts.append(
++            f"⚠️ PLAN DISRUPTED — {state.get('replan_reason', '')}. "
++            f"Re-assess your win path; update my_plan only if it genuinely shifted."
++        )
++
+     if not parts:
+         return ""
+     return (
+@@ -149,6 +158,8 @@ STRATEGY_SYSTEM_PROMPT = """You are the STRATEGY SYNTHESISER for a Pokémon batt
+ 
+ my_plan must describe how you win the WHOLE battle, not what you do this turn. The "Battle Memory" section shows your previous my_plan — keep it stable and only change it when your read of the win path genuinely shifts.
+ 
++If the Battle Memory flags your plan as disrupted (your active Pokemon was KO'd or forced out), re-formulate my_plan only when your long-term win path actually changed — do not rewrite it for one-turn tactical events.
++
+ GOOD my_plan examples:
+ - "Set Stealth Rock with Ting-Lu early, then win by sweeping with Gholdengo once the opponent's special wall (Clodsire) is removed."
+ - "Opponent's only win condition is Dragonite Dragon Dance; keep Ceruledge (Shadow Sneak priority) alive as the revenge killer and win the long game by chipping."
+diff --git a/pokechamp/agents/state.py b/pokechamp/agents/state.py
+index cfc0157..0876d95 100644
+--- a/pokechamp/agents/state.py
++++ b/pokechamp/agents/state.py
+@@ -67,6 +67,10 @@ class BattleAgentState(TypedDict):
+     opp_win_condition: str
+     my_plan: str
+     plan_turn: int
++    # Plan resilience nudge (EXP-051): set one turn when the own active mon
++    # changed (KO/forced switch); read by _format_memory_brief.
++    plan_invalidated: bool
++    replan_reason: str
+ 
+     # -- Tool call tracking (accumulated via reducer) --
+     tool_call_count: Annotated[int, _add_int]
+diff --git a/pokechamp/battle_memory.py b/pokechamp/battle_memory.py
+index 6981286..009326c 100644
+--- a/pokechamp/battle_memory.py
++++ b/pokechamp/battle_memory.py
+@@ -24,7 +24,7 @@ from __future__ import annotations
+ 
+ import string
+ from dataclasses import dataclass, field
+-from typing import Any, Dict, List
++from typing import Any, Dict, List, Optional
+ 
+ 
+ def to_species_key(name: str) -> str:
+@@ -42,6 +42,44 @@ def to_species_key(name: str) -> str:
+     return cleaned
+ 
+ 
++def _opponent_full_team(battle: Any) -> list:
++    """teampreview 6명 ∪ revealed를 species 기준 병합해 정확한 opp 팀 반환.
++
++    poke_env의 ``opponent_team`` property (``abstract_battle.py``)는
++    ``if self._opponent_team: return self._opponent_team`` 분기로 switch-in
++    1개 이후 ``_teampreview_opponent_team`` 6명을 영구 가려 revealed 수만
++    반환한다. 이 헬퍼는 두 집합을 합산해 풀 팀을 복원한다 (EXP-052).
++
++    - ``_teampreview_opponent_team`` (``Set[Pokemon]``) 객체와 switch-in
++      ``_opponent_team`` 객체는 **다른 인스턴스**.
++    - ``fainted`` 는 ``Status.FNT == _status`` 인데, teampreview 객체는
++      status가 갱신되지 않아 항상 ``fainted=False`` 다. revealed 객체만
++      실제 status(FNT)를 받는다.
++    - 따라서 species 기준으로 병합하되 **revealed를 우선**(상태 신뢰)하고,
++      teampreview에만 있는 species는 alive(아직 field에 안 나옴)로 둔다.
++    """
++    revealed = getattr(battle, "_opponent_team", None) or {}
++    preview = getattr(battle, "_teampreview_opponent_team", None) or set()
++    by_species: Dict[str, Any] = {}
++    for mon in revealed.values():
++        by_species[to_species_key(str(mon.species))] = mon
++    for mon in preview:
++        k = to_species_key(str(mon.species))
++        if k not in by_species:
++            by_species[k] = mon
++    return list(by_species.values())
++
++
++def _opp_alive_count(battle: Any) -> int:
++    """opponent 팀 중 생존(fainted 아닌) 수 — teampreview 풀 팀 기준 (EXP-052)."""
++    return sum(1 for m in _opponent_full_team(battle) if not m.fainted)
++
++
++def _opp_fainted_count(battle: Any) -> int:
++    """opponent 팀 중 기절(fainted) 수 — teampreview 풀 팀 기준 (EXP-052)."""
++    return sum(1 for m in _opponent_full_team(battle) if m.fainted)
++
++
+ @dataclass
+ class BattleMemory:
+     """Per-battle accumulated memory (D design)."""
+@@ -66,6 +104,15 @@ class BattleMemory:
+     my_team_roles: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
+     preview_seed_turn: int = -1  # -1 = no preview seed (fallback); 0 = seeded at preview
+ 
++    # ⑥ plan resilience (EXP-051): event-based plan-disruption tracking.
++    # last_my_active_species snapshots the previous own active mon so a change
++    # (own KO / forced switch) flags my_plan as invalidated. plan_invalidated +
++    # replan_reason carry a one-turn replan nudge; reset after state copy
++    # (build_battle_state) so it never persists across turns.
++    last_my_active_species: str = ""
++    plan_invalidated: bool = False
++    replan_reason: str = ""
++
+ 
+ def refresh_team_roles(memory: BattleMemory, battle: Any) -> None:
+     """Refresh opponent team role analysis from the Smogon role compendium.
+@@ -312,6 +359,45 @@ def plan_is_stale(memory: BattleMemory, current_turn: int, max_age: int = 5) ->
+     return (current_turn - memory.plan_turn) > max_age
+ 
+ 
++def detect_plan_disruption(
++    memory: BattleMemory, battle: Any
++) -> "tuple[bool, Optional[str]]":
++    """Detect whether ``my_plan`` was disrupted this turn (EXP-051).
++
++    A change in the own active species since last turn (own KO or forced
++    switch) flags the long-term plan as invalidated so the agent is nudged
++    to re-assess its win path — instead of leaning on a plan built around a
++    mon that is now gone.
++
++    Updates the snapshot (``last_my_active_species``) to the current species
++    on every call, establishing the baseline for the next turn's comparison.
++    First-turn calls (empty snapshot) never flag a disruption.
++
++    Returns ``(disrupted, reason)``: ``reason`` is a human-readable nudge
++    when disrupted, else ``None``.
++    """
++    mon = getattr(battle, "active_pokemon", None)
++    if mon is None:
++        return False, None
++
++    curr = to_species_key(getattr(mon, "species", "") or "")
++    if not curr:
++        return False, None
++
++    prev = memory.last_my_active_species
++    disrupted = bool(prev) and curr != prev
++    reason: Optional[str] = None
++    if disrupted:
++        reason = (
++            f"your {prev} was removed (KO/forced switch) — reassess "
++            f"whether your win path still holds"
++        )
++
++    # Snapshot the current active so the next call compares against it.
++    memory.last_my_active_species = curr
++    return disrupted, reason
++
++
+ # ---------------------------------------------------------------------------
+ # Lead payoff matrix (EXP-050c, codex lead-selection feedback)
+ # ---------------------------------------------------------------------------
+diff --git a/pokechamp/battle_tools.py b/pokechamp/battle_tools.py
+index 0030589..699faf9 100644
+--- a/pokechamp/battle_tools.py
++++ b/pokechamp/battle_tools.py
+@@ -29,6 +29,10 @@ from pokechamp.data_cache import (
+     get_cached_move_effect,
+     get_cached_pokemon_move_dict,
+ )
++from pokechamp.battle_memory import (
++    _opp_alive_count,
++    _opponent_full_team,
++)
+ from pokechamp.dynamic_move import (
+     resolve_dynamic_power,
+     resolve_dynamic_priority,
+@@ -597,9 +601,12 @@ def get_team_analysis(side: str = "player") -> str:
+     battle = ctx.battle
+ 
+     if side == "player":
+-        team = battle.team
++        team = list(battle.team.values())
+     else:
+-        team = battle.opponent_team
++        # EXP-052: opponent_team property hides teampreview 6 after the first
++        # switch-in, so count shared weaknesses over the full merged team
++        # (revealed + teampreview-only species). types are accurate on both.
++        team = _opponent_full_team(battle)
+ 
+     if not team:
+         return json.dumps({"error": f"No {side} team data available"})
+@@ -616,7 +623,7 @@ def get_team_analysis(side: str = "player") -> str:
+         "ROCK", "GHOST", "DRAGON", "DARK", "STEEL", "FAIRY",
+     ]
+ 
+-    for pokemon in team.values():
++    for pokemon in team:
+         if pokemon.fainted:
+             continue
+         info = _pokemon_to_dict(pokemon)
+@@ -637,8 +644,8 @@ def get_team_analysis(side: str = "player") -> str:
+             except Exception:
+                 continue
+ 
+-    alive_count = sum(1 for p in team.values() if not p.fainted)
+-    fainted_count = sum(1 for p in team.values() if p.fainted)
++    alive_count = sum(1 for p in team if not p.fainted)
++    fainted_count = sum(1 for p in team if p.fainted)
+ 
+     result = {
+         "side": side,
+@@ -924,7 +931,10 @@ def evaluate_position() -> str:
+     try:
+         # Team counts
+         my_alive = sum(1 for p in battle.team.values() if not p.fainted)
+-        opp_alive = sum(1 for p in battle.opponent_team.values() if not p.fainted)
++        # EXP-052: opponent_team property counts revealed mons only (1-4 mid
++        # game); use the teampreview-merged count so opp_alive reflects the
++        # real team and team_diff bonus/penalty isn't systematically positive.
++        opp_alive = _opp_alive_count(battle)
+ 
+         # HP fractions
+         my_hp = round(mon.current_hp_fraction, 3) if mon else 0
+diff --git a/pokechamp/langchain_player.py b/pokechamp/langchain_player.py
+index dc6f7e2..afc2002 100644
+--- a/pokechamp/langchain_player.py
++++ b/pokechamp/langchain_player.py
+@@ -43,6 +43,7 @@ from pokechamp.agents.llm_logging import LLMLoggingCallback
+ from pokechamp.agents.react_agent import create_react_agent
+ from pokechamp.battle_memory import (
+     BattleMemory,
++    detect_plan_disruption,
+     gather_preview_strategy,
+     predict_opp_leads,
+     refresh_own_team_roles,
+@@ -620,6 +621,13 @@ class LangChainPlayer(LLMPlayer):
+             self._battle_memory[battle.battle_tag] = memory
+         refresh_team_roles(memory, battle)
+         update_opp_revealed(memory, battle)
++        # EXP-051 plan resilience: detect own-KO/forced-switch since last turn
++        # and flag my_plan as invalidated for a one-turn replan nudge. The
++        # flag is consumed into state and reset by build_battle_state below.
++        disrupted, disruption_reason = detect_plan_disruption(memory, battle)
++        if disrupted:
++            memory.plan_invalidated = True
++            memory.replan_reason = disruption_reason or ""
+         # EXP-050d: attach own pack (ability/item/EV/nature/IV) to own Pokemon so
+         # the oracle (_pack_pokemon) and tools recover own-team info poke_env
+         # does not surface. No-op in random/teamloader mode.
+diff --git a/pokechamp/prompts.py b/pokechamp/prompts.py
+index 2fcb0ed..91dd631 100644
+--- a/pokechamp/prompts.py
++++ b/pokechamp/prompts.py
+@@ -7,6 +7,7 @@ from poke_env.environment.pokemon import Pokemon
+ from poke_env.environment.side_condition import SideCondition
+ from poke_env.player.local_simulation import LocalSim, move_type_damage_wrapper
+ from poke_env.player.battle_order import DefaultBattleOrder
++from pokechamp.battle_memory import _opp_alive_count
+ from pokechamp.dynamic_move import (
+     resolve_dynamic_type,
+     resolve_dynamic_power,
+@@ -1074,12 +1075,9 @@ def state_translate(
+     battle_prompt = context_prompt + " Current battle state:\n"
+ 
+     # number of fainted pokemon
+-    opponent_fainted_num = 0
+-    for _, opponent_pokemon in battle.opponent_team.items():
+-        if opponent_pokemon.fainted:
+-            opponent_fainted_num += 1
+-
+-    opponent_unfainted_num = 6 - opponent_fainted_num
++    # EXP-052: opponent_team hides the teampreview 6 after the first switch-in,
++    # so count alive over the full merged team — matches the tool's opp_alive.
++    opponent_unfainted_num = _opp_alive_count(battle)
+     opponent_hp_fraction = round(
+         battle.opponent_active_pokemon.current_hp
+         / battle.opponent_active_pokemon.max_hp
+@@ -1944,12 +1942,9 @@ def state_translate2(
+     battle_prompt = get_turn_summary(sim, battle, n_turn=16)
+ 
+     # number of fainted pokemon
+-    opponent_fainted_num = 0
+-    for _, opponent_pokemon in battle.opponent_team.items():
+-        if opponent_pokemon.fainted:
+-            opponent_fainted_num += 1
+-
+-    opponent_unfainted_num = 6 - opponent_fainted_num
++    # EXP-052: opponent_team hides the teampreview 6 after the first switch-in,
++    # so count alive over the full merged team — matches the tool's opp_alive.
++    opponent_unfainted_num = _opp_alive_count(battle)
+     opponent_hp_fraction = round(
+         battle.opponent_active_pokemon.current_hp
+         / battle.opponent_active_pokemon.max_hp
+@@ -2487,12 +2482,8 @@ def state_translate3(
+     battle_prompt = get_turn_summary(sim, battle, n_turn=16)
+ 
+     # number of fainted pokemon
+-    opponent_fainted_num = 0
+-    for _, opponent_pokemon in battle.opponent_team.items():
+-        if opponent_pokemon.fainted:
+-            opponent_fainted_num += 1
+-
+-    opponent_unfainted_num = 4 - opponent_fainted_num  # 4 instead of 6 for vgc\
++    # EXP-052: full merged team (handles VGC 4 and singles 6 uniformly).
++    opponent_unfainted_num = _opp_alive_count(battle)
+     opponent_hp_fractions = []
+     opponent_stats = []
+     opponent_boosts = []
+diff --git a/tests/test_react_memory.py b/tests/test_react_memory.py
+index f66730c..48a2145 100644
+--- a/tests/test_react_memory.py
++++ b/tests/test_react_memory.py
+@@ -11,10 +11,14 @@ from types import SimpleNamespace
+ 
+ import pytest
+ 
+-from pokechamp.agents.common import parse_action_json
++from pokechamp.agents.common import build_battle_state, parse_action_json
+ from pokechamp.agents.react_agent import _format_memory_brief
+ from pokechamp.battle_memory import (
+     BattleMemory,
++    _opp_alive_count,
++    _opp_fainted_count,
++    _opponent_full_team,
++    detect_plan_disruption,
+     plan_is_stale,
+     refresh_team_roles,
+     to_species_key,
+@@ -266,3 +270,200 @@ def test_parse_action_json_strategy_keys_need_action():
+         '{"win_condition_opponent": "sweep", "my_plan": "something"}', None
+     )
+     assert out is None
++
++
++# ---------------------------------------------------------------------------
++# detect_plan_disruption (EXP-051 plan resilience)
++# ---------------------------------------------------------------------------
++
++
++def _mock_battle_active(active_species, turn=1):
++    """Battle with only the own active mon populated (for disruption tests)."""
++    return SimpleNamespace(
++        active_pokemon=_mock_pokemon(active_species),
++        turn=turn,
++    )
++
++
++def test_detect_plan_disruption_first_turn():
++    """No snapshot yet → never flag a disruption on the first observation."""
++    mem = BattleMemory()
++    battle = _mock_battle_active("Gholdengo", turn=1)
++    disrupted, reason = detect_plan_disruption(mem, battle)
++    assert disrupted is False
++    assert reason is None
++    # snapshot now seeded for the next turn's comparison
++    assert mem.last_my_active_species == "gholdengo"
++
++
++def test_detect_plan_disruption_no_change():
++    """Same species on consecutive turns → no disruption, no nudge."""
++    mem = BattleMemory()
++    detect_plan_disruption(mem, _mock_battle_active("Gholdengo", turn=1))
++    disrupted, reason = detect_plan_disruption(
++        mem, _mock_battle_active("Gholdengo", turn=2)
++    )
++    assert disrupted is False
++    assert reason is None
++
++
++def test_detect_plan_disruption_my_ko():
++    """Own active species changes (KO/forced switch) → flag disruption."""
++    mem = BattleMemory()
++    detect_plan_disruption(mem, _mock_battle_active("Gholdengo", turn=1))
++    disrupted, reason = detect_plan_disruption(
++        mem, _mock_battle_active("Kingambit", turn=2)
++    )
++    assert disrupted is True
++    assert reason is not None
++    assert "gholdengo" in reason
++    # snapshot updated to the new mon so the same KO is not re-flagged next turn
++    assert mem.last_my_active_species == "kingambit"
++
++
++def test_detect_plan_disruption_no_active():
++    """active_pokemon=None → no exception, no disruption, snapshot untouched."""
++    mem = BattleMemory()
++    mem.last_my_active_species = "gholdengo"
++    battle = SimpleNamespace(active_pokemon=None, turn=2)
++    disrupted, reason = detect_plan_disruption(mem, battle)
++    assert disrupted is False
++    assert reason is None
++    # snapshot must not be clobbered when there is no active mon
++    assert mem.last_my_active_species == "gholdengo"
++
++
++def test_format_memory_brief_replan_marker():
++    """plan_invalidated state → brief carries the replan nudge; else absent."""
++    base = {"my_plan": "set hazards then sweep", "plan_turn": 3}
++
++    disrupted = dict(
++        base,
++        plan_invalidated=True,
++        replan_reason="your gholdengo was removed (KO/forced switch)",
++    )
++    brief = _format_memory_brief(disrupted)
++    assert "PLAN DISRUPTED" in brief
++    assert "gholdengo was removed" in brief
++
++    ok = dict(base, plan_invalidated=False, replan_reason="")
++    brief_ok = _format_memory_brief(ok)
++    assert "PLAN DISRUPTED" not in brief_ok
++
++
++# ---------------------------------------------------------------------------
++# build_battle_state plan_invalidated reset (EXP-051 frequency guard layer 2)
++# ---------------------------------------------------------------------------
++
++
++def _mock_battle_for_state(active_species=None, turn=1):
++    """Minimal battle mock satisfying build_battle_state's reads."""
++    mon = _mock_pokemon(active_species) if active_species else None
++    return SimpleNamespace(
++        battle_tag="b1",
++        turn=turn,
++        format="gen9ou",
++        available_moves=[],
++        available_switches=[],
++        active_pokemon=mon,
++        opponent_active_pokemon=None,
++        team={},
++        opponent_team={},
++        weather=None,
++        terrain=None,
++        can_dynamax=False,
++        can_tera=True,
++    )
++
++
++def _mock_sim():
++    return SimpleNamespace(state_translate=lambda b: ("sys", "state", "state_action"))
++
++
++def test_build_battle_state_resets_invalidated_flag():
++    """The one-turn plan_invalidated nudge is copied into state then reset on
++    memory (frequency guard layer 2) so it never persists across turns."""
++    mem = BattleMemory()
++    mem.plan_invalidated = True
++    mem.replan_reason = "your gholdengo was removed (KO/forced switch)"
++    state = build_battle_state(_mock_battle_for_state(), _mock_sim(), "", memory=mem)
++    assert state["plan_invalidated"] is True  # surfaced this turn
++    assert "gholdengo was removed" in state["replan_reason"]
++    assert mem.plan_invalidated is False  # consumed — reset
++    assert mem.replan_reason == ""
++
++
++# ---------------------------------------------------------------------------
++# _opponent_full_team / _opp_alive_count (EXP-052: teampreview merge)
++# ---------------------------------------------------------------------------
++
++
++def _stub_mon(species, fainted=False):
++    """Minimal Pokemon stub — only ``.species`` and ``.fainted`` are read."""
++    return SimpleNamespace(species=species, fainted=fainted)
++
++
++def _battle_with_teams(revealed: dict, preview):
++    """Battle stub exposing the private team attrs the merge helper reads.
++    ``preview`` may be a list in tests — the helper only iterates it (the real
++    attribute is a set, but stubs are unhashable)."""
++    return SimpleNamespace(
++        _opponent_team=revealed,
++        _teampreview_opponent_team=preview,
++    )
++
++
++def test_opp_alive_teampreview_six_revealed_one():
++    """teampreview 6 + revealed 1 (overlapping species) → 6 alive."""
++    revealed = {"gholdengo": _stub_mon("gholdengo")}
++    preview = [
++        _stub_mon(s)
++        for s in [
++            "gholdengo",
++            "roaringmoon",
++            "tinglu",
++            "ogerponwellspring",
++            "ironvaliant",
++            "dragapult",
++        ]
++    ]
++    battle = _battle_with_teams(revealed, preview)
++    assert len(_opponent_full_team(battle)) == 6
++    assert _opp_alive_count(battle) == 6
++    assert _opp_fainted_count(battle) == 0
++
++
++def test_opp_alive_revealed_fainted_merged_with_teampreview():
++    """revealed carries the real faint status; teampreview-only species stay
++    alive. revealed 3 (1 fainted) + preview 6 → 6 species, 1 fainted → 5 alive."""
++    revealed = {
++        "gholdengo": _stub_mon("gholdengo", fainted=False),
++        "dragapult": _stub_mon("dragapult", fainted=True),
++        "tinglu": _stub_mon("tinglu", fainted=False),
++    }
++    preview = [
++        _stub_mon(s)
++        for s in [
++            "gholdengo",
++            "dragapult",
++            "tinglu",
++            "ogerponwellspring",
++            "ironvaliant",
++            "roaringmoon",
++        ]
++    ]
++    battle = _battle_with_teams(revealed, preview)
++    assert _opp_alive_count(battle) == 5
++    assert _opp_fainted_count(battle) == 1
++
++
++def test_opp_alive_empty_preview_falls_back_to_revealed():
++    """Before teampreview lands, the merge degrades to revealed-only (current
++    behaviour) — graceful, no crash."""
++    revealed = {
++        "gholdengo": _stub_mon("gholdengo", fainted=False),
++        "dragapult": _stub_mon("dragapult", fainted=True),
++    }
++    battle = _battle_with_teams(revealed, set())
++    assert _opp_alive_count(battle) == 1
++    assert _opp_fainted_count(battle) == 1
