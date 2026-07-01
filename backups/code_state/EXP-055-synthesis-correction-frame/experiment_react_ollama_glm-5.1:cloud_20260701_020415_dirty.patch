@@ -1,0 +1,39 @@
+diff --git a/AGENTS.md b/AGENTS.md
+index 1363038..e47a91e 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -60,3 +60,9 @@ Prompt algorithms (`--player_prompt_algo`): `io`, `sc`, `cot`, `tot`, `minimax`,
+ - Common types: `feat`, `fix`, `clean`.
+ - Keep commits focused and atomic. Link related issues in PR descriptions.
+ - Never commit secrets — `passwords.json`, `passwords_vgc.json`, and `.env` files are gitignored.
++
++## Codex Feedback Notes
++
++- When the user asks to preserve brainstorming, design feedback, or experiment ideas from a Codex discussion, save the note under `.temp/codex_feedback/`.
++- Use descriptive Markdown filenames such as `lead-selection-feedback.md`; keep notes focused on the idea, context, and actionable next steps.
++- Do not mix these notes with experiment results in `.temp/experiments/` unless the user explicitly asks to promote the idea into an experiment.
+diff --git a/pokechamp/agents/react_agent.py b/pokechamp/agents/react_agent.py
+index 821aaf0..7dc764a 100644
+--- a/pokechamp/agents/react_agent.py
++++ b/pokechamp/agents/react_agent.py
+@@ -170,6 +170,10 @@ BAD my_plan (this is just THIS turn's action — do NOT repeat it here):
+ 
+ Use the tool results and battle state to decide THIS turn's action (move/switch), but write my_plan as the multi-turn win path. win_condition_opponent is the opponent's analogous long-term path.
+ 
++## Tool credibility
++
++Oracle-backed numbers (calculate_damage, simulate_turn resolved via the Showdown engine) are exact. Other tools (analyze_matchup speed calls, evaluate_position) are heuristic estimates that can be wrong. If two numbers disagree, prefer the oracle-backed one and note the conflict in your reasoning — do not treat every tool output as equally reliable.
++
+ ## Output (JSON only, no prose, no code fences)
+ 
+ {{"move": "<move_name>"}}  OR  {{"switch": "<species>"}}
+@@ -309,7 +313,8 @@ def _make_strategy_synthesis(max_tool_calls: int):
+             user_content += memory_brief
+         if tool_results:
+             user_content += (
+-                "\n\n## Tool Results:\n"
++                "\n\n## Tool Results (oracle-backed = exact; heuristic tools = "
++                "estimates — reconcile conflicts):\n"
+                 + "\n".join(f"- {r}" for r in tool_results)
+             )
+         if last_ai_reasoning:
