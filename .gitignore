@@ -72,6 +72,7 @@ yarn-error.log*
 
 CLAUDE.md
 pokemon-showdown/
+damage-calc/
 
 .venv/
 

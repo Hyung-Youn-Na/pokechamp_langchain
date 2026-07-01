@@ -268,11 +268,8 @@ def _resolve_move_outcome_via_oracle(
         if mon is None or mon_opp is None:
             return None
         from pokechamp.battle_state_mapper import battle_to_oracle_payload
-        from pokechamp.showdown_oracle import (
-            _CACHE_MISS,
-            get_oracle_cache,
-            get_shared_oracle,
-        )
+        from pokechamp.oracle_backend import get_cache, get_oracle
+        from pokechamp.showdown_oracle import _CACHE_MISS
 
         payload = battle_to_oracle_payload(ctx.battle, mon, mon_opp, move)
         if not payload:
@@ -283,12 +280,12 @@ def _resolve_move_outcome_via_oracle(
         defn = str(getattr(mon_opp, "species", "")).lower()
         ash = _active_state_hash(payload)
 
-        cache = get_oracle_cache()
+        cache = get_cache()
         cached = cache.get(ash, move_id, atk, defn)
         if cached is not _CACHE_MISS:
             return cached  # outcome dict or None — both cached
 
-        oracle = get_shared_oracle()
+        oracle = get_oracle()
         if oracle is None:
             cache.set(ash, move_id, atk, defn, None)
             return None

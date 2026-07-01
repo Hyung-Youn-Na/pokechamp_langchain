@@ -132,6 +132,15 @@ parser.add_argument("--opponent_api_key", type=str, default="")
 parser.add_argument("--enable_dynamic_flags", action="store_true", default=False)
 parser.add_argument("--enable_dynamic_calcs", action="store_true", default=False)
 parser.add_argument("--enable_showdown_oracle", action="store_true", default=False)
+parser.add_argument(
+    "--oracle_backend",
+    choices=["showdown", "damagecalc", "compare"],
+    default="showdown",
+    help=(
+        "damage backend used when --enable_showdown_oracle is on: "
+        "showdown (default) | damagecalc (@smogon/calc) | compare (both, log diff)"
+    ),
+)
 parser.add_argument("--enable_llm_lead_selection", action="store_true", default=False)
 
 # Team composition mode. "fixed" isolates matchups across ablations so a metric
@@ -152,6 +161,12 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
+
+# Damage backend selection (effective only when --enable_showdown_oracle is on).
+# compare mode runs both backends, logs the diff, and returns the showdown result.
+from pokechamp.oracle_backend import set_default_backend
+
+set_default_backend(args.oracle_backend)
 
 # Set random seed if provided
 if args.seed is not None:
