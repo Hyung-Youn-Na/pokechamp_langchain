@@ -61,12 +61,12 @@ node -e "console.log(typeof require('./damage-calc/calc/dist/index.js').calculat
 
 ## 핵심 구현 포인트 (재현 시 반드시 포함돼야 할 로직)
 
-1. **item/ability display-name 변환 (★비자명)** — `toItemName`/`toAbilityName`.
-   `calc.Pokemon`의 item/ability 옵션은 **display name**("Choice Band")으로 받아야 효과가
-   적용된다. **ID**("choiceband")를 주면 lookup 없이 그대로 저장해 **효과가 무시된다**
-   (species/move/nature는 ID OK — 이 비대칭이 함정). Showdown packed은 item/ability를
-   ID로 주므로 `GEN.items.get(id).name` / `GEN.abilities.get(id).name`으로 변환.
-   검증: Choice Band 미적용 시 데미지가 ~1/1.5(494 vs 740)로 나온다.
+1. **display-name 변환 (★비자명, 3종)** — calc는 lookup은 ID 로 되지만 **효과 발동은 display name**이어야 한다. Showdown packed(전부 ID)을 calc 에 넘기기 전에 변환:
+   - **item**(`toItemName`): "choiceband"→"Choice Band". 미적용 시 Choice Band 물리 1.5×가 빠져 데미지 ~1/1.5(494 vs 740).
+   - **ability**(`toAbilityName`): "guts"→"Guts".
+   - **move**(`toMoveName`): "weatherball"→"Weather Ball". **동적 타입/위력 콜백(ModifyType)이 display name일 때만 발동** — ID 면 100 BP는 되지만 type/STAB/weather 보정이 빠진다(Weather Ball rain: ID 110-130% vs display 494-584%). Tera Blast(attacker 옵션 기반)는 ID 도 OK — 차이 패턴.
+   - **species**(`toSpeciesName`): "ogerponwellspring"→"Ogerpon-Wellspring". **forme 인식 + species-specific 보정**(Pikachu Light Ball 2×)이 display name일 때만. ID 면 Ivy Cudgel type이 Water 안 되고, Pikachu Light Ball 미적용(108.8% vs 215.1%). 일반 species("garchomp")는 양쪽 OK 라 우연히 안 드러났던 함정.
+   - 이 4개 변환은 EXP-057 제어 스위트(`scripts/exp/damage_compare_suite.py`)가 발견·수정했다(초기 weatherball/ivycudgel/tb-lightball 비정상 → 전부 정상).
 2. **curHP = rawStats.hp × hp_pct/100** — calc는 `rawStats.hp`(=maxhp) 산출 후
    `originalCurHP` 설정. `max_hp`는 payload에서 오지 않는다(EXP-050a 방어 규칙, oracle과 동일).
 3. **16-roll → min/max/median** — `result.damage`(16배열)를 정렬해 산출. calc는 내부적으로
@@ -170,6 +170,8 @@ function parseStatList(s, dflt) {
 }
 function toItemName(id) { if (!id) return undefined; const it = GEN.items.get(id); return it ? it.name : id; }
 function toAbilityName(id) { if (!id) return undefined; const ab = GEN.abilities.get(id); return ab ? ab.name : id; }
+function toMoveName(id) { if (!id) return id; const m = GEN.moves.get(id); return m ? m.name : id; }
+function toSpeciesName(id) { if (!id) return id; const sp = GEN.species.get(id); return sp ? sp.name : id; }
 function parsePackedMon(seg) {
   const f = String(seg).split("|");
   const clean = (x) => (x && x !== "none" ? x : undefined);
@@ -198,7 +200,7 @@ function makeCalcPokemon(mon, st) {
     if (st.ability) opts.ability = toAbilityName(st.ability);
     if (st.item) opts.item = toItemName(st.item);
   }
-  const poke = new calc.Pokemon(GEN, mon.species, opts);
+  const poke = new calc.Pokemon(GEN, toSpeciesName(mon.species), opts);
   if (st && st.hp_pct != null) {
     const maxhp = (poke.rawStats && poke.rawStats.hp) || 1;
     poke.originalCurHP = Math.max(1, Math.round((maxhp * st.hp_pct) / 100));
@@ -228,6 +230,7 @@ function resolve(payload) {
   let attacker, defender, field, move;
   try { attacker = makeCalcPokemon(aMon, aSt && aSt[0]); defender = makeCalcPokemon(dMon, dSt && dSt[0]); field = makeCalcField(payload); move = new calc.Move(GEN, payload.move_id, { isCrit:false, hits:1 }); }
   catch (e) { return { ok:false, move_id:payload.move_id, error:"build failed: " + e.message }; }
+  // move = new calc.Move(GEN, toMoveName(payload.move_id), ...) — display name 필요(동적 타입)
   let result;
   try { result = calc.calculate(GEN, attacker, defender, move, field); }
   catch (e) { return { ok:false, move_id:payload.move_id, error:"calculate failed: " + e.message }; }
